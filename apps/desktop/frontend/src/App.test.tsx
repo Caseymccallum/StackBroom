@@ -94,4 +94,13 @@ describe("App", () => {
     fireEvent.keyDown(window, { key: "3", ctrlKey: true });
     expect(await screen.findByRole("heading", { name: "Volume capacity" })).toBeInTheDocument();
   });
+
+  it("keeps the current destination when skipping to the keyboard scroll region", async () => {
+    render(<App />);
+    await screen.findByText("TEST-PC");
+    fireEvent.keyDown(window, { key: "5", ctrlKey: true });
+    fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
+    expect(window.location.hash).toBe("#settings");
+    expect(screen.getByRole("main", { name: "Settings" })).toHaveFocus();
+  });
 });

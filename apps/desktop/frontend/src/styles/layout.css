@@ -1,13 +1,18 @@
 .app-shell {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
+  /* Bound the implicit auto row: otherwise main's intrinsic height escapes the viewport. */
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
+  overflow: hidden;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   padding: 22px 14px 16px;
   border-right: 1px solid var(--border);
   background:
@@ -149,6 +154,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
+  min-height: 0;
   height: 100%;
 }
 
@@ -201,12 +207,16 @@
 
 .content {
   overflow: auto;
+  min-width: 0;
   min-height: 0;
+  scrollbar-gutter: stable;
+  scroll-padding-block: 16px;
   padding: 26px 30px 40px;
 }
 
-.content:focus {
-  outline: none;
+.content:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
 }
 
 .content-inner {

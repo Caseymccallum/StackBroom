@@ -114,7 +114,8 @@ export default function App() {
       }
     }
     requestAnimationFrame(() => {
-      document.getElementById("page-title")?.focus({ preventScroll: true });
+      // Put keyboard scrolling in its owning pane after navigation.
+      main?.focus({ preventScroll: true });
     });
   }, [active]);
 
@@ -203,7 +204,10 @@ export default function App() {
 
   return (
     <>
-      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <a className="skip-link" href="#main-content" onClick={(event) => {
+        event.preventDefault();
+        document.getElementById("main-content")?.focus();
+      }}>Skip to main content</a>
       <div className="app-shell">
         <Sidebar
           active={active}
@@ -226,7 +230,7 @@ export default function App() {
               setSettings((current) => ({ ...current, theme: current.theme === "dark" ? "light" : "dark" }))
             }
           />
-          <main id="main-content" className="content scrollbar-thin" tabIndex={-1}>
+          <main id="main-content" className="content scrollbar-thin" tabIndex={0} aria-labelledby="page-title">
             <div className="content-inner grid" style={{ gap: 16 }}>
               {desktop.error ? (
                 <Notice tone="error">

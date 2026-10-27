@@ -1,0 +1,42 @@
+{
+  "before": {
+    "viewport": [
+      1106,
+      683
+    ],
+    "height": 2199,
+    "scrollHeight": 2199,
+    "scrollTop": 0,
+    "shellRow": "2354.69px"
+  },
+  "wheel": {
+    "viewport": [
+      1106,
+      683
+    ],
+    "height": 2199,
+    "scrollHeight": 2199,
+    "scrollTop": 0,
+    "shellRow": "2354.69px"
+  },
+  "fixed": {
+    "viewport": [
+      1106,
+      683
+    ],
+    "height": 528,
+    "scrollHeight": 2199,
+    "scrollTop": 0,
+    "shellRow": "683.2px"
+  },
+  "fixedWheel": {
+    "viewport": [
+      1106,
+      683
+    ],
+    "height": 528,
+    "scrollHeight": 2199,
+    "scrollTop": 1200,
+    "shellRow": "683.2px"
+  }
+}
