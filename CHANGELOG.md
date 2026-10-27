@@ -4,6 +4,36 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - Desktop foundation
+
+Read-only Windows desktop MVP. The CLI remains unchanged and independently
+buildable; no cleanup capability was added.
+
+### Added
+
+- **Wails v3 desktop application** under `apps/desktop/`, with React, TypeScript
+  and Tailwind CSS. The application calls the existing Go engine through four
+  typed, read-only bridge methods.
+- **Overview, Processes, Storage, Developer Tools and Settings** screens using
+  real Windows observations. Session-only memory/CPU charts; no persisted
+  monitoring history.
+- **Read-only host metrics collector** (`internal/sysinfo`) for physical memory,
+  interval CPU usage, Windows build and fixed-volume capacity. No mutation path.
+- **Narrow, sanitized desktop DTOs**; command lines, executable paths, project
+  roots and raw profile paths never cross the frontend boundary.
+- **Desktop tests** for redaction, scan overlap/cancellation, 5,000-process
+  inventories, unavailable Docker/WSL, frontend filtering, review-card safety,
+  navigation and theme.
+- **Desktop documentation** covering architecture, dependency licences, visual
+  and accessibility review, validation evidence, future storage analysis and a
+  design-only BYOK AI adviser.
+
+### Security
+
+- No kill/delete/prune/settings-write method, no shell execution, no remote
+  Docker override, no production HTTP listener and no AI provider contact.
+- The CLI's default privacy policy is applied at the desktop service boundary.
+
 ## [0.2.0] - 2026-10-27
 
 Read-only TCP listener truth. No cleanup capability was added; the command

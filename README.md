@@ -93,6 +93,33 @@ pwsh -File scripts/build.ps1 -Version 0.2.0
 The result is a single self-contained `bin\stackbroom.exe` (about 3 MB). Copy it
 anywhere on your `PATH`; it has no runtime files.
 
+## Windows desktop application
+
+The separate desktop MVP lives in [`apps/desktop/`](apps/desktop/). It is a
+Wails v3 + React + TypeScript application built around the same read-only Go
+engine and privacy policy. The root CLI does not depend on Wails, Node or any
+desktop package.
+
+```powershell
+cd apps/desktop
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
+.\bin\StackBroom.exe
+```
+
+It provides Overview, Processes, Storage, Developer Tools and Settings screens,
+with real Windows metrics, session-only charts and review cards that cannot act.
+There is no cleanup, AI call or production network listener. See:
+
+- [Desktop architecture](docs/desktop/ARCHITECTURE.md)
+- [Visual and accessibility review](docs/desktop/DESIGN-REVIEW.md)
+- [Validation evidence](docs/desktop/VALIDATION.md)
+- [Screenshots](docs/desktop/screenshots/)
+- [BYOK AI design (not implemented)](docs/desktop/BYOK-AI.md)
+- [Future storage analysis design](docs/desktop/STORAGE-ANALYSIS.md)
+
+Windows 10/11 with the WebView2 Evergreen Runtime is required for the desktop
+application.
+
 
 ## Usage
 
