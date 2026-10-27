@@ -23,6 +23,10 @@ import (
 // DefaultTimeout bounds a single external command.
 const DefaultTimeout = 20 * time.Second
 
+// DefaultMaxOutputBytes bounds how much of a command's stdout or stderr is
+// retained. A wedged or hostile tool cannot exhaust memory by flooding output.
+const DefaultMaxOutputBytes = 8 << 20
+
 // Result is the outcome of one external command.
 type Result struct {
 	Command  string
@@ -33,8 +37,11 @@ type Result struct {
 	Err      error
 	TimedOut bool
 	Missing  bool
-	Duration time.Duration
-	Timeout  time.Duration
+	// Truncated reports that stdout or stderr exceeded the capture limit and
+	// was cut. Parsers must treat incomplete output as unreliable.
+	Truncated bool
+	Duration  time.Duration
+	Timeout   time.Duration
 }
 
 // OK reports whether the command ran and exited successfully.
@@ -45,6 +52,14 @@ func (r Result) OK() bool {
 // FailureReason renders a short, user-facing explanation. It returns an empty
 // string for successful commands.
 func (r Result) FailureReason() string {
+	reason := r.failureReason()
+	if reason != "" && r.Truncated {
+		reason += " (output was truncated)"
+	}
+	return reason
+}
+
+func (r Result) failureReason() string {
 	switch {
 	case r.OK():
 		return ""
@@ -91,13 +106,45 @@ type Runner interface {
 type Exec struct {
 	// Timeout bounds one command. Zero means DefaultTimeout.
 	Timeout time.Duration
+	// MaxOutputBytes bounds retained stdout/stderr per stream. Zero means
+	// DefaultMaxOutputBytes.
+	MaxOutputBytes int
 }
+
+// limitedBuffer keeps at most limit bytes and always reports a full write so the
+// child process is never blocked or killed by a short write.
+type limitedBuffer struct {
+	buf       bytes.Buffer
+	limit     int
+	truncated bool
+}
+
+func (w *limitedBuffer) Write(p []byte) (int, error) {
+	remaining := w.limit - w.buf.Len()
+	if remaining <= 0 {
+		w.truncated = true
+		return len(p), nil
+	}
+	if len(p) > remaining {
+		_, _ = w.buf.Write(p[:remaining])
+		w.truncated = true
+		return len(p), nil
+	}
+	_, _ = w.buf.Write(p)
+	return len(p), nil
+}
+
+func (w *limitedBuffer) String() string { return w.buf.String() }
 
 // Run executes the command and waits for it to finish or time out.
 func (e Exec) Run(ctx context.Context, name string, args ...string) Result {
 	timeout := e.Timeout
 	if timeout <= 0 {
 		timeout = DefaultTimeout
+	}
+	limit := e.MaxOutputBytes
+	if limit <= 0 {
+		limit = DefaultMaxOutputBytes
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -112,14 +159,16 @@ func (e Exec) Run(ctx context.Context, name string, args ...string) Result {
 	cmd.WaitDelay = 2 * time.Second
 	configureCommand(cmd)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := &limitedBuffer{limit: limit}
+	stderr := &limitedBuffer{limit: limit}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
 	res.Duration = time.Since(started)
 	res.Stdout = stdout.String()
 	res.Stderr = stderr.String()
+	res.Truncated = stdout.truncated || stderr.truncated
 
 	if cmd.ProcessState != nil {
 		res.ExitCode = cmd.ProcessState.ExitCode()

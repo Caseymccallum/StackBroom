@@ -84,6 +84,55 @@ func TestExecEnforcesTimeout(t *testing.T) {
 	}
 }
 
+func TestLimitedBufferTruncatesWithoutShortWrites(t *testing.T) {
+	buffer := &limitedBuffer{limit: 5}
+	n, err := buffer.Write([]byte("abcdefgh"))
+	if err != nil || n != 8 {
+		t.Fatalf("Write = (%d,%v), want (8,nil)", n, err)
+	}
+	if buffer.String() != "abcde" {
+		t.Fatalf("buffer = %q, want abcde", buffer.String())
+	}
+	if !buffer.truncated {
+		t.Fatal("buffer did not record truncation")
+	}
+
+	// Further writes must still report the full length so a child process is
+	// never blocked by a short write.
+	n, err = buffer.Write([]byte("ij"))
+	if err != nil || n != 2 {
+		t.Fatalf("second Write = (%d,%v)", n, err)
+	}
+	if buffer.String() != "abcde" {
+		t.Fatalf("buffer grew beyond its limit: %q", buffer.String())
+	}
+}
+
+func TestExecTruncatesLargeOutput(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("truncation test uses cmd.exe")
+	}
+	res := Exec{Timeout: 10 * time.Second, MaxOutputBytes: 64}.Run(
+		context.Background(), "cmd.exe", "/c",
+		"for /L %i in (1,1,100) do @echo 012345678901234567890123456789")
+	if !res.Truncated {
+		t.Fatalf("expected truncation, got %d bytes", len(res.Stdout))
+	}
+	if len(res.Stdout) > 64 {
+		t.Fatalf("retained %d bytes, limit was 64", len(res.Stdout))
+	}
+	if res.FailureReason() != "" {
+		t.Errorf("successful command reported a failure: %q", res.FailureReason())
+	}
+}
+
+func TestFailureReasonMentionsTruncation(t *testing.T) {
+	res := Result{Command: "docker", ExitCode: 1, Stderr: "boom", Truncated: true}
+	if !strings.Contains(res.FailureReason(), "truncated") {
+		t.Errorf("reason = %q", res.FailureReason())
+	}
+}
+
 func TestExecTreatsTheNameAsOneExecutable(t *testing.T) {
 	// If a shell were involved, "cmd.exe /c echo hi" would be executed. A
 	// direct argv execution instead looks for an executable with that literal
