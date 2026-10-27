@@ -134,7 +134,7 @@
 [id^="developer-"] { scroll-margin-top: 16px; }
 .table-wrap { max-height: 55vh; scrollbar-gutter: stable; }
 .table td.name { white-space: normal; overflow-wrap: anywhere; min-width: 140px; }
-.table td { overflow-wrap: anywhere; }
+.table td { overflow-wrap: normal; }
 .sort-btn { min-height: 28px; }
 .table-wrap:focus-visible { outline-offset: -3px; }
 .btn, .icon-btn, .input, .select { min-height: 40px; }
