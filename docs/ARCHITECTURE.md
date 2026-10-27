@@ -59,6 +59,7 @@ never import `cli`; `cli` never imports collector internals.
 | `docker` | Query the Docker CLI and parse containers, stats, disk usage and images | Read-only subcommands only; JSON-lines parsers with table fallbacks |
 | `wsl` | List distributions and decode WSL console output | Only `wsl.exe --list --verbose` |
 | `wintext` | Decode UTF-16LE (with or without BOM), UTF-16BE, UTF-8 and BOMs | Never silently drops data |
+| `privacy` | Redact secrets and tokenise paths at the output boundary | Deep-copies the snapshot; never mutates inspection data |
 | `analysis` | Aggregate totals, find duplicate suspects, build recommendations | Threshold-driven; no I/O |
 | `scan` | Wire collectors, resolve projects, attach WSL memory, call analysis | Collectors injected for tests |
 | `cli` | Parse flags, render text, encode JSON, exit codes | ASCII-only text output |
@@ -127,6 +128,19 @@ as warnings instead of failing. Sizes are parsed from Docker's human-readable te
 ends Docker collection immediately with an actionable reason; StackBroom does not
 attempt to start Docker Desktop.
 
+### Endpoint safety
+
+Before any daemon command, `internal/docker` resolves the endpoint without
+contacting it, following Docker's documented precedence: `DOCKER_CONTEXT` >
+`DOCKER_HOST` > active context. It reads the context with `docker context show` and
+`docker context inspect` (local metadata only) and classifies the endpoint.
+
+Only `npipe`, `unix` and `fd` are treated as local. Every network transport,
+including loopback TCP, is refused unless `--allow-remote-docker` is passed. An
+endpoint that cannot be determined is refused. The resolved endpoint, locality and
+approval state are reported in `docker.status`, so "Docker unavailable" is never
+ambiguous between "daemon stopped" and "remote endpoint declined".
+
 Container sizes shown by `docker ps` are ignored; per-container disk usage is
 reported as unmeasured rather than approximated.
 
@@ -141,16 +155,33 @@ Memory is attributed only to the shared WSL2 utility VM (`vmmem` or `vmmemWSL`
 working set) and labelled approximate. Per-distribution memory would require
 running commands inside a distribution, which StackBroom deliberately does not do.
 
+## Privacy boundary
+
+Inspection needs full command lines; output does not. `internal/privacy` applies a
+policy to a deep copy of the snapshot at the CLI boundary, after analysis:
+
+- default: command line removed, `commandLineOmitted` set, home paths tokenised,
+  secrets masked;
+- `--diagnostics`: command line retained with secrets masked and paths tokenised,
+  plus a sensitivity warning.
+
+Because the same pass rewrites project evidence, duplicate evidence,
+recommendation text, subject detail and warnings, there is no second channel that
+can leak a raw command line. JSON contains `redaction` metadata so a consumer can
+tell "omitted" from "not observed". See [JSON-SCHEMA.md](JSON-SCHEMA.md).
+
 ## JSON contract
 
 `scan --json` emits a `Snapshot`; `plan --json` emits a `PlanDocument`. Both carry
-`schemaVersion: "1"` and `readOnly: true`. The plan document also carries
-`executesCleanup: false`. Fields that could not be measured carry an explicit
-`known` boolean next to the value (for example `memoryKnown`,
-`dockerTotalKnown`), and partial Docker totals report how many categories were
-readable.
+`schemaVersion: "2"` and `readOnly: true`. Version 2 omits command lines by
+default, adds `redaction` metadata, Docker endpoint fields, independent reclaim row
+counts, per-stage `timings` and WSL warnings. The plan document also carries
+`executesCleanup: false`.
 
-Schema changes that remove or reinterpret a field require a version bump.
+Fields that could not be measured carry an explicit `known` boolean next to the
+value (for example `memoryKnown`, `dockerTotalKnown`), and partial Docker totals
+report how many categories were readable. The machine-readable schema lives in
+`docs/schema/v2.json` and is checked by `internal/model/schema_test.go`.
 
 ## Testing strategy
 
@@ -162,7 +193,15 @@ Schema changes that remove or reinterpret a field require a version bump.
 * Analysis is tested with constructed models, including unknown memory, partial
   Docker reports and empty inputs.
 * CLI tests inject a fixed snapshot, so rendering is deterministic and no live
-  process, container or distribution is touched.
+  process, container or distribution is touched. `testdata/*.golden.txt` lock the
+  exact text layout.
+* Large-inventory tests cover 20,000 processes in analysis, 5,000 in orchestration
+  and 2,000 rendered rows.
+* Privacy tests use synthetic passwords, tokens, database URLs and profile paths,
+  and assert that neither JSON nor text can leak them.
+* Output truncation is tested directly and through the runner.
+* The JSON schema is validated against the Go model (required keys, `$ref`
+  resolution, version constant).
 * Live tests are opt-in (`STACKBROOM_LIVE=1`) and read-only.
 
 ## Key decisions and trade-offs
@@ -175,6 +214,9 @@ Schema changes that remove or reinterpret a field require a version bump.
 | No socket inspection in v0.1 | Keeps the milestone small and avoids another syscall surface | Duplicate detection uses requested ports, not listening ports |
 | ASCII output | Survives Windows code pages and PowerShell redirection | No colour or box drawing |
 | Compose label for container projects | Docker's own metadata is stronger than path heuristics | Requires Compose-labelled containers |
+| Refuse non-local Docker endpoints by default | A configured remote daemon must never be queried silently | Loopback TCP users must pass `--allow-remote-docker` |
+| Redact at the presentation boundary | Inspection keeps full detail; every output path shares one policy | A second output path must call the same policy |
+| Cap captured output at 8 MiB per stream | Bounds memory against a misbehaving tool | Truncation must be reported, not hidden |
 
 ## Extension points
 

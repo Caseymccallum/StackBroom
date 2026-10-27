@@ -6,7 +6,7 @@ StackBroom is a lightweight, open-source, Windows-first resource inspector for
 software developers. It shows what development processes, Docker and WSL2 are
 using, and suggests things worth reviewing. It never cleans up anything itself.
 
-- **Version:** 0.1.0 (read-only)
+- **Version:** 0.1.1 (read-only hardening release)
 - **Platform:** Windows 10/11 (process inspection is Windows-only; Docker and WSL
   inspection degrade gracefully elsewhere)
 - **Dependencies:** Go standard library only, plus the tools it inspects
@@ -69,13 +69,13 @@ other users or protected by the OS show `Unknown` memory, which is expected.
 ```powershell
 git clone https://github.com/Caseymccallum/StackBroom.git
 cd StackBroom
-go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.1.0" -o bin/stackbroom.exe ./cmd/stackbroom
+go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.1.1" -o bin/stackbroom.exe ./cmd/stackbroom
 ```
 
 Or use the validation script, which formats, vets, tests and builds:
 
 ```powershell
-pwsh -File scripts/build.ps1 -Version 0.1.0
+pwsh -File scripts/build.ps1 -Version 0.1.1
 ```
 
 The result is a single self-contained `bin\stackbroom.exe` (about 3 MB). Copy it
@@ -93,11 +93,13 @@ stackbroom help              Show help
 
 | Flag | Applies to | Meaning |
 | --- | --- | --- |
-| `--json` | scan, plan | Emit structured JSON (stable `schemaVersion`) |
+| `--json` | scan, plan | Emit structured JSON (`schemaVersion` 2) |
 | `--top N` | scan | How many memory-heavy processes to list (default 8) |
 | `--timeout DURATION` | scan, plan | Limit for **each** external command (default `20s`) |
 | `--skip-docker` | scan, plan | Do not query Docker at all |
 | `--skip-wsl` | scan, plan | Do not query WSL at all |
+| `--allow-remote-docker` | scan, plan | Permit a Docker endpoint that is not a local IPC channel. Refused by default; still read-only |
+| `--diagnostics` | scan, plan | Include command lines with secrets masked and home paths tokenised. Still sensitive; see Privacy |
 | `--no-command-lines` | scan, plan | Skip the PowerShell CIM lookup (faster, but roles and projects cannot be identified) |
 
 Exit codes: `0` success, `1` runtime error, `2` usage error. Docker or WSL being
@@ -106,9 +108,10 @@ could not read.
 
 ### Example: a real scan
 
-Genuine output from a Windows 10 development machine on 27 October 2026 (Docker
-Desktop 29.4.0 running, one WSL2 distribution), with some rows and project names
-shortened for readability:
+Genuine output from v0.1.0 (layout unchanged in v0.1.1 apart from the "estimate"
+label and the output-policy note) on a Windows 10 development machine on
+27 October 2026 (Docker Desktop 29.4.0 running, one WSL2 distribution), with some
+rows and project names shortened for readability:
 
 ```
 stackbroom 0.1.0 - read-only scan
@@ -214,14 +217,15 @@ Windows and Program Files are deliberately excluded: a package's own
 gofmt -l .                # should print nothing
 go vet ./...
 go test ./...             # unit tests only; no live processes, Docker or WSL
+go test ./internal/winproc -run TestLive -v   # after setting STACKBROOM_LIVE=1
 
-# Opt-in, read-only live inspection of the current machine:
-$env:STACKBROOM_LIVE = "1"; go test ./internal/winproc -run TestLive -v
+# Intentional CLI layout change only:
+go test ./internal/cli -run TestGolden -update
 ```
 
-Ordinary tests use deterministic fixtures and injected fake runners. They never
-start, stop or modify anything. The live tests are read-only and skipped unless
-`STACKBROOM_LIVE=1`.
+Ordinary tests use deterministic fixtures, golden files and injected fake
+runners. They never start, stop or modify anything. The live tests are read-only
+and skipped unless `STACKBROOM_LIVE=1`.
 
 ## Repository layout
 
@@ -244,19 +248,40 @@ scripts/             Build/validation helper
 ```
 
 Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
-[docs/SAFETY.md](docs/SAFETY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
+[docs/SAFETY.md](docs/SAFETY.md), [docs/JSON-SCHEMA.md](docs/JSON-SCHEMA.md),
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md),
+[docs/V0.2-TCP-OWNERSHIP.md](docs/V0.2-TCP-OWNERSHIP.md),
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Privacy
 
-StackBroom makes no network calls. It reads local process metadata and queries
-local Docker and WSL services. `scan --json` output contains process command
-lines and local paths, so treat a saved report as sensitive.
+StackBroom makes no outbound network calls. It reads local process metadata,
+talks to Docker through a local named pipe or Unix socket, and invokes WSL
+locally. A Docker endpoint that is not a local IPC channel is refused unless you
+pass `--allow-remote-docker`.
 
-## Known limitations (v0.1)
+**Command lines are omitted by default.** They routinely contain tokens,
+passwords, connection strings and private paths. They are still used internally
+for classification and project association, but output carries
+`commandLineOmitted: true` instead of the command.
+
+`--diagnostics` includes command lines with secrets masked and the current user's
+home directory replaced by `%USERPROFILE%`. Matching covers sensitive flags,
+`NAME=value` assignments, URL userinfo passwords and bearer tokens. It cannot
+recognise a secret passed positionally, so diagnostics output must still be
+treated as sensitive. Project evidence, duplicate evidence, recommendation text
+and warnings go through the same redaction.
+
+Saved JSON contains local paths and, in diagnostics mode, command detail; treat it
+as sensitive either way. See [docs/JSON-SCHEMA.md](docs/JSON-SCHEMA.md) for the
+full privacy contract.
+
+## Known limitations (v0.1.1)
 
 - Port-based duplicate detection uses requested ports from command lines, not the
   actual listening socket. Two processes may request the same port while only one
-  is bound.
+  is bound. Ownership measurement is designed but not implemented
+  ([docs/V0.2-TCP-OWNERSHIP.md](docs/V0.2-TCP-OWNERSHIP.md)).
 - Servers started without a recognisable command line (for example through a
   wrapper script) stay classified as `runtime`.
 - WSL per-distribution memory and Docker per-container sizes are not measured.

@@ -46,8 +46,9 @@ The CLI has exactly two data commands: `scan` and `plan`. Both inspect and print
 
 | Tool | Invocation | Purpose | When |
 | --- | --- | --- | --- |
-| Docker CLI | `docker version --format {{.Server.Version}}` | Availability probe | Unless `--skip-docker` |
-| Docker CLI | `docker context show` | Report the active context | If Docker is available |
+| Docker CLI | `docker version --format {{.Server.Version}}` | Availability probe | Unless `--skip-docker`, and only after the endpoint is approved |
+| Docker CLI | `docker context show` | Read the active context name (local metadata only) | Before any daemon command |
+| Docker CLI | `docker context inspect <name>` | Read the context's endpoint (local metadata only) | Before any daemon command |
 | Docker CLI | `docker ps -a --no-trunc --format {{json .}}` | Containers | If Docker is available |
 | Docker CLI | `docker stats --no-stream --format {{json .}}` | CPU/memory of **running** containers | Only when at least one container runs |
 | Docker CLI | `docker system df --format {{json .}}` | Storage categories | If Docker is available |
@@ -190,4 +191,68 @@ review. A future implementation should, at minimum:
 If you find a way for StackBroom to change system state, treat it as a security
 bug: do not publish exploit details before the maintainer has responded. Include
 the command line, the observed effect and the version (`stackbroom version`).
+
+
+## Remote Docker endpoints
+
+Docker's CLI can point at another machine through a context or environment
+variable. StackBroom must not contact a remote daemon just because the CLI is
+configured that way.
+
+**Resolution order** (Docker CLI reference, checked 27 October 2026):
+
+1. `DOCKER_CONTEXT` names a context and overrides `DOCKER_HOST`.
+2. `DOCKER_HOST` overrides the endpoint of the active context.
+3. Otherwise the active context (`docker context use`) applies.
+
+StackBroom reads the context name and endpoint with `docker context show` and
+`docker context inspect`, which read local metadata and do not contact a daemon.
+It then classifies the endpoint:
+
+| Endpoint | Classification | Default behaviour |
+| --- | --- | --- |
+| `npipe://...` | local IPC | allowed |
+| `unix://...` | local IPC | allowed |
+| `fd://...` | local IPC | allowed |
+| `tcp://...` (including 127.0.0.1 and localhost) | network | **refused** |
+| `ssh://...` | network | **refused** |
+| `http://`, `https://` | network | **refused** |
+| unparseable, missing, unsupported scheme | unknown | **refused** |
+
+Loopback TCP is refused because a local port can be an SSH tunnel to a remote
+daemon. Refusal is explicit: the Docker section reports the endpoint, the reason
+and `--allow-remote-docker`; no daemon command is issued.
+
+`--allow-remote-docker` permits the same read-only commands against a network
+endpoint, adds a warning to the output and sets `status.remoteApproved`. It does
+not enable any mutating command, because none exist.
+
+## Output privacy and redaction
+
+Command lines are inspection input, not output. They routinely contain tokens,
+passwords, connection strings, usernames and private paths.
+
+| Mode | Command lines | Paths | Secrets |
+| --- | --- | --- | --- |
+| Default (no flag) | omitted; `commandLineOmitted: true` | home replaced with `%USERPROFILE%`, other profiles with `<user>` | masked |
+| `--diagnostics` | present, secrets masked, paths tokenised | same | masked |
+
+The same redaction is applied to project evidence, duplicate evidence,
+recommendation text, subject detail and scan warnings — not just the process
+table — because evidence is assembled from observed strings. Diagnostics prints a
+warning to stderr and adds one to `warnings`.
+
+Masking covers sensitive flag values, sensitive `NAME=value` assignments, URL
+userinfo passwords and bearer tokens. It cannot recognise an arbitrary secret
+passed positionally, so diagnostics output must still be treated as sensitive.
+
+Text output additionally replaces control characters, so a hostile process name
+cannot inject ANSI escapes.
+
+## Bounded command output
+
+Each external command retains at most 8 MiB of stdout and 8 MiB of stderr. Output
+beyond that is drained and discarded, and `Result.Truncated` is set. Docker and WSL
+collectors turn truncation into a warning rather than presenting a partial list as
+complete. This bounds memory even if a tool or daemon misbehaves.
 

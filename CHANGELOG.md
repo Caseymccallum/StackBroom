@@ -4,6 +4,61 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [0.1.1] - 2026-10-27
+
+### Security and privacy
+
+- **Remote Docker endpoints are refused by default.** StackBroom resolves the
+  daemon endpoint from `DOCKER_CONTEXT`, `DOCKER_HOST` or the active context,
+  using local CLI metadata only, and contacts it only when it is a local IPC
+  channel (`npipe`, `unix`, `fd`). Network endpoints, including loopback TCP,
+  require the new `--allow-remote-docker` opt-in. Unknown endpoints are refused.
+- **Command lines are omitted from output by default.** They remain available
+  internally for classification and project association. A new `--diagnostics`
+  flag re-enables them with secrets masked and home paths tokenised, and prints a
+  sensitivity warning.
+- The same redaction applies to project evidence, duplicate evidence,
+  recommendation text, subject detail and warnings, so there is no bypass path.
+- External command output is capped at 8 MiB per stream; truncation is reported
+  instead of silently presenting partial data.
+- The terminal renderer continues to neutralise control characters.
+
+### Fixed
+
+- Docker reclaimable completeness no longer follows size completeness. A report
+  with a reclaimable figure but a missing size now counts as reclaim-complete,
+  and row counts are tracked separately.
+- Docker reclaimable and image-reclaim recommendation text now states explicitly
+  that the figure is Docker's estimate, not guaranteed recovery.
+
+### Added
+
+- Versioned JSON schema (`docs/schema/v2.json`) with `schemaVersion: "2"`, a
+  documented privacy contract, `redaction` metadata, Docker endpoint fields,
+  independent reclaim row counts, per-stage `timings` and WSL warnings.
+- Golden-file CLI tests (`internal/cli/testdata/*.golden.txt`).
+- Large-inventory tests: 20,000 processes in analysis, 5,000 in orchestration,
+  2,000 rendered rows.
+- Regression tests for synthetic credentials, private paths, remote endpoints,
+  Docker accounting edge cases and output truncation.
+- Wrapper coverage for pnpm, Yarn, Corepack, Volta, fnm, nvm, `npx`, `dlx` and
+  `exec`.
+- `docs/JSON-SCHEMA.md`, `docs/PERFORMANCE.md` and
+  `docs/V0.2-TCP-OWNERSHIP.md` (design only).
+
+### Changed
+
+- `schemaVersion` is now `"2"`. Consumers that expect
+  `processes[].commandLine` must opt in with `--diagnostics` or treat the field
+  as optional.
+
+### Not changed
+
+- No cleanup capability, no process control, no Docker mutation, no WSL state
+  change. The safety contract is unchanged.
+
+[0.1.1]: https://github.com/Caseymccallum/StackBroom/compare/v0.1.0...v0.1.1
+
 ## [0.1.0] - 2026-10-27
 
 ### Added

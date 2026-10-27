@@ -19,18 +19,37 @@ must not weaken the safety contract.
 
 **Not in scope, by design:** any form of cleanup.
 
-## v0.1.x -- hardening (next, small)
+## v0.1.1 -- hardening (delivered)
 
-- Publish the JSON schema as a versioned document with examples.
+- Remote Docker endpoints refused by default, with documented precedence for
+  `DOCKER_CONTEXT` / `DOCKER_HOST` / active context and an explicit
+  `--allow-remote-docker` opt-in.
+- Command lines omitted from output by default; `--diagnostics` provides masked,
+  path-tokenised detail with a warning. Evidence, warnings and subject detail obey
+  the same policy.
+- Docker reclaimable completeness tracked independently of size completeness, with
+  regression tests and explicit "estimate, not guaranteed recovery" wording.
+- Bounded external-command output (8 MiB per stream) with truncation warnings.
+- Versioned JSON schema (`docs/schema/v2.json`) and schema-validation tests.
+- Golden-file CLI tests, large-inventory tests (20k processes) and per-stage
+  `timings` with measured performance notes.
+- Broader wrapper coverage: pnpm, Yarn, Corepack, Volta, fnm, nvm, `npx`/`dlx`/
+  `exec`.
+- v0.2 port-ownership design completed (no implementation).
+
+**Not in scope, by design:** any form of cleanup.
+
+## v0.1.x -- remaining small hardening
+
 - Add a `--max-processes` safety valve for machines with very large process lists.
 - Normalise localised WSL states (or document a `--raw` mode).
-- Broaden classification fixtures from real-world manager wrappers (pnpm, Volta,
-  fnm, `nvm-windows`).
-- Add golden-file tests for text rendering to catch accidental layout changes.
 - Add GitHub Actions once the owner's billing restriction is lifted; until then
   `scripts/build.ps1` is the release gate.
 
 ## v0.2 -- port truth
+
+**Design:** [V0.2-TCP-OWNERSHIP.md](V0.2-TCP-OWNERSHIP.md). Design only; not
+implemented in v0.1.1.
 
 **Goal:** stop guessing which development server owns a port.
 
