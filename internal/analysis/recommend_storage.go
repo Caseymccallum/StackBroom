@@ -32,7 +32,8 @@ func buildCacheRecommendation(dockerInfo model.DockerInfo, opts Options) []model
 			"Reclaimable is Docker's own estimate, based on cache entries not needed by current images.",
 			"Build cache is separate from images, containers and volumes.",
 		},
-		Resource: fmt.Sprintf("%s reclaimable of %s total build cache.", row.ReclaimableText, orUnknown(row.SizeText)),
+		Resource: fmt.Sprintf("Docker reports %s reclaimable of %s total build cache; this is Docker's estimate, not guaranteed recovery.",
+			row.ReclaimableText, orUnknown(row.SizeText)),
 		Review: []string{
 			"Check whether you are actively iterating on Dockerfiles; the next build will be slower.",
 			"Prefer clearing build cache only, rather than pruning everything Docker can find.",
@@ -69,7 +70,8 @@ func unusedImageRecommendation(dockerInfo model.DockerInfo, opts Options) []mode
 			"Docker system df: type=Images, total=" + orUnknown(row.SizeText) + ", reclaimable=" + row.ReclaimableText + ".",
 			"Reclaimable is Docker's own estimate and already excludes images used by existing containers, including stopped ones.",
 		},
-		Resource: fmt.Sprintf("%s reclaimable of %s total image storage.", row.ReclaimableText, orUnknown(row.SizeText)),
+		Resource: fmt.Sprintf("Docker reports %s reclaimable of %s total image storage; this is Docker's estimate, not guaranteed recovery.",
+			row.ReclaimableText, orUnknown(row.SizeText)),
 		Review: []string{
 			"Confirm you can re-pull or rebuild any image you still need.",
 			"Check whether a project relies on a locally built image that has no registry copy.",

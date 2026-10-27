@@ -84,12 +84,16 @@ func Summarize(procs []model.Process, dockerInfo model.DockerInfo, wslInfo model
 			summary.DockerSizeRowsKnown++
 			summary.DockerTotalBytes += *row.Size
 		}
+		summary.DockerReclaimRowsTotal++
 		if row.Reclaimable != nil {
+			summary.DockerReclaimRowsKnown++
 			summary.DockerReclaimableBytes += *row.Reclaimable
 		}
 	}
 	summary.DockerTotalKnown = summary.DockerSizeRowsTotal > 0 && summary.DockerSizeRowsKnown == summary.DockerSizeRowsTotal
-	summary.DockerReclaimKnown = summary.DockerSizeRowsTotal > 0 && summary.DockerSizeRowsKnown == summary.DockerSizeRowsTotal
+	// Reclaimable completeness is independent of size completeness: Docker can
+	// report a total without a reclaimable figure (and vice versa).
+	summary.DockerReclaimKnown = summary.DockerReclaimRowsTotal > 0 && summary.DockerReclaimRowsKnown == summary.DockerReclaimRowsTotal
 
 	return summary
 }

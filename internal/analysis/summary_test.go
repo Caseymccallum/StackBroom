@@ -73,6 +73,9 @@ func TestSummarize(t *testing.T) {
 	if got.DockerReclaimKnown {
 		t.Error("reclaimable total should be incomplete when a row has no size")
 	}
+	if got.DockerReclaimRowsKnown != 1 || got.DockerReclaimRowsTotal != 3 {
+		t.Errorf("reclaim row counts = %d/%d", got.DockerReclaimRowsKnown, got.DockerReclaimRowsTotal)
+	}
 	if got.DockerReclaimableBytes != 500 {
 		t.Errorf("docker reclaimable = %d", got.DockerReclaimableBytes)
 	}

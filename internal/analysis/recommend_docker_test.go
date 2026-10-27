@@ -91,6 +91,9 @@ func TestRecommendBuildCache(t *testing.T) {
 				if !strings.Contains(recs[0].RiskDetail, "no project files") {
 					t.Errorf("risk detail should be explicit about data safety: %q", recs[0].RiskDetail)
 				}
+				if !strings.Contains(recs[0].Resource, "estimate") || !strings.Contains(recs[0].Resource, "not guaranteed") {
+					t.Errorf("resource must present the figure as an estimate: %q", recs[0].Resource)
+				}
 			}
 		})
 	}
@@ -124,5 +127,8 @@ func TestRecommendUnusedImages(t *testing.T) {
 	}
 	if strings.Contains(evidence, "nginx") {
 		t.Errorf("in-use image should not be listed as unused: %v", rec.Evidence)
+	}
+	if !strings.Contains(rec.Resource, "estimate") || !strings.Contains(rec.Resource, "not guaranteed") {
+		t.Errorf("resource must present the figure as an estimate: %q", rec.Resource)
 	}
 }
