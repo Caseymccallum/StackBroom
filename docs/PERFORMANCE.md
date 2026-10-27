@@ -6,7 +6,24 @@ Desktop 29.4.0 (local named pipe), one WSL2 distribution, ~400 processes.
 below are from real runs, not estimates. A cold first run is excluded and called
 out separately.
 
-## Results
+## v0.2.0 TCP listener stage
+
+Measured 27 October 2026 with 38 listening rows (IPv4 and IPv6), Docker Desktop
+running and one WSL2 distribution:
+
+| Run | Total (ms) | Processes (ms) | Network (ms) | Docker (ms) | WSL (ms) | Analysis (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1917 | 540 | 0 | 1328 | 46 | 0 |
+| 2 | 1917 | 563 | 1 | 1309 | 43 | 0 |
+| 3 | 1927 | 474 | 1 | 1404 | 47 | 0 |
+
+Listener collection is **0-1 ms**. It is dominated by the two
+`GetExtendedTcpTable` calls and per-listener creation-time checks; Docker remains
+~70% of a warm scan. The table can change size between the size query and the fill,
+so the implementation retries at most three times, but no retry occurred in these
+runs.
+
+## Baseline (v0.1.x)
 
 | Mode | Total (ms) | Processes (ms) | Docker (ms) | WSL (ms) | Analysis (ms) |
 | --- | --- | --- | --- | --- | --- |
@@ -37,7 +54,7 @@ steady-state cost, and the per-command timeout still bounds it.
 | Skip the CIM command-line query | ~0.45 s (≈23%) | `--no-command-lines` |
 | Skip Docker storage accounting only (`system df`, `image ls`) | ~0.8-1.0 s (inferred from per-call cost; not separately measured) | No |
 
-**Conclusion:** a new `--fast` mode is **not justified for v0.1.1**. The existing
+**Conclusion:** a new `--fast` mode is **not justified for v0.2.0**. The existing
 flags already cover the meaningful cases, and a partial Docker mode would produce
 a confusing result: container data without storage data. If users ask for a faster
 default, the next step would be to measure `system df` and `image ls` separately
@@ -48,8 +65,8 @@ and consider a `--no-storage` flag, not a vague "fast" mode.
 ```powershell
 1..3 | ForEach-Object {
   $r = .\bin\stackbroom.exe scan --json | ConvertFrom-Json
-  "total={0} proc={1} docker={2} wsl={3} analysis={4}" -f `
-    $r.durationMs, $r.timings.processesMs, $r.timings.dockerMs, $r.timings.wslMs, $r.timings.analysisMs
+  "total={0} proc={1} net={2} docker={3} wsl={4} analysis={5}" -f `
+    $r.durationMs, $r.timings.processesMs, $r.timings.networkMs, $r.timings.dockerMs, $r.timings.wslMs, $r.timings.analysisMs
 }
 ```
 

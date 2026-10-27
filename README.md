@@ -6,15 +6,16 @@ StackBroom is a lightweight, open-source, Windows-first resource inspector for
 software developers. It shows what development processes, Docker and WSL2 are
 using, and suggests things worth reviewing. It never cleans up anything itself.
 
-- **Version:** 0.1.2 (read-only boundary hardening release)
+- **Version:** 0.2.0 (read-only TCP listener truth)
 - **Platform:** Windows 10/11 (process inspection is Windows-only; Docker and WSL
   inspection degrade gracefully elsewhere)
 - **Dependencies:** Go standard library only, plus the tools it inspects
-- **Network:** no cloud services, telemetry or accounts. Docker is contacted over a
-  local named pipe or socket by default; a network daemon requires
+- **Network:** no cloud services, telemetry or accounts. TCP listener inspection
+  reads local kernel state only: it opens no socket and sends no packet. Docker is
+  contacted over a local named pipe or socket by default; a network daemon requires
   `--allow-remote-docker`.
 
-> **Safety first.** StackBroom v0.1 has no cleanup capability. It cannot stop a
+> **Safety first.** StackBroom v0.2 has no cleanup capability. It cannot stop a
 > process, remove a container or image, prune Docker, delete a volume or stop a
 > WSL distribution. Read [docs/SAFETY.md](docs/SAFETY.md) before relying on it.
 
@@ -28,9 +29,18 @@ using, and suggests things worth reviewing. It never cleans up anything itself.
   development-server kind (vite, next dev, uvicorn, `go run`, `npm run dev`, ...).
 - **Project associations** -- which local project a process belongs to, marked
   `confirmed`, `inferred` or absent, with the evidence behind the claim.
-- **Potential duplicate servers** -- processes of the same runtime requesting the
-  same port, or repeated servers for one confirmed project. Always framed as
-  "check this", never as "this is redundant".
+- **TCP listeners** -- IPv4 and IPv6 sockets observed through the Windows TCP
+  table, with local address, port, owning PID, process, project and ownership
+  confidence. The text report shows development-related sockets; `--json`
+  contains every row.
+- **Requested vs observed ports** -- ports found in command lines are reported
+  separately from sockets actually observed listening. A request is never
+  presented as a binding.
+- **Potential duplicate servers** -- processes of the same runtime associated
+  with the same port, or repeated servers for one confirmed project. Explanations
+  distinguish two verified listeners, one listener plus a requester, no observed
+  listener, and a port held by another process. Always framed as "check this",
+  never as "this is redundant".
 - **Docker** -- running and stopped containers, Docker's own CPU/memory stats for
   running containers, Compose project metadata, disk usage per category, the
   reclaimable figures Docker reports, images and build cache.
@@ -71,13 +81,13 @@ other users or protected by the OS show `Unknown` memory, which is expected.
 ```powershell
 git clone https://github.com/Caseymccallum/StackBroom.git
 cd StackBroom
-go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.1.2" -o bin/stackbroom.exe ./cmd/stackbroom
+go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.2.0" -o bin/stackbroom.exe ./cmd/stackbroom
 ```
 
 Or use the validation script, which formats, vets, tests and builds:
 
 ```powershell
-pwsh -File scripts/build.ps1 -Version 0.1.2
+pwsh -File scripts/build.ps1 -Version 0.2.0
 ```
 
 The result is a single self-contained `bin\stackbroom.exe` (about 3 MB). Copy it
@@ -95,7 +105,7 @@ stackbroom help              Show help
 
 | Flag | Applies to | Meaning |
 | --- | --- | --- |
-| `--json` | scan, plan | Emit structured JSON (`schemaVersion` 2) |
+| `--json` | scan, plan | Emit structured JSON (`schemaVersion` 3) |
 | `--top N` | scan | How many memory-heavy processes to list (default 8) |
 | `--timeout DURATION` | scan, plan | Limit for **each** external command (default `20s`) |
 | `--skip-docker` | scan, plan | Do not query Docker at all |
@@ -110,10 +120,11 @@ could not read.
 
 ### Example: a real scan
 
-Genuine output from v0.1.0 (layout unchanged through v0.1.2 apart from the
-"estimate" label and the output-policy note) on a Windows 10 development machine
-on 27 October 2026 (Docker Desktop 29.4.0 running, one WSL2 distribution), with
-some rows and project names shortened for readability:
+Genuine output from v0.1.0 (historical; v0.2.0 adds a `TCP LISTENERS` section
+between `TOP MEMORY CONSUMERS` and `DOCKER`, and the process detail now says
+`requests`/`listening` instead of `port`) on a Windows 10 development machine on
+27 October 2026 (Docker Desktop 29.4.0 running, one WSL2 distribution), with some
+rows and project names shortened for readability:
 
 ```
 stackbroom 0.1.0 - read-only scan
@@ -201,11 +212,11 @@ Windows and Program Files are deliberately excluded: a package's own
 | Measure | Source | Accuracy |
 | --- | --- | --- |
 | Process working set | `GetProcessMemoryInfo` (PSAPI), CIM fallback | Good. Working set is resident memory, not private bytes |
-| Process age | CIM `CreationDate` | Good when CIM is available |
+| Process age | `GetProcessTimes` creation time, CIM fallback | Good; the native value is immutable and is also the listener identity anchor |
 | Command line | CIM via PowerShell | Good for the current user; may be unavailable for protected processes |
 | Dev-server role | Command-line patterns | Deterministic but pattern-based; unrecognized servers stay `runtime` |
 | Requested port | Command-line flags | Explicit flags only; environment/config ports are unknown |
-| Port ownership | *not measured* | StackBroom does not inspect listening sockets in v0.1 |
+| Port ownership | `GetExtendedTcpTable` IPv4/IPv6 + `GetProcessTimes` identity check | Confirmed only when PID and native creation time match before/after sampling; otherwise inferred/unknown |
 | Docker sizes / reclaimable | `docker system df` | Docker's own estimate; total and reclaimable are different measures |
 | Container CPU / memory | `docker stats --no-stream` | Docker's own one-shot sample |
 | Per-container disk size | *not measured* | Unknown |
@@ -220,6 +231,7 @@ gofmt -l .                # should print nothing
 go vet ./...
 go test ./...             # unit tests only; no live processes, Docker or WSL
 go test ./internal/winproc -run TestLive -v   # after setting STACKBROOM_LIVE=1
+go test ./internal/netstat -run TestLive -v   # after setting STACKBROOM_LIVE_NETSTAT=1
 
 # Intentional CLI layout change only:
 go test ./internal/cli -run TestGolden -update
@@ -237,6 +249,7 @@ internal/model/      Shared JSON/data types (no behaviour)
 internal/winproc/    Windows process enumeration and classification
 internal/project/    Project association heuristics
 internal/docker/     Docker CLI inspection and parsers
+internal/netstat/    TCP listener table reader and row parsers
 internal/wsl/        WSL inspection and parsers
 internal/wintext/    UTF-16/UTF-8 console decoding
 internal/analysis/   Summaries, duplicate suspects, recommendations
@@ -279,14 +292,24 @@ Saved JSON contains local paths and, in diagnostics mode, command detail; treat 
 as sensitive either way. See [docs/JSON-SCHEMA.md](docs/JSON-SCHEMA.md) for the
 full privacy contract.
 
-## Known limitations (v0.1.2)
+## Known limitations (v0.2.0)
 
-- Port-based duplicate detection uses requested ports from command lines, not the
-  actual listening socket. Two processes may request the same port while only one
-  is bound. Ownership measurement is designed but not implemented
-  ([docs/V0.2-TCP-OWNERSHIP.md](docs/V0.2-TCP-OWNERSHIP.md)).
+- Listener ownership is `confirmed` only when a PID's native creation time
+  matched before and after sampling. Protected processes (including some system
+  services) remain `inferred`; their PID reuse is not ruled out.
+- Windows exposes PIDs but not process creation time in the TCP table, so
+  ownership depends on the separate `GetProcessTimes` query. If a process exits
+  or the PID is reused between samples, the listener is reported as `unknown`;
+  StackBroom does not claim why it disappeared.
+- A missing listener means "not observed", not "failed to bind". The effective
+  port may come from config or environment variables that StackBroom cannot see.
+- TCP only. UDP ownership, remote hosts, firewall state and port scanning are not
+  inspected.
 - Servers started without a recognisable command line (for example through a
-  wrapper script) stay classified as `runtime`.
+  wrapper script) stay classified as `runtime` and appear in the text listener
+  table only when their port was requested by a recognised development process.
+- Docker remote named pipes are unsupported by design; remote daemons require
+  `tcp` or `ssh` with `--allow-remote-docker`.
 - WSL per-distribution memory and Docker per-container sizes are not measured.
 - Localized WSL state names are preserved verbatim; only English states are
   normalised, so a non-English state may not be counted as "Running".
@@ -294,8 +317,9 @@ full privacy contract.
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md). The next milestone is verifying which
-process actually owns a listening port before calling anything a duplicate.
+See [docs/ROADMAP.md](docs/ROADMAP.md). v0.2.0 verifies listener ownership before
+calling anything a duplicate. The next candidate is measured process activity over
+a short sample window, presented as an observation rather than an "idle" verdict.
 
 ## Licence
 

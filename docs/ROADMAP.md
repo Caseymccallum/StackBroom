@@ -57,21 +57,26 @@ must not weaken the safety contract.
 - Add GitHub Actions once the owner's billing restriction is lifted; until then
   `scripts/build.ps1` is the release gate.
 
-## v0.2 -- port truth
+## v0.2.0 -- port truth (delivered)
 
-**Design:** [V0.2-TCP-OWNERSHIP.md](V0.2-TCP-OWNERSHIP.md). Design only; not
-implemented in v0.1.1.
+**Design:** [V0.2-TCP-OWNERSHIP.md](V0.2-TCP-OWNERSHIP.md).
 
 **Goal:** stop guessing which development server owns a port.
 
 - Read the TCP listener table through `GetExtendedTcpTable` (IPv4 and IPv6) and
   map listening ports to PIDs, read-only.
-- Report requested vs actually-bound ports per process.
-- Upgrade duplicate confidence when two processes cannot both be bound, and say
-  which PID holds the port.
-- Distinguish "server failed to bind and exited" from "server is running".
+- Report requested ports (`requestedPorts`) separately from observed listeners
+  (`listeningPorts`), per process and in a `network` section.
+- Verify listener ownership by PID **and native process creation time** captured
+  before and after sampling; otherwise `inferred` or `unknown`.
+- Duplicate recommendations cite observed sockets, the listening PID and the
+  requested-port evidence separately. Confidence rises only when two or more
+  listeners are verified; two command-line mentions never raise it.
+- Never infer failure: wording says a port "was not observed listening", not
+  that a process failed, crashed or exited.
+- JSON schema v3 with a documented `ports` → `requestedPorts` migration.
 
-**Acceptance:** duplicate recommendations cite the listening PID and the
+**Acceptance met:** duplicate recommendations cite verified listeners and
 requested-port evidence separately; no new mutating capability.
 
 ## v0.3 -- activity without assumptions

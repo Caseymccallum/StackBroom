@@ -4,6 +4,64 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [0.2.0] - 2026-10-27
+
+Read-only TCP listener truth. No cleanup capability was added; the command
+allowlist and Docker endpoint boundary are unchanged.
+
+### Added
+
+- **TCP listener discovery.** `GetExtendedTcpTable` is read for IPv4 and IPv6
+  listener rows, including wildcard and specific addresses, port, owning PID and
+  address family. No socket is created, no packet is sent and no elevation is
+  requested.
+- **`TCP LISTENERS` section.** The text report shows development-related sockets
+  (owned by a recognised development process or holding a port one requested)
+  with process, project and ownership. System services remain in `--json`.
+- **Requested vs observed ports.** Processes now carry `requestedPorts` from
+  command lines, `listeningPorts` from verified associations, and
+  `portOwnership`.
+- **PID-reuse detection.** Each process's native creation time is captured with
+  `GetProcessTimes`, then re-read for listener PIDs after sampling. Ownership is
+  `confirmed` only when both values match; otherwise `inferred` or `unknown`.
+- **Evidence-led duplicate recommendations.** Groups distinguish two verified
+  listeners, one listener plus a requester, no observed listener, a port held by
+  an unrelated process, and uncertain ownership. Listener rows are included in
+  `duplicateSuspects[].listeners`.
+- **JSON schema v3.** `docs/schema/v3.json` describes `network`, listener rows,
+  duplicate listener evidence and the renamed port fields. Version 2 remains
+  published for existing consumers.
+
+### Changed
+
+- `processes[].ports` is renamed to `processes[].requestedPorts`. This is a
+  breaking schema change with documented migration steps.
+- Duplicate confidence no longer rises because two command lines mention the same
+  port. It rises only for verified listener observations, and still describes the
+  detected facts, not the safety of stopping anything.
+- Recommendation wording no longer says "only one process can listen" or implies
+  a failed bind. A missing listener is reported as "not observed", with the
+  possible reasons kept open.
+- Start times now prefer the native Windows creation time for every process; CIM
+  remains a display fallback and never confirms listener ownership.
+
+### Privacy
+
+- Listener process/project names and warnings pass through the same redaction
+  policy as process names, evidence and recommendations. No command lines are
+  added to listener or duplicate evidence fields.
+
+### Fixed during implementation
+
+- The Windows TCP table can return a buffer much larger than `4 + count*rowSize`
+  when the table shrinks between calls (8-248 bytes for IPv4, up to 1,744 for IPv6
+  observed live). Parsing uses the declared count and derived ABI offsets, caps
+  allocation and row counts, and ignores trailing allocation slack.
+- Ownership warnings are summarised per scan instead of repeating once per IPv4
+  and IPv6 row.
+
+[0.2.0]: https://github.com/Caseymccallum/StackBroom/compare/v0.1.2...v0.2.0
+
 ## [0.1.2] - 2026-10-27
 
 Final Docker boundary hardening from independent review of v0.1.1. No new product

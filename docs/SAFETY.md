@@ -1,12 +1,12 @@
 # Safety, security and limitations
 
-StackBroom v0.1 is **read-only**. This document states the safety contract, how
+StackBroom v0.2 is **read-only**. This document states the safety contract, how
 it is enforced, what the measurements mean, and what a future cleanup feature
 would require before it could exist.
 
-## The v0.1 safety contract
+## The v0.2 safety contract
 
-StackBroom v0.1 must not, and cannot:
+StackBroom v0.2 must not, and cannot:
 
 - kill, suspend or signal a process;
 - stop, start, restart, remove or pause a Docker container;
@@ -31,8 +31,11 @@ The CLI has exactly two data commands: `scan` and `plan`. Both inspect and print
    concatenated into a command string, so shell metacharacters are inert.
 4. **Read-only Windows APIs.** Process inspection uses `CreateToolhelp32Snapshot`,
    `OpenProcess` with `PROCESS_QUERY_LIMITED_INFORMATION`,
-   `QueryFullProcessImageNameW` and `GetProcessMemoryInfo`. No process-termination
-   or thread-injection API is imported.
+   `QueryFullProcessImageNameW`, `GetProcessTimes` and `GetProcessMemoryInfo`.
+   Listener inspection uses `GetExtendedTcpTable` with
+   `TCP_TABLE_OWNER_PID_LISTENER`. No socket is opened, no packet is sent, no
+   firewall rule is read or changed, and no process-termination or
+   thread-injection API is imported. No elevation is requested.
 5. **Tests assert the property.** Docker and WSL collector tests record every
    invocation and fail if a mutating verb (`prune`, `rm`, `stop`, `kill`, `start`,
    `--terminate`, `--exec`) appears. Recommendation tests fail if any text implies
@@ -174,7 +177,7 @@ Risk is derived from the operation, not from how much space it frees.
 
 ## What a future cleanup feature would require
 
-Cleanup is **not** part of v0.1 and must not be added without a separate safety
+Cleanup is **not** part of v0.2 and must not be added without a separate safety
 review. A future implementation should, at minimum:
 
 1. Present a specific action with its exact consequence and the evidence.
@@ -246,6 +249,39 @@ and `--allow-remote-docker`; no daemon command is issued.
 endpoint, adds a warning to the output and sets `status.remoteApproved`. It does
 not enable any mutating command, because none exist.
 
+## What TCP listener evidence proves
+
+A listener row proves that, at the sample moment, Windows had a TCP socket in the
+LISTEN state with that local address, port and owning PID. It does **not** prove:
+
+- that the owning process is a development server (that comes from process
+  classification);
+- that a process requesting the same port in its command line is listening;
+- that either process is redundant, idle or safe to stop;
+- why a requested port has no listener. It may be overridden by config or an
+  environment variable, may not have started yet, or may be unable to bind.
+
+Ownership levels:
+
+| Level | Meaning |
+| --- | --- |
+| `confirmed` | The PID was in the process snapshot and its native creation time matched when re-read after the TCP sample. |
+| `inferred` | The PID matched by number, but a creation time was unavailable or could not be re-read. PID reuse was not ruled out. |
+| `unknown` | The PID was absent from the snapshot, had no usable PID, or changed identity. The listener is reported without a process/project association. |
+
+An `unknown` or `inferred` owner never means the process exited, crashed or
+failed. Missing listeners are described as "not observed", not as failures.
+
+Wildcard addresses (`0.0.0.0`, `::`) are local bindings on all interfaces, not
+remote endpoints. IPv4 and IPv6 tables are independent; one can fail while the
+other succeeds, and the result reports each family separately. UDP is not
+inspected. No remote host is queried.
+
+The process snapshot and the TCP table are sampled at different moments. A
+listener can disappear or appear between them, and a PID can be reused. StackBroom
+keeps both timestamps and the race limitation explicit rather than asserting a
+causal story.
+
 ## Output privacy and redaction
 
 Command lines are inspection input, not output. They routinely contain tokens,
@@ -257,8 +293,12 @@ passwords, connection strings, usernames and private paths.
 | `--diagnostics` | present, secrets masked, paths tokenised | same | masked |
 
 The same redaction is applied to project evidence, duplicate evidence,
-recommendation text, subject detail and scan warnings — not just the process
-table — because evidence is assembled from observed strings. Diagnostics prints a
+recommendation text, subject detail, listener process/project names and scan
+warnings — not just the process table — because evidence is assembled from
+observed strings. Listener rows never include command lines. Local socket
+addresses and ports are reported as observations; they are not secrets, but they
+can reveal local network layout, so JSON output should still be handled as
+sensitive. Diagnostics prints a
 warning to stderr and adds one to `warnings`.
 
 Masking covers sensitive flag values, sensitive `NAME=value` assignments, URL

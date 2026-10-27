@@ -1,11 +1,11 @@
 # StackBroom architecture
 
-Status: v0.1.0 (read-only). This document describes what exists, not what is
+Status: v0.2.0 (read-only). This document describes what exists, not what is
 planned. Plans are in [ROADMAP.md](ROADMAP.md).
 
 ## Design principles
 
-1. **Observation before action.** v0.1 has no cleanup code path at all. Safety is
+1. **Observation before action.** v0.2 has no cleanup code path at all. Safety is
    structural, not a flag.
 2. **Evidence over inference.** A project association needs a manifest on disk and
    a process path inside it. Age, memory use and "looks idle" are never treated as
@@ -27,12 +27,13 @@ planned. Plans are in [ROADMAP.md](ROADMAP.md).
                      internal/cli (commands, rendering)
                                   |
                      internal/scan (orchestration, defaults)
-             +--------------------+--------------------+
-             |                    |                    |
-   internal/winproc       internal/docker       internal/wsl
-   (processes, CIM)       (docker CLI)          (wsl.exe)
-             |                    |                    |
-             +--------------------+--------------------+
+             +--------------------+--------------------+--------------------+
+             |                    |                    |                    |
+   internal/winproc       internal/netstat      internal/docker       internal/wsl
+   (processes, CIM,       (GetExtendedTcpTable  (docker CLI)          (wsl.exe)
+    creation time)        IPv4 + IPv6)
+             |                    |                    |                    |
+             +--------------------+--------------------+--------------------+
                                   |
                         internal/analysis
               (summary, duplicate suspects, recommendations)
@@ -52,9 +53,10 @@ never import `cli`; `cli` never imports collector internals.
 
 | Package | Responsibility | Notable constraints |
 | --- | --- | --- |
-| `model` | Data types and the JSON contract (`schemaVersion` 1) | Pure data; no I/O |
+| `model` | Data types and the JSON contract (`schemaVersion` 3) | Pure data; no I/O |
 | `run` | Execute an external command with a hard timeout | Argument vector only; no shell |
-| `winproc` | Enumerate processes, read memory and image paths, parse CIM command lines, classify runtimes and dev servers | Syscalls isolated in `*_windows.go`; parsers platform-neutral |
+| `winproc` | Enumerate processes, read memory/image paths/creation times, parse CIM command lines, classify runtimes and dev servers | Syscalls isolated in `*_windows.go`; parsers platform-neutral |
+| `netstat` | Read IPv4/IPv6 TCP listener tables and decode rows | `GetExtendedTcpTable` only in `*_windows.go`; parser and availability policy platform-neutral; no socket or packet |
 | `project` | Turn path evidence into a project association with a confidence level | Requires an on-disk manifest; ignores package caches |
 | `docker` | Query the Docker CLI and parse containers, stats, disk usage and images | Read-only subcommands only; JSON-lines parsers with table fallbacks |
 | `wsl` | List distributions and decode WSL console output | Only `wsl.exe --list --verbose` |
@@ -181,20 +183,28 @@ tell "omitted" from "not observed". See [JSON-SCHEMA.md](JSON-SCHEMA.md).
 ## JSON contract
 
 `scan --json` emits a `Snapshot`; `plan --json` emits a `PlanDocument`. Both carry
-`schemaVersion: "2"` and `readOnly: true`. Version 2 omits command lines by
-default, adds `redaction` metadata, Docker endpoint fields, independent reclaim row
-counts, per-stage `timings` and WSL warnings. The plan document also carries
-`executesCleanup: false`.
+`schemaVersion: "3"` and `readOnly: true`. Version 3 adds `network` listener
+observations, separates `requestedPorts` from `listeningPorts`, adds
+`portOwnership`, duplicate listener evidence and `timings.networkMs`. It retains
+version 2's omitted command lines, redaction metadata, Docker endpoint fields,
+independent reclaim row counts, per-stage timings and WSL warnings. The plan
+document also carries `executesCleanup: false`.
 
 Fields that could not be measured carry an explicit `known` boolean next to the
 value (for example `memoryKnown`, `dockerTotalKnown`), and partial Docker totals
-report how many categories were readable. The machine-readable schema lives in
-`docs/schema/v2.json` and is checked by `internal/model/schema_test.go`.
+report how many categories were readable. `network.available`, `ipv4` and `ipv6`
+make partial listener availability explicit. The machine-readable schema lives
+in `docs/schema/v3.json`; `v2.json` is retained for older consumers, and
+`internal/model/schema_test.go` checks both.
 
 ## Testing strategy
 
 * Parsers are tested with deterministic fixtures: captured Docker JSON, table
-  output, WSL UTF-16 bytes, CIM JSON and synthetic `PROCESSENTRY32W` buffers.
+  output, WSL UTF-16 bytes, CIM JSON, synthetic `PROCESSENTRY32W` buffers and
+  synthetic `MIB_TCPROW_OWNER_PID` / `MIB_TCP6ROW_OWNER_PID` tables.
+* Listener association is tested with fake process snapshots, fake creation
+  times and fake identity checks: confirmed, inferred, PID reuse, missing PID and
+  re-read failure. Ordinary tests never enumerate live sockets.
 * Collectors are tested with fake `run.Runner` implementations that record every
   invocation. Tests assert that no mutating command (`prune`, `rm`, `stop`,
   `kill`, `start`) is ever issued.
@@ -219,7 +229,10 @@ report how many categories were readable. The machine-readable schema lives in
 | Stdlib only | No supply-chain or licence surface; trivial builds | Manual Win32 bindings |
 | PowerShell/CIM for command lines | Reading the PEB would need `PROCESS_VM_READ` and fragile 32/64-bit handling | ~1.5 s per scan; PowerShell dependency |
 | Toolhelp32 + PSAPI for memory | Fast, no elevation, works for most processes | Some processes report `Unknown` |
-| No socket inspection in v0.1 | Keeps the milestone small and avoids another syscall surface | Duplicate detection uses requested ports, not listening ports |
+| `GetExtendedTcpTable` for listeners | Kernel state, no socket or packet; owner PID is included | Some processes/protected rows cannot be identity-verified |
+| Native creation time for identity | `GetProcessTimes` is immutable and independent of CIM formatting | One extra query per process; protected processes stay `inferred` |
+| Listener rows are never collapsed | One port can have IPv4/IPv6/wildcard/specific binds and several owners | Larger JSON and a filtered text table |
+| `ports` → `requestedPorts` in schema v3 | Makes the request/listener distinction explicit and prevents misuse | Breaking rename with a migration note |
 | ASCII output | Survives Windows code pages and PowerShell redirection | No colour or box drawing |
 | Compose label for container projects | Docker's own metadata is stronger than path heuristics | Requires Compose-labelled containers |
 | Refuse non-local Docker endpoints by default | A configured remote daemon must never be queried silently | Loopback TCP users must pass `--allow-remote-docker` |
