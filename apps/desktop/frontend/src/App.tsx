@@ -85,7 +85,12 @@ export default function App() {
       autoRefreshSeconds: 0,
       showDeveloperTools: true,
     });
-  }, [desktop.appInfo?.preview, desktop.appInfo?.previewTheme]);
+    const screen = desktop.appInfo.previewScreen as NavKey | undefined;
+    if (screen && VALID_NAV.includes(screen)) {
+      setActive(screen);
+      window.history.replaceState(null, "", `#${screen}`);
+    }
+  }, [desktop.appInfo?.preview, desktop.appInfo?.previewTheme, desktop.appInfo?.previewScreen]);
 
   useEffect(() => {
     const onHashChange = () => setActive(navFromHash());

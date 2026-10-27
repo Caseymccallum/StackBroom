@@ -16,6 +16,7 @@ type AppInfo struct {
 	Limitations   []string `json:"limitations"`
 	Preview       bool     `json:"preview,omitempty"`
 	PreviewTheme  string   `json:"previewTheme,omitempty"`
+	PreviewScreen string   `json:"previewScreen,omitempty"`
 }
 
 type QuickResult struct {

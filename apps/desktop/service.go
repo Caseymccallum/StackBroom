@@ -48,10 +48,15 @@ func NewDesktopService() *DesktopService {
 func (s *DesktopService) GetAppInfo() AppInfo {
 	preview := os.Getenv("STACKBROOM_PREVIEW") == "1"
 	previewTheme := ""
+	previewScreen := ""
 	if preview {
 		previewTheme = os.Getenv("STACKBROOM_PREVIEW_THEME")
 		if previewTheme != "light" {
 			previewTheme = "dark"
+		}
+		switch os.Getenv("STACKBROOM_PREVIEW_SCREEN") {
+		case "overview", "processes", "storage", "developer", "settings":
+			previewScreen = os.Getenv("STACKBROOM_PREVIEW_SCREEN")
 		}
 	}
 	return AppInfo{
@@ -70,8 +75,9 @@ func (s *DesktopService) GetAppInfo() AppInfo {
 			"Storage shows volume capacity only. It does not claim that used space is safely reclaimable.",
 			"No AI provider is contacted in this milestone.",
 		},
-		Preview:      preview,
-		PreviewTheme: previewTheme,
+		Preview:       preview,
+		PreviewTheme:  previewTheme,
+		PreviewScreen: previewScreen,
 	}
 }
 

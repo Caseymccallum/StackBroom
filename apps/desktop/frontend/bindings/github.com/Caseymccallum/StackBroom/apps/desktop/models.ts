@@ -11,6 +11,7 @@ export interface AppInfo {
     "limitations": string[] | null;
     "preview"?: boolean;
     "previewTheme"?: string;
+    "previewScreen"?: string;
 }
 
 export interface ContainerRow {
