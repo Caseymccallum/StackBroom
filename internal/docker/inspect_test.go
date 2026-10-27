@@ -15,11 +15,27 @@ type fakeRunner struct {
 	calls   []string
 }
 
+// localContextJSON is the shape `docker context inspect` returns for a local
+// Docker Desktop context.
+const localContextJSON = `[{"Name":"desktop-linux","Description":"Docker Desktop","Endpoints":{"docker":{"Host":"npipe:////./pipe/dockerDesktopLinuxEngine"}}}]`
+
 func newFakeRunner(results map[string]run.Result) *fakeRunner {
-	if results == nil {
-		results = map[string]run.Result{}
+	merged := map[string]run.Result{
+		"context show":                  {Stdout: "desktop-linux\n"},
+		"context inspect desktop-linux": {Stdout: localContextJSON},
 	}
-	return &fakeRunner{results: results}
+	for key, value := range results {
+		merged[key] = value
+	}
+	return &fakeRunner{results: merged}
+}
+
+// envLookup returns a lookup function backed by a map, for tests.
+func envLookup(values map[string]string) func(string) (string, bool) {
+	return func(key string) (string, bool) {
+		value, ok := values[key]
+		return value, ok
+	}
 }
 
 func (f *fakeRunner) Run(ctx context.Context, name string, args ...string) run.Result {

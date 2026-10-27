@@ -3,13 +3,20 @@ package model
 import "strings"
 
 // DockerStatus reports whether the Docker CLI and daemon could be queried.
-// Available is false when Docker is absent or its daemon is unreachable; that
-// is a normal, non-fatal outcome for StackBroom.
+// Available is false when Docker is absent, its daemon is unreachable, or the
+// configured endpoint was refused because it is not a local IPC channel.
 type DockerStatus struct {
 	Available     bool   `json:"available"`
 	Reason        string `json:"reason,omitempty"`
 	ServerVersion string `json:"serverVersion,omitempty"`
 	Context       string `json:"context,omitempty"`
+	// Endpoint is the resolved daemon endpoint with credentials removed.
+	Endpoint string `json:"endpoint,omitempty"`
+	// EndpointLocal is true only for local IPC channels (npipe, unix, fd).
+	EndpointLocal bool `json:"endpointLocal"`
+	// RemoteApproved is true when a network endpoint was inspected because the
+	// user passed --allow-remote-docker.
+	RemoteApproved bool `json:"remoteApproved,omitempty"`
 }
 
 // DockerContainer is a container observed through `docker ps -a`.

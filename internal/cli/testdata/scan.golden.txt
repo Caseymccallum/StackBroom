@@ -1,0 +1,58 @@
+stackbroom 0.1.0-test - read-only scan
+Generated 2026-10-27 12:00:00 in 1.2s
+Host windows/amd64 (TEST-PC) - memory 8.00 GB used of 16.00 GB, 8.00 GB available
+
+RESOURCES
+  Development processes  2 (1 servers)                   150 MB reported (partial)
+  Top memory consumers   1 shown                         150 MB in listed processes
+  Docker                 15.89 GB on disk                12.12 GB reclaimable (estimate)
+  WSL2 utility VM        473 MB host-side (approximate)  1 of 1 distributions running
+
+DEVELOPMENT PROCESSES (2)
+  PID  RUNTIME  CATEGORY    PROJECT           MEMORY   AGE      DETAIL
+  100  node     dev-server  demo (confirmed)  150 MB   9h00m    vite | port 5173
+  300  python   dev-tool    unknown           Unknown  Unknown  no recognisable role
+
+TOP MEMORY CONSUMERS
+  PID  PROCESS   MEMORY  CATEGORY    PROJECT
+  100  node.exe  150 MB  dev-server  demo
+
+DOCKER
+  Status: available (server 29.4.0, context desktop-linux)
+  Containers: 0 running, 1 stopped
+  Storage (Docker's own report; total and reclaimable are different measures):
+    TYPE         TOTAL  ACTIVE  SIZE     RECLAIMABLE
+    Images       25     5       15.64GB  12.41GB (79%)
+    Build Cache  21     0       630.1MB  42.68MB
+  Stopped containers:
+    old-db - Exited (0) 5 months ago (compose: demo)
+  Largest images:
+    public.ecr.aws/supabase/studio:2026.10.19 - 1.75GB, not referenced by a container
+
+WSL
+  DISTRIBUTION  STATE    VERSION  DEFAULT
+  Ubuntu        Running  2        yes
+  Host-side WSL2 VM memory: 473 MB (approximate; vmmem covers all distributions)
+  Per-distribution memory: Unknown (StackBroom does not run commands inside distributions)
+
+POTENTIAL DUPLICATES (1)
+  node on port 5173 - PIDs 100, 200 (inferred confidence)
+    PID 100 (node, vite) requests port 5173
+
+REVIEW OPPORTUNITIES
+  1. Two node development servers appear to request port 5173  [risk: medium, confidence: inferred]
+  Run `stackbroom plan` for the evidence and review steps behind each suggestion.
+  Nothing has been stopped, deleted or pruned.
+
+NOTES AND LIMITATIONS
+  - StackBroom is read-only: no process, container, image, volume or WSL distribution was changed.
+  - Process memory is the Windows working set. Summed working sets can count shared pages more than once,
+    so they are not unique memory; Unknown is never estimated.
+  - Docker totals and reclaimable sizes are separate Docker reports. Reclaimable is Docker's estimate of what
+    clean-up could free, not space already freed and not a guarantee.
+  - WSL memory is the host-side utility VM figure; per-distribution use is not measurable from outside.
+  - Project associations are evidence-based: "confirmed" needs a manifest on disk and a referenced path inside it.
+  - Output policy: mode=default; command lines omitted; paths tokenised as %USERPROFILE%; secrets masked.
+  - Scan notes:
+      Docker: example note.
+

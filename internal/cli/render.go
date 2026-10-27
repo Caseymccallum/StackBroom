@@ -75,7 +75,7 @@ func renderResourceOverview(w io.Writer, s model.Snapshot) {
 	case sum.DockerSizeRowsTotal == 0:
 		fmt.Fprintf(tw, "  Docker\tavailable\tstorage usage unavailable\n")
 	default:
-		fmt.Fprintf(tw, "  Docker\t%s on disk\t%s reclaimable\n",
+		fmt.Fprintf(tw, "  Docker\t%s on disk\t%s reclaimable (estimate)\n",
 			units.Bytes(sum.DockerTotalBytes), units.Bytes(sum.DockerReclaimableBytes))
 	}
 

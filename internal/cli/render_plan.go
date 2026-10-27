@@ -15,7 +15,7 @@ func renderPlan(w io.Writer, s model.Snapshot) {
 	fmt.Fprintln(w, "Read-only: StackBroom inspected the system and will not act on anything below.")
 	fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "Context: %d development processes (%d servers), %s reported; Docker uses %s with %s reclaimable.\n",
+	fmt.Fprintf(w, "Context: %d development processes (%d servers), %s reported; Docker uses %s with %s Docker-estimated reclaimable.\n",
 		s.Summary.DevProcessCount,
 		s.Summary.DevServerCount,
 		units.Bytes(s.Summary.DevMemoryBytes),
@@ -51,6 +51,13 @@ func renderPlan(w io.Writer, s model.Snapshot) {
 		if len(rec.Subjects) > 0 {
 			fmt.Fprintf(w, "   Applies to: %s\n", sanitize(subjectText(rec.Subjects)))
 		}
+		fmt.Fprintln(w)
+	}
+
+	if s.Redaction != nil {
+		fmt.Fprintln(w, "OUTPUT POLICY")
+		fmt.Fprintf(w, "  Command lines: %s. Paths tokenised as %%USERPROFILE%%. Secrets masked. Mode: %s.\n",
+			sanitize(s.Redaction.CommandLines), sanitize(s.Redaction.Mode))
 		fmt.Fprintln(w)
 	}
 

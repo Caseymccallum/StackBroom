@@ -44,9 +44,13 @@ type Summary struct {
 	DockerReclaimableBytes uint64 `json:"dockerReclaimableBytes"`
 	DockerReclaimKnown     bool   `json:"dockerReclaimableKnown"`
 	// Row counts make partial Docker storage reports explicit instead of
-	// silently presenting a partial sum as a total.
-	DockerSizeRowsKnown int `json:"dockerSizeRowsKnown"`
-	DockerSizeRowsTotal int `json:"dockerSizeRowsTotal"`
+	// silently presenting a partial sum as a total. Size and reclaimable
+	// completeness are tracked separately because Docker can report one without
+	// the other.
+	DockerSizeRowsKnown    int `json:"dockerSizeRowsKnown"`
+	DockerSizeRowsTotal    int `json:"dockerSizeRowsTotal"`
+	DockerReclaimRowsKnown int `json:"dockerReclaimRowsKnown"`
+	DockerReclaimRowsTotal int `json:"dockerReclaimRowsTotal"`
 
 	WSLRunningDistributions int    `json:"wslRunningDistributions"`
 	WSLVMMemoryBytes        uint64 `json:"wslVmMemoryBytes"`
@@ -113,13 +117,39 @@ type Recommendation struct {
 	Subjects        []Subject  `json:"subjects"`
 }
 
+// RedactionInfo tells consumers exactly how the output was reduced. It is
+// always present in CLI output so a reader cannot mistake omitted data for
+// missing data.
+type RedactionInfo struct {
+	// Mode is "default" or "diagnostics".
+	Mode string `json:"mode"`
+	// CommandLines is "omitted" or "redacted".
+	CommandLines string `json:"commandLines"`
+	// Paths is "user-profile-tokenised".
+	Paths string `json:"paths"`
+	// Secrets is "masked".
+	Secrets string `json:"secrets"`
+}
+
+// Timings records how long each stage of a scan took. It exists so performance
+// claims can be measured rather than guessed; values are zero when a stage was
+// skipped or a fake clock was injected.
+type Timings struct {
+	ProcessesMS int64 `json:"processesMs"`
+	DockerMS    int64 `json:"dockerMs"`
+	WSLMS       int64 `json:"wslMs"`
+	AnalysisMS  int64 `json:"analysisMs"`
+}
+
 // Snapshot is the complete result of one StackBroom scan.
 type Snapshot struct {
 	SchemaVersion   string           `json:"schemaVersion"`
 	ReadOnly        bool             `json:"readOnly"`
+	Redaction       *RedactionInfo   `json:"redaction,omitempty"`
 	Tool            Tool             `json:"tool"`
 	GeneratedAt     time.Time        `json:"generatedAt"`
 	DurationMS      int64            `json:"durationMs"`
+	Timings         *Timings         `json:"timings,omitempty"`
 	Host            Host             `json:"host"`
 	Processes       []Process        `json:"processes"`
 	Docker          DockerInfo       `json:"docker"`
@@ -135,6 +165,7 @@ type Snapshot struct {
 type PlanDocument struct {
 	SchemaVersion   string           `json:"schemaVersion"`
 	ReadOnly        bool             `json:"readOnly"`
+	Redaction       *RedactionInfo   `json:"redaction,omitempty"`
 	Executes        bool             `json:"executesCleanup"`
 	Tool            Tool             `json:"tool"`
 	GeneratedAt     time.Time        `json:"generatedAt"`

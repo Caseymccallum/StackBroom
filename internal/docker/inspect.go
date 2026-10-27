@@ -24,6 +24,13 @@ type Inspector struct {
 	Binary string
 	// MaxImages overrides DefaultMaxImages when positive.
 	MaxImages int
+	// AllowRemote permits inspecting a daemon that is not on a local IPC
+	// channel. It defaults to false so a configured remote endpoint is never
+	// contacted silently.
+	AllowRemote bool
+	// LookupEnv reads environment variables. Tests inject a fake; nil means
+	// os.LookupEnv.
+	LookupEnv func(string) (string, bool)
 }
 
 // Collect gathers container, storage and, for running containers, usage data.
@@ -31,6 +38,10 @@ type Inspector struct {
 // Every failure mode (CLI missing, daemon stopped, timeout, unparsable output)
 // is reported inside the returned struct. Collect never returns an error and
 // never changes Docker state.
+//
+// The daemon endpoint is resolved first, without contacting it. Unless the
+// endpoint is a local IPC channel (or the caller explicitly allowed a remote
+// endpoint), no daemon command is issued.
 func (i Inspector) Collect(ctx context.Context) model.DockerInfo {
 	binary := i.Binary
 	if binary == "" {
@@ -47,23 +58,46 @@ func (i Inspector) Collect(ctx context.Context) model.DockerInfo {
 		Images:     []model.DockerImage{},
 	}
 
-	version := runner.Run(ctx, binary, "version", "--format", "{{.Server.Version}}")
-	if !version.OK() {
-		info.Status = model.DockerStatus{Available: false, Reason: describeFailure(version)}
+	target := ResolveTarget(ctx, runner, binary, i.LookupEnv)
+	info.Status = model.DockerStatus{
+		Context:       target.Context,
+		Endpoint:      target.Display,
+		EndpointLocal: target.Local,
+	}
+
+	if !target.Local && !i.AllowRemote {
+		info.Status.Available = false
+		if target.Source == SourceUnknown {
+			info.Status.Reason = target.Reason + ". StackBroom did not contact Docker."
+		} else {
+			info.Status.Reason = "Docker endpoint refused: " + target.Reason +
+				". StackBroom did not contact it. Re-run with --allow-remote-docker to inspect it read-only."
+		}
 		return info
 	}
-	info.Status = model.DockerStatus{
-		Available:     true,
-		ServerVersion: strings.TrimSpace(version.Stdout),
+	if !target.Local && i.AllowRemote {
+		info.Status.RemoteApproved = true
+		info.Warnings = append(info.Warnings,
+			"Remote Docker endpoint "+orUnknownEndpoint(target.Display)+
+				" was inspected with --allow-remote-docker; only read-only commands were issued.")
 	}
-	if res := runner.Run(ctx, binary, "context", "show"); res.OK() {
-		info.Status.Context = strings.TrimSpace(res.Stdout)
+
+	version := runner.Run(ctx, binary, "version", "--format", "{{.Server.Version}}")
+	if !version.OK() {
+		info.Status.Available = false
+		info.Status.Reason = describeFailure(version)
+		return info
 	}
+	info.Status.Available = true
+	info.Status.ServerVersion = strings.TrimSpace(version.Stdout)
 
 	if res := runner.Run(ctx, binary, "ps", "-a", "--no-trunc", "--format", "{{json .}}"); res.OK() {
 		containers, warnings := ParseContainerList(res.Stdout)
 		info.Containers = containers
 		info.Warnings = append(info.Warnings, warnings...)
+		if warning := truncationWarning("Container list", res); warning != "" {
+			info.Warnings = append(info.Warnings, warning)
+		}
 	} else {
 		info.Warnings = append(info.Warnings, "Container list unavailable: "+res.FailureReason())
 	}
@@ -75,6 +109,9 @@ func (i Inspector) Collect(ctx context.Context) model.DockerInfo {
 		if res.OK() {
 			stats, warnings := ParseStats(res.Stdout)
 			info.Warnings = append(info.Warnings, warnings...)
+			if warning := truncationWarning("Container stats", res); warning != "" {
+				info.Warnings = append(info.Warnings, warning)
+			}
 			for idx := range info.Containers {
 				c := &info.Containers[idx]
 				if !c.Running() {
@@ -108,6 +145,9 @@ func (i Inspector) collectDiskUsage(ctx context.Context, runner run.Runner, bina
 	if res := runner.Run(ctx, binary, "system", "df", "--format", "{{json .}}"); res.OK() {
 		rows, warnings := ParseDiskUsageJSON(res.Stdout)
 		info.Warnings = append(info.Warnings, warnings...)
+		if warning := truncationWarning("Docker storage report", res); warning != "" {
+			info.Warnings = append(info.Warnings, warning)
+		}
 		if len(rows) > 0 {
 			return rows
 		}
@@ -121,6 +161,9 @@ func (i Inspector) collectDiskUsage(ctx context.Context, runner run.Runner, bina
 	}
 	rows, warnings := ParseDiskUsageTable(res.Stdout)
 	info.Warnings = append(info.Warnings, warnings...)
+	if warning := truncationWarning("Docker storage report", res); warning != "" {
+		info.Warnings = append(info.Warnings, warning)
+	}
 	return rows
 }
 
@@ -132,6 +175,9 @@ func (i Inspector) collectImages(ctx context.Context, runner run.Runner, binary 
 	}
 	images, warnings := ParseImageList(res.Stdout)
 	info.Warnings = append(info.Warnings, warnings...)
+	if warning := truncationWarning("Docker image list", res); warning != "" {
+		info.Warnings = append(info.Warnings, warning)
+	}
 
 	for idx := range images {
 		for _, c := range info.Containers {
@@ -162,6 +208,15 @@ func (i Inspector) collectImages(ctx context.Context, runner run.Runner, binary 
 		info.ImagesTruncated = true
 	}
 	return images
+}
+
+// truncationWarning reports incomplete command output instead of letting a
+// truncated response look like a complete one.
+func truncationWarning(what string, res run.Result) string {
+	if !res.Truncated {
+		return ""
+	}
+	return what + " output exceeded the capture limit and was truncated; results may be incomplete"
 }
 
 // describeFailure turns a Docker CLI failure into a short explanation a

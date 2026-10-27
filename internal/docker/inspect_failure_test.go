@@ -27,8 +27,17 @@ func TestCollectDaemonUnreachableStopsImmediately(t *testing.T) {
 	if !strings.Contains(strings.ToLower(info.Status.Reason), "did not start") {
 		t.Errorf("reason should state Docker was not started: %q", info.Status.Reason)
 	}
-	if len(runner.calls) != 1 {
-		t.Errorf("expected a single probe, got %d calls: %v", len(runner.calls), runner.calls)
+	// Endpoint resolution (context show/inspect) is local and happens before the
+	// daemon probe. No other daemon command may follow the failed probe.
+	for _, call := range runner.calls {
+		for _, forbidden := range []string{" ps ", "stats", "system df", "image ls"} {
+			if strings.Contains(call, forbidden) {
+				t.Errorf("unexpected daemon command after failure: %s", call)
+			}
+		}
+	}
+	if last := runner.calls[len(runner.calls)-1]; !strings.Contains(last, "version") {
+		t.Errorf("last command was %q, want the version probe", last)
 	}
 }
 
@@ -74,6 +83,27 @@ func TestCollectMalformedOutputIsSurvivable(t *testing.T) {
 	}
 	if len(info.Warnings) < 3 {
 		t.Errorf("expected warnings for the failures, got %v", info.Warnings)
+	}
+}
+
+func TestCollectWarnsWhenOutputIsTruncated(t *testing.T) {
+	runner := newFakeRunner(map[string]run.Result{
+		"version --format {{.Server.Version}}": {Stdout: "29.4.0"},
+		"ps -a --no-trunc --format {{json .}}": {
+			Truncated: true,
+			Stdout:    `{"ID":"abc","Names":"db","State":"exited","Status":"Exited (0) 5 months ago"}` + "\n",
+		},
+	})
+	info := Inspector{Runner: runner}.Collect(context.Background())
+
+	found := false
+	for _, warning := range info.Warnings {
+		if strings.Contains(warning, "truncated") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no truncation warning: %v", info.Warnings)
 	}
 }
 

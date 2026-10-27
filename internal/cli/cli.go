@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Caseymccallum/StackBroom/internal/model"
+	"github.com/Caseymccallum/StackBroom/internal/privacy"
 	"github.com/Caseymccallum/StackBroom/internal/run"
 	"github.com/Caseymccallum/StackBroom/internal/scan"
 	"github.com/Caseymccallum/StackBroom/internal/version"
@@ -41,6 +42,10 @@ Flags for scan and plan:
   --timeout DURATION     Limit for each external command (default 20s)
   --skip-docker          Do not query Docker at all
   --skip-wsl             Do not query WSL at all
+  --allow-remote-docker  Permit a Docker endpoint that is not a local IPC
+                         channel (refused by default; still read-only)
+  --diagnostics          Include redacted command lines and paths. Secrets are
+                         masked, but the output may still be sensitive.
   --no-command-lines     Skip the PowerShell command-line lookup (faster,
                          but roles and projects cannot be identified)
 
@@ -56,6 +61,9 @@ type App struct {
 	Scan func(ctx context.Context, opts scan.Options) model.Snapshot
 	// BaseOptions are the scan defaults, overridable by flags.
 	BaseOptions scan.Options
+	// HomeDir overrides the profile path replaced by %USERPROFILE%. Tests use a
+	// synthetic value; empty means the current user's home.
+	HomeDir string
 }
 
 // New returns an App writing to out and errOut.
@@ -64,11 +72,13 @@ func New(out, errOut io.Writer) *App {
 }
 
 type commonFlags struct {
-	jsonOut        bool
-	timeout        time.Duration
-	skipDocker     bool
-	skipWSL        bool
-	noCommandLines bool
+	jsonOut           bool
+	timeout           time.Duration
+	skipDocker        bool
+	skipWSL           bool
+	noCommandLines    bool
+	allowRemoteDocker bool
+	diagnostics       bool
 }
 
 func addCommonFlags(fs *flag.FlagSet, c *commonFlags) {
@@ -77,6 +87,8 @@ func addCommonFlags(fs *flag.FlagSet, c *commonFlags) {
 	fs.BoolVar(&c.skipDocker, "skip-docker", false, "do not query Docker")
 	fs.BoolVar(&c.skipWSL, "skip-wsl", false, "do not query WSL")
 	fs.BoolVar(&c.noCommandLines, "no-command-lines", false, "skip the PowerShell command-line lookup")
+	fs.BoolVar(&c.allowRemoteDocker, "allow-remote-docker", false, "permit a non-local Docker endpoint")
+	fs.BoolVar(&c.diagnostics, "diagnostics", false, "include redacted command lines and paths")
 }
 
 func (a *App) scanOptions(c *commonFlags, top int) scan.Options {
@@ -85,6 +97,7 @@ func (a *App) scanOptions(c *commonFlags, top int) scan.Options {
 	opts.EnrichCommandLines = !c.noCommandLines
 	opts.SkipDocker = c.skipDocker
 	opts.SkipWSL = c.skipWSL
+	opts.AllowRemoteDocker = c.allowRemoteDocker
 	if top > 0 {
 		opts.TopN = top
 	}
@@ -96,6 +109,31 @@ func (a *App) run(ctx context.Context, opts scan.Options) model.Snapshot {
 		return a.Scan(ctx, opts)
 	}
 	return scan.New(opts).Run(ctx)
+}
+
+const diagnosticsWarning = "Diagnostics mode: command lines are redacted, not removed; the output may still contain sensitive local detail."
+
+func (a *App) privacyPolicy(diagnostics bool) privacy.Policy {
+	mode := privacy.ModeDefault
+	if diagnostics {
+		mode = privacy.ModeDiagnostics
+	}
+	policy := privacy.DefaultPolicy(mode)
+	if a.HomeDir != "" {
+		policy.UserProfile = a.HomeDir
+	}
+	return policy
+}
+
+// prepareOutput applies the privacy policy to a snapshot copy and announces
+// diagnostics mode on stderr.
+func (a *App) prepareOutput(snapshot model.Snapshot, diagnostics bool) model.Snapshot {
+	out := privacy.Apply(snapshot, a.privacyPolicy(diagnostics))
+	if diagnostics {
+		out.Warnings = append(out.Warnings, diagnosticsWarning)
+		fmt.Fprintln(a.Err, "stackbroom: diagnostics mode enabled; secrets are masked but the output may still be sensitive.")
+	}
+	return out
 }
 
 // Run executes one command and returns a process exit code.
@@ -132,7 +170,7 @@ func (a *App) runScan(ctx context.Context, args []string) int {
 		return ExitUsage
 	}
 
-	snapshot := a.run(ctx, a.scanOptions(&common, *top))
+	snapshot := a.prepareOutput(a.run(ctx, a.scanOptions(&common, *top)), common.diagnostics)
 
 	if common.jsonOut {
 		if err := writeJSON(a.Out, snapshot); err != nil {
@@ -154,12 +192,13 @@ func (a *App) runPlan(ctx context.Context, args []string) int {
 		return ExitUsage
 	}
 
-	snapshot := a.run(ctx, a.scanOptions(&common, 0))
+	snapshot := a.prepareOutput(a.run(ctx, a.scanOptions(&common, 0)), common.diagnostics)
 
 	if common.jsonOut {
 		doc := model.PlanDocument{
 			SchemaVersion:   model.SchemaVersion,
 			ReadOnly:        true,
+			Redaction:       snapshot.Redaction,
 			Executes:        false,
 			Tool:            snapshot.Tool,
 			GeneratedAt:     snapshot.GeneratedAt,

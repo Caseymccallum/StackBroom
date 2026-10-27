@@ -27,6 +27,16 @@ func renderDocker(w io.Writer, s model.Snapshot) {
 		status += ")"
 	}
 	fmt.Fprintf(w, "  Status: %s\n", status)
+	if d.Status.Endpoint != "" {
+		locality := "local IPC"
+		if !d.Status.EndpointLocal {
+			locality = "network"
+			if d.Status.RemoteApproved {
+				locality = "network, approved with --allow-remote-docker"
+			}
+		}
+		fmt.Fprintf(w, "  Endpoint: %s (%s)\n", sanitize(d.Status.Endpoint), locality)
+	}
 	fmt.Fprintf(w, "  Containers: %d running, %d stopped\n", d.RunningContainers(), d.StoppedContainers())
 
 	if len(d.DiskUsage) > 0 {

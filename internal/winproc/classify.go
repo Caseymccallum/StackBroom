@@ -19,6 +19,12 @@ var runtimeByExe = map[string]model.Runtime{
 	"pnpm":     model.RuntimeNode,
 	"yarn":     model.RuntimeNode,
 	"corepack": model.RuntimeNode,
+	// Version managers run Node tooling through their own executable.
+	"volta":  model.RuntimeNode,
+	"fnm":    model.RuntimeNode,
+	"nvm":    model.RuntimeNode,
+	"nodist": model.RuntimeNode,
+	"nvs":    model.RuntimeNode,
 
 	"go":    model.RuntimeGo,
 	"gofmt": model.RuntimeGo,
@@ -251,7 +257,7 @@ func packageScriptDev(names []string) string {
 			}
 		}
 		if len(rest) >= 1 {
-			if script := rest[0]; script == "dev" || strings.HasPrefix(script, "dev:") {
+			if script := rest[0]; script == "dev" || strings.HasPrefix(script, "dev:") || script == "start" {
 				return "package script: " + script
 			}
 		}

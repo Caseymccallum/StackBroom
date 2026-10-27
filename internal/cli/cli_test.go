@@ -15,7 +15,7 @@ import (
 func ptrU64(v uint64) *uint64 { return &v }
 
 func fixtureSnapshot() model.Snapshot {
-	generated := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	generated := time.Date(2026, 10, 27, 12, 0, 0, 0, time.Local)
 	started := generated.Add(-9 * time.Hour)
 	project := &model.ProjectRef{
 		Root: `C:\Web Apps\demo`, Name: "demo", Marker: "package.json",
@@ -273,7 +273,8 @@ func TestScanFlagsArePropagated(t *testing.T) {
 	}
 
 	code := app.Run(context.Background(), []string{
-		"scan", "--top", "3", "--timeout", "5s", "--skip-docker", "--skip-wsl", "--no-command-lines",
+		"scan", "--top", "3", "--timeout", "5s", "--skip-docker", "--skip-wsl",
+		"--no-command-lines", "--allow-remote-docker",
 	})
 	if code != ExitOK {
 		t.Fatalf("exit code = %d", code)
@@ -286,6 +287,9 @@ func TestScanFlagsArePropagated(t *testing.T) {
 	}
 	if !captured.SkipDocker || !captured.SkipWSL {
 		t.Errorf("skip flags not propagated: %+v", captured)
+	}
+	if !captured.AllowRemoteDocker {
+		t.Error("--allow-remote-docker was not propagated")
 	}
 	if captured.EnrichCommandLines {
 		t.Error("--no-command-lines did not disable enrichment")
@@ -332,5 +336,117 @@ func TestSanitizeTruncatesLongValues(t *testing.T) {
 	}
 	if !strings.HasSuffix(got, "...") {
 		t.Fatalf("truncated value has no marker: %q", got[len(got)-10:])
+	}
+}
+
+// sensitiveSnapshot adds command lines, paths and credentials to the standard
+// fixture so redaction can be tested end to end.
+func sensitiveSnapshot() model.Snapshot {
+	snapshot := fixtureSnapshot()
+	command := `node C:\Users\Casey\Web Apps\demo\server.js --password hunter2 --token=abc123`
+	snapshot.Processes[0].CommandLine = command
+	snapshot.Processes[0].ExePath = `C:\Users\Casey\AppData\Local\Programs\nodejs\node.exe`
+	snapshot.Processes[0].Project.Root = `C:\Users\Casey\Web Apps\demo`
+	snapshot.Processes[0].Project.Evidence = []string{`package.json found in C:\Users\Casey\Web Apps\demo`}
+	snapshot.Recommendations[0].Subjects[0].Detail = command
+	snapshot.Recommendations[0].Detected = `project at C:\Users\Casey\Web Apps\demo`
+	snapshot.Warnings = append(snapshot.Warnings, `token used: API_TOKEN=xyz789 in C:\Users\Casey\Web Apps\demo`)
+	return snapshot
+}
+
+func assertNoSensitiveText(t *testing.T, text string) {
+	t.Helper()
+	for _, forbidden := range []string{"hunter2", "abc123", "xyz789", "Casey"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("output contains %q:\n%s", forbidden, text)
+		}
+	}
+}
+
+func TestScanJSONOmitsCommandLinesByDefault(t *testing.T) {
+	app, out, _ := newTestApp(sensitiveSnapshot())
+	app.HomeDir = `C:\Users\Casey`
+	if code := app.Run(context.Background(), []string{"scan", "--json"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+
+	body := out.String()
+	assertNoSensitiveText(t, body)
+	if !strings.Contains(body, `"commandLineOmitted": true`) {
+		t.Errorf("commandLineOmitted marker missing:\n%s", body)
+	}
+
+	var got model.Snapshot
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if got.Redaction == nil || got.Redaction.Mode != "default" || got.Redaction.CommandLines != "omitted" {
+		t.Errorf("redaction = %+v", got.Redaction)
+	}
+	if got.Processes[0].CommandLine != "" {
+		t.Errorf("command line present: %q", got.Processes[0].CommandLine)
+	}
+	if got.Recommendations[0].Subjects[0].Detail != "" {
+		t.Errorf("subject detail present: %q", got.Recommendations[0].Subjects[0].Detail)
+	}
+}
+
+func TestScanDiagnosticsRedactsSecretsAndWarns(t *testing.T) {
+	app, out, errOut := newTestApp(sensitiveSnapshot())
+	app.HomeDir = `C:\Users\Casey`
+	if code := app.Run(context.Background(), []string{"scan", "--json", "--diagnostics"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+
+	body := out.String()
+	assertNoSensitiveText(t, body)
+	if !strings.Contains(body, "[REDACTED]") {
+		t.Error("diagnostics output has no redaction markers")
+	}
+	if !strings.Contains(body, "%USERPROFILE%") {
+		t.Error("diagnostics output did not tokenise the home directory")
+	}
+
+	var got model.Snapshot
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if got.Redaction == nil || got.Redaction.CommandLines != "redacted" {
+		t.Errorf("redaction = %+v", got.Redaction)
+	}
+	if got.Processes[0].CommandLine == "" {
+		t.Error("diagnostics omitted the command line entirely")
+	}
+	if !strings.Contains(errOut.String(), "diagnostics mode") {
+		t.Errorf("missing stderr warning: %q", errOut.String())
+	}
+}
+
+func TestPlanTextNeverPrintsRawCommandLines(t *testing.T) {
+	app, out, _ := newTestApp(sensitiveSnapshot())
+	app.HomeDir = `C:\Users\Casey`
+	if code := app.Run(context.Background(), []string{"plan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	text := out.String()
+	assertNoSensitiveText(t, text)
+	if !strings.Contains(text, "OUTPUT POLICY") {
+		t.Error("plan output does not state its output policy")
+	}
+	if !strings.Contains(text, "omitted") {
+		t.Errorf("plan output should say command lines are omitted:\n%s", text)
+	}
+}
+
+func TestScanTextStatesOutputPolicy(t *testing.T) {
+	app, out, _ := newTestApp(sensitiveSnapshot())
+	app.HomeDir = `C:\Users\Casey`
+	if code := app.Run(context.Background(), []string{"scan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	text := out.String()
+	assertNoSensitiveText(t, text)
+	if !strings.Contains(text, "Output policy") {
+		t.Error("scan notes do not state the output policy")
 	}
 }

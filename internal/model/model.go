@@ -9,7 +9,10 @@ import "time"
 
 // SchemaVersion identifies the JSON output contract. Bump it when a field is
 // removed, renamed or changed in meaning.
-const SchemaVersion = "1"
+//
+// Version 2 (v0.1.1) omits command lines by default and adds explicit redaction
+// metadata. Consumers must not assume commandLine is present.
+const SchemaVersion = "2"
 
 // Confidence describes how strongly an association is supported by evidence.
 //
@@ -74,6 +77,9 @@ type Process struct {
 
 	CommandLine      string `json:"commandLine,omitempty"`
 	CommandLineKnown bool   `json:"commandLineKnown"`
+	// CommandLineOmitted is true when a command line was observed but withheld
+	// from output by the privacy policy.
+	CommandLineOmitted bool `json:"commandLineOmitted,omitempty"`
 
 	// WorkingSetBytes is the process working set. Zero with MemoryKnown=false
 	// means the measurement was refused or unavailable; it is never estimated.

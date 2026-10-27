@@ -238,3 +238,97 @@ func TestExtractPortsIgnoresOutOfRangeValues(t *testing.T) {
 		t.Fatalf("extractPorts = %v, want %v", ports, want)
 	}
 }
+
+func TestClassifyPackageManagerWrappers(t *testing.T) {
+	tests := []classifyCase{
+		{
+			name:         "pnpm cjs shim",
+			exe:          "node.exe",
+			cmd:          `node C:\proj\node_modules\pnpm\bin\pnpm.cjs run dev -- --port 3000`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev",
+			wantPorts:    []int{3000},
+		},
+		{
+			name:         "yarn js shim",
+			exe:          "node.exe",
+			cmd:          `node C:\proj\node_modules\yarn\bin\yarn.js dev`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev",
+		},
+		{
+			name:         "corepack pnpm dev",
+			exe:          "node.exe",
+			cmd:          `node "C:\Program Files\nodejs\node_modules\corepack\dist\corepack.js" pnpm dev`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev",
+		},
+		{
+			name:         "volta run npm run dev",
+			exe:          "volta.exe",
+			cmd:          `volta run npm run dev`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev",
+		},
+		{
+			name:         "fnm exec npm run dev",
+			exe:          "fnm.exe",
+			cmd:          `fnm exec --using=20 npm run dev`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev",
+		},
+		{
+			name:         "npm exec vite",
+			exe:          "node.exe",
+			cmd:          `node C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js exec vite`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "vite",
+		},
+		{
+			name:         "npx yes vite",
+			exe:          "node.exe",
+			cmd:          `node C:\Program Files\nodejs\node_modules\npm\bin\npx-cli.js --yes vite`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "vite",
+		},
+		{
+			name:         "pnpm dlx vite",
+			exe:          "pnpm.exe",
+			cmd:          `pnpm dlx vite`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "vite",
+		},
+		{
+			name:         "npm run dev:server",
+			exe:          "node.exe",
+			cmd:          `node C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js run dev:server`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: dev:server",
+		},
+		{
+			name:         "yarn start",
+			exe:          "yarn.exe",
+			cmd:          `yarn start`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevServer,
+			wantKind:     "package script: start",
+		},
+		{
+			name:         "pnpm install is tooling",
+			exe:          "pnpm.exe",
+			cmd:          `pnpm install`,
+			wantRuntime:  model.RuntimeNode,
+			wantCategory: model.CategoryDevTool,
+		},
+	}
+	runClassifyCases(t, tests)
+}

@@ -28,6 +28,8 @@ type WSLInfo struct {
 	VMMemoryKnown bool   `json:"vmMemoryKnown"`
 	VMProcessName string `json:"vmProcessName,omitempty"`
 	VMNote        string `json:"vmNote,omitempty"`
+	// Warnings reports incomplete or truncated inspection output.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // RunningDistributions counts distributions in the running state.

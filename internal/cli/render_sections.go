@@ -41,10 +41,16 @@ func renderRecommendationSummary(w io.Writer, s model.Snapshot) {
 func renderNotes(w io.Writer, s model.Snapshot) {
 	fmt.Fprintln(w, "NOTES AND LIMITATIONS")
 	fmt.Fprintln(w, "  - StackBroom is read-only: no process, container, image, volume or WSL distribution was changed.")
-	fmt.Fprintln(w, "  - Process memory is the Windows working set. Unknown means Windows refused access; it is never estimated.")
-	fmt.Fprintln(w, "  - Docker totals and reclaimable sizes are separate Docker reports, not a promise that space will be freed.")
+	fmt.Fprintln(w, "  - Process memory is the Windows working set. Summed working sets can count shared pages more than once,")
+	fmt.Fprintln(w, "    so they are not unique memory; Unknown is never estimated.")
+	fmt.Fprintln(w, "  - Docker totals and reclaimable sizes are separate Docker reports. Reclaimable is Docker's estimate of what")
+	fmt.Fprintln(w, "    clean-up could free, not space already freed and not a guarantee.")
 	fmt.Fprintln(w, "  - WSL memory is the host-side utility VM figure; per-distribution use is not measurable from outside.")
 	fmt.Fprintln(w, "  - Project associations are evidence-based: \"confirmed\" needs a manifest on disk and a referenced path inside it.")
+	if s.Redaction != nil {
+		fmt.Fprintf(w, "  - Output policy: mode=%s; command lines %s; paths tokenised as %%USERPROFILE%%; secrets masked.\n",
+			sanitize(s.Redaction.Mode), sanitize(s.Redaction.CommandLines))
+	}
 	if len(s.Warnings) > 0 {
 		fmt.Fprintln(w, "  - Scan notes:")
 		for _, warning := range dedupeStrings(s.Warnings) {

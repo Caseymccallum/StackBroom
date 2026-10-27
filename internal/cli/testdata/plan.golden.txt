@@ -1,0 +1,28 @@
+stackbroom 0.1.0-test - review suggestions
+Generated 2026-10-27 12:00:00 in 1.2s
+Read-only: StackBroom inspected the system and will not act on anything below.
+
+Context: 2 development processes (1 servers), 150 MB reported; Docker uses 15.89 GB with 12.12 GB Docker-estimated reclaimable.
+
+1. Two node development servers appear to request port 5173
+   Risk: medium | Confidence: inferred
+   Detected: 2 node development server processes each request port 5173 (PIDs 100, 200).
+   Why it may be unnecessary: Only one process can listen on a TCP port.
+   Evidence:
+     - PID 100 (node, vite) requests port 5173
+   Resource use: 150 MB working set.
+   Review before acting:
+     - Check the listening process with Get-NetTCPConnection.
+   Risk of clean-up: Stopping the wrong process ends an active session.
+   Applies to: process 100
+
+OUTPUT POLICY
+  Command lines: omitted. Paths tokenised as %USERPROFILE%. Secrets masked. Mode: default.
+
+NO CLEANUP WAS PERFORMED
+  StackBroom has no implementation for stopping processes, removing containers or images,
+  pruning Docker, deleting volumes or shutting down WSL distributions. Any action is yours.
+
+SCAN NOTES
+  - Docker: example note.
+

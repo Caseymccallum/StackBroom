@@ -44,9 +44,12 @@ type Options struct {
 	EnrichCommandLines bool
 	SkipDocker         bool
 	SkipWSL            bool
-	TopN               int
-	Recommendation     analysis.Options
-	Now                func() time.Time
+	// AllowRemoteDocker permits inspecting a Docker daemon that is not on a
+	// local IPC channel. It is false by default.
+	AllowRemoteDocker bool
+	TopN              int
+	Recommendation    analysis.Options
+	Now               func() time.Time
 
 	// Injection points; nil means use the production implementation.
 	Processes ProcessSource
@@ -90,7 +93,11 @@ func New(opts Options) *Scanner {
 		}
 	}
 	if opts.Docker == nil {
-		opts.Docker = docker.Inspector{Runner: opts.Runner, Timeout: opts.Timeout}
+		opts.Docker = docker.Inspector{
+			Runner:      opts.Runner,
+			Timeout:     opts.Timeout,
+			AllowRemote: opts.AllowRemoteDocker,
+		}
 	}
 	if opts.WSL == nil {
 		opts.WSL = wsl.Inspector{Runner: opts.Runner, Timeout: opts.Timeout}
