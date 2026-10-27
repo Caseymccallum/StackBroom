@@ -201,13 +201,18 @@ configured that way.
 
 **Resolution order** (Docker CLI reference, checked 27 October 2026):
 
-1. `DOCKER_CONTEXT` names a context and overrides `DOCKER_HOST`.
-2. `DOCKER_HOST` overrides the endpoint of the active context.
+1. `DOCKER_CONTEXT` selects a context. For a named context, its endpoint takes
+   precedence over `DOCKER_HOST`.
+2. The special `default` context derives its endpoint from `DOCKER_HOST`, so
+   `docker context inspect default` reports that value.
 3. Otherwise the active context (`docker context use`) applies.
 
 StackBroom reads the context name and endpoint with `docker context show` and
 `docker context inspect`, which read local metadata and do not contact a daemon.
-It then classifies the endpoint:
+It classifies whatever endpoint Docker reports, so the refusal follows the CLI's
+effective target even when these rules interact.
+
+Endpoint classification:
 
 | Endpoint | Classification | Default behaviour |
 | --- | --- | --- |

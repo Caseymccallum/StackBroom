@@ -7,9 +7,12 @@ import (
 	"strings"
 )
 
-// Where the active endpoint came from. These values mirror Docker's documented
-// precedence: DOCKER_CONTEXT overrides DOCKER_HOST, which overrides the context
-// selected with `docker context use`.
+// Where the active endpoint came from. Docker's precedence is: DOCKER_CONTEXT
+// selects a context, and a named context's endpoint takes precedence over
+// DOCKER_HOST. The special "default" context derives its endpoint from
+// DOCKER_HOST, so inspecting it reports that value (verified against Docker
+// 29.4.0 on 27 Oct 2026). StackBroom always classifies the endpoint Docker
+// itself reports, so the refusal decision follows the CLI's effective target.
 const (
 	SourceContextEnv = "DOCKER_CONTEXT"
 	SourceHostEnv    = "DOCKER_HOST"

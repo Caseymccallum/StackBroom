@@ -14,9 +14,15 @@ import (
 // documented precedence, without contacting any daemon.
 //
 // Precedence (Docker CLI reference, verified 27 Oct 2026):
-//  1. DOCKER_CONTEXT names a context and overrides DOCKER_HOST.
-//  2. DOCKER_HOST overrides the endpoint of the active context.
+//  1. DOCKER_CONTEXT selects a context. For a named context, its endpoint takes
+//     precedence over DOCKER_HOST.
+//  2. The special "default" context derives its endpoint from DOCKER_HOST, so
+//     `docker context inspect default` reports DOCKER_HOST.
 //  3. Otherwise the active context (set with `docker context use`) applies.
+//
+// StackBroom inspects the selected context and classifies the endpoint Docker
+// reports, so it follows the CLI's effective target even when these rules
+// interact.
 func ResolveTarget(ctx context.Context, runner run.Runner, binary string, lookup func(string) (string, bool)) Target {
 	if runner == nil {
 		runner = run.Exec{}

@@ -131,9 +131,11 @@ attempt to start Docker Desktop.
 ### Endpoint safety
 
 Before any daemon command, `internal/docker` resolves the endpoint without
-contacting it, following Docker's documented precedence: `DOCKER_CONTEXT` >
-`DOCKER_HOST` > active context. It reads the context with `docker context show` and
-`docker context inspect` (local metadata only) and classifies the endpoint.
+contacting it. `DOCKER_CONTEXT` selects a context; a named context's endpoint
+takes precedence over `DOCKER_HOST`, while the special `default` context derives
+its endpoint from `DOCKER_HOST`. StackBroom reads the endpoint Docker reports with
+`docker context show` and `docker context inspect` (local metadata only) and
+classifies that effective target.
 
 Only `npipe`, `unix` and `fd` are treated as local. Every network transport,
 including loopback TCP, is refused unless `--allow-remote-docker` is passed. An

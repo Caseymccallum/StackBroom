@@ -89,6 +89,25 @@ func TestResolveTargetUsesDockerHostWhenContextEnvUnset(t *testing.T) {
 	}
 }
 
+func TestResolveTargetDefaultContextReflectsDockerHost(t *testing.T) {
+	// Docker's "default" context derives its endpoint from DOCKER_HOST, so the
+	// CLI reports the network endpoint even with DOCKER_CONTEXT=default.
+	runner := newFakeRunner(map[string]run.Result{
+		"context inspect default": {Stdout: `[{"Name":"default","Endpoints":{"docker":{"Host":"tcp://192.0.2.10:2375"}}}]`},
+	})
+	target := ResolveTarget(context.Background(), runner, "docker", envLookup(map[string]string{
+		"DOCKER_CONTEXT": "default",
+		"DOCKER_HOST":    "tcp://192.0.2.10:2375",
+	}))
+
+	if target.Local {
+		t.Fatalf("default context endpoint should be classified as network: %+v", target)
+	}
+	if target.Display != "tcp://192.0.2.10:2375" {
+		t.Errorf("display = %q", target.Display)
+	}
+}
+
 func TestResolveTargetRejectsUnusableContextName(t *testing.T) {
 	runner := newFakeRunner(nil)
 	target := ResolveTarget(context.Background(), runner, "docker", envLookup(map[string]string{
