@@ -1,0 +1,100 @@
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-row:first-child {
+  padding-top: 0;
+}
+
+.setting-name {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+
+.setting-note {
+  max-width: 480px;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.segmented button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.switch {
+  position: relative;
+  width: 40px;
+  height: 23px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-3);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--muted);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.switch[aria-checked="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.switch[aria-checked="true"]::after {
+  transform: translateX(17px);
+  background: var(--accent-strong);
+}
+
+.limitations {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-soft);
+  font-size: 11.5px;
+}
+
+.limitations li + li {
+  margin-top: 7px;
+}

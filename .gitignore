@@ -5,6 +5,10 @@
 *.exe~
 *.test
 *.out
+*.syso
+apps/desktop/bin/
+apps/desktop/frontend/node_modules/
+apps/desktop/frontend/.vite/
 
 # Go workspace / tooling
 go.work

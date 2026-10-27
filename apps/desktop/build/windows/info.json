@@ -1,0 +1,15 @@
+{
+  "fixed": {
+    "file_version": "0.2.0"
+  },
+  "info": {
+    "0409": {
+      "ProductVersion": "0.2.0",
+      "CompanyName": "StackBroom contributors",
+      "FileDescription": "StackBroom read-only PC health dashboard",
+      "LegalCopyright": "MIT licensed",
+      "ProductName": "StackBroom",
+      "Comments": "Read-only system and developer observations. No cleanup."
+    }
+  }
+}
