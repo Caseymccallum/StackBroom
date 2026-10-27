@@ -81,6 +81,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - No Windows ARM64 or 32-bit build was produced.
 - GitHub Actions was unavailable; all checks were local.
 - Go 1.27.3 was not installed and no system-wide tooling was changed. Release builds should use Go 1.27.3+ after owner validation.
+- The Go race detector was not runnable locally because the installed environment has no CGO compiler; overlap/cancellation is covered by a functional concurrency test instead.
 - Screen-reader/axe/Narrator validation is not yet performed.
 - The full-folder storage analyzer and duplicate-file engine are design-only.
 - The BYOK AI adviser is design-only.
