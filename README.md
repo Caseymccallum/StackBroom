@@ -78,8 +78,8 @@ Or use the validation script, which formats, vets, tests and builds:
 pwsh -File scripts/build.ps1 -Version 0.1.0
 ```
 
-The result is a single self-contained `bin\stackbroom.exe` (roughly 5 MB). Copy
-it anywhere on your `PATH`; it has no runtime files.
+The result is a single self-contained `bin\stackbroom.exe` (about 3 MB). Copy it
+anywhere on your `PATH`; it has no runtime files.
 
 
 ## Usage
