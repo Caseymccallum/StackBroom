@@ -1,0 +1,193 @@
+# Safety, security and limitations
+
+StackBroom v0.1 is **read-only**. This document states the safety contract, how
+it is enforced, what the measurements mean, and what a future cleanup feature
+would require before it could exist.
+
+## The v0.1 safety contract
+
+StackBroom v0.1 must not, and cannot:
+
+- kill, suspend or signal a process;
+- stop, start, restart, remove or pause a Docker container;
+- remove images, build cache, volumes or networks;
+- run `docker prune` in any form;
+- start Docker Desktop or any Docker service;
+- start, stop, terminate, restart or export a WSL distribution;
+- execute commands inside a WSL distribution;
+- modify registry keys, services, environment variables or files;
+- run anything automatically at startup, on a timer, or in the background.
+
+The CLI has exactly two data commands: `scan` and `plan`. Both inspect and print.
+
+## How the contract is enforced
+
+1. **No cleanup code path exists.** There is no "apply" command, no confirmation
+   prompt, no hidden flag. `plan --json` even carries `"executesCleanup": false`.
+2. **A fixed command allowlist.** The only external commands StackBroom can run
+   are listed below. Nothing is constructed from observed data.
+3. **No shell.** `internal/run` uses `exec.Command` with an argument vector.
+   Process names, paths, container labels and command lines are never
+   concatenated into a command string, so shell metacharacters are inert.
+4. **Read-only Windows APIs.** Process inspection uses `CreateToolhelp32Snapshot`,
+   `OpenProcess` with `PROCESS_QUERY_LIMITED_INFORMATION`,
+   `QueryFullProcessImageNameW` and `GetProcessMemoryInfo`. No process-termination
+   or thread-injection API is imported.
+5. **Tests assert the property.** Docker and WSL collector tests record every
+   invocation and fail if a mutating verb (`prune`, `rm`, `stop`, `kill`, `start`,
+   `--terminate`, `--exec`) appears. Recommendation tests fail if any text implies
+   an automatic action.
+6. **Bounded output rendering.** Observed strings are sanitised for terminal
+   control characters and truncated before printing, so a hostile process name
+   cannot rewrite the terminal.
+7. **Timeouts on everything.** No external command can hang the scan.
+
+## External commands (complete list)
+
+| Tool | Invocation | Purpose | When |
+| --- | --- | --- | --- |
+| Docker CLI | `docker version --format {{.Server.Version}}` | Availability probe | Unless `--skip-docker` |
+| Docker CLI | `docker context show` | Report the active context | If Docker is available |
+| Docker CLI | `docker ps -a --no-trunc --format {{json .}}` | Containers | If Docker is available |
+| Docker CLI | `docker stats --no-stream --format {{json .}}` | CPU/memory of **running** containers | Only when at least one container runs |
+| Docker CLI | `docker system df --format {{json .}}` | Storage categories | If Docker is available |
+| Docker CLI | `docker system df` | Storage fallback for older Docker | Only if the JSON form yields nothing |
+| Docker CLI | `docker image ls --no-trunc --format {{json .}}` | Image inventory | If Docker is available |
+| WSL | `wsl.exe --list --verbose` | Distributions and state | Unless `--skip-wsl` |
+| PowerShell | `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command <fixed script>` | Read command lines, start times and a memory fallback via CIM | Unless `--no-command-lines` |
+
+Notes:
+
+- `-ExecutionPolicy Bypass` applies to that single PowerShell process. It does not
+  read or write machine or user execution policy.
+- The PowerShell script is a compile-time constant:
+  `Get-CimInstance -ClassName Win32_Process | Select-Object ... | ConvertTo-Json`.
+  It contains no interpolation and no mutating verb.
+- If PowerShell is blocked by policy, the scan continues without command lines and
+  says so in its warnings.
+- StackBroom never invokes `docker run`, `docker start`, `docker desktop start`,
+  `wsl --terminate`, `wsl --shutdown`, `taskkill`, `Stop-Process` or `sc`.
+
+## Limits and resource bounds
+
+| Bound | Value | Rationale |
+| --- | --- | --- |
+| Per-command timeout | 20 s default, configurable with `--timeout` | A wedged Docker daemon cannot hang the scan |
+| Wait delay after kill | 2 s | Guarantees inherited pipes close |
+| Image list | 40 largest images (reported as truncated) | Keeps output readable |
+| Container list | All containers, but text output shows 10 stopped | Avoids a wall of output |
+| Docker stats | `--no-stream` only | One measurement; never watches |
+| Project search depth | 12 directory levels, never a volume root | Bounds filesystem work |
+| Process list | All processes | Needed for accurate totals |
+
+## Handling untrusted data
+
+Process names, command lines, executable paths, Docker labels, container names,
+image tags, distribution names and command output are all treated as untrusted
+text.
+
+- They are parsed, never executed.
+- They are never used as command names, arguments to a shell, file paths for
+  writing, or format strings.
+- Text output replaces control characters and caps length (`sanitize`), preventing
+  ANSI escape injection into a terminal.
+- JSON output escapes control characters per the JSON standard; consumers should
+  still treat strings as data.
+- No files are written by StackBroom, so observed paths cannot cause file
+  overwrites.
+- StackBroom makes no network requests, so no data leaves the machine.
+
+## Evidence rules (why nothing is called "unnecessary")
+
+A recommendation is a prompt to look, not a verdict. The rules deliberately
+reject weak signals:
+
+- **Age is not evidence.** A development server running for 12 hours may be
+  serving a long test session, a demo or another machine. Age only triggers a
+  review prompt, and the text says so explicitly.
+- **Memory use is not evidence.** A 900 MB process may be the most important one
+  on the machine. Memory only affects ordering and how a suggestion is worded.
+- **Idle-looking is not measurable here.** StackBroom does not read CPU time
+  deltas, so it never claims a process is idle.
+- **Requested port is not ownership.** Two command lines can request port 5173
+  while only one holds it. Duplicate suspects are labelled `inferred` and the
+  evidence says the listening socket was not checked.
+- **A project match needs a manifest.** Package caches, `node_modules`, temp
+  directories and Program Files are excluded because they contain manifests that
+  are not the developer's project.
+
+Confidence in a recommendation describes the reliability of the *detected facts*
+(Docker's own state, a supported project match, matching command-line flags). It
+never asserts that cleanup is correct.
+
+## Risk levels
+
+| Level | Meaning | Examples |
+| --- | --- | --- |
+| Low | Data-safe; the cost is time or bandwidth | Reclaiming Docker build cache |
+| Medium | Reversible with effort; may interrupt work or need re-downloading | Removing unused images; stopping a duplicate server; removing a stopped container |
+| High | Destroys live state or is hard to undo | Terminating a running WSL distribution; any future volume deletion |
+
+Risk is derived from the operation, not from how much space it frees.
+
+## Measurement caveats
+
+| Figure | Caveat |
+| --- | --- |
+| Process working set | Resident memory, not private bytes. Shared pages are counted per process, so a sum over processes can exceed physical RAM |
+| Process age | Requires CIM. If unavailable, age is `Unknown` |
+| Docker "SIZE" vs "RECLAIMABLE" | Two different Docker reports. Reclaimable is an estimate of what pruning could free, not space already freed |
+| Docker image sizes | Rounded by Docker; identical layers shared between images are counted in each image's size |
+| Container CPU / memory | A single `docker stats` sample, not an average |
+| WSL VM memory | `vmmem` working set covers the whole utility VM and can double-count memory also attributed to guest processes. It is not per-distribution |
+| Per-distribution memory | Not measured. Would require executing commands inside the distribution |
+| Disk space | StackBroom does not stat the Docker data directory; it reports Docker's own accounting |
+
+## Failure modes and behaviour
+
+| Situation | Behaviour |
+| --- | --- |
+| Docker CLI missing | Docker section says unavailable with "not found on PATH"; scan succeeds |
+| Docker daemon stopped | Says the daemon is not reachable and that StackBroom did not start it; scan succeeds |
+| Docker permission denied | Reports the access error; no retry with elevation |
+| Docker output malformed | Skips the offending line, adds a warning, keeps the rest |
+| `docker stats` fails | Container list still shown; usage marked Unknown |
+| WSL not installed | WSL section says unavailable; scan succeeds |
+| WSL has no distributions | Reported as available with an empty list |
+| PowerShell blocked | Command lines, ages and roles unavailable; explicit warning; scan succeeds |
+| Process protected by Windows | Memory `Unknown`; process still listed |
+| CIM date in an unknown format | Age `Unknown` rather than a guess |
+| Command times out | That section degrades; the scan completes |
+
+## Privacy
+
+- No telemetry, analytics, update checks or crash reporting.
+- No network access of any kind.
+- Reports contain process command lines and local paths. Treat saved JSON as
+  sensitive: it can reveal usernames, project names and arguments.
+- StackBroom writes no files unless you redirect its output yourself.
+
+## What a future cleanup feature would require
+
+Cleanup is **not** part of v0.1 and must not be added without a separate safety
+review. A future implementation should, at minimum:
+
+1. Present a specific action with its exact consequence and the evidence.
+2. Require explicit per-action approval (no blanket "clean everything").
+3. Never target volumes, bind mounts or user files in the first iteration.
+4. Prefer reversible actions and document how to recover.
+5. Verify identity before acting (PID + start time + executable, to avoid PID
+   reuse; container ID + name).
+6. Re-check state immediately before acting, and abort if it changed.
+7. Log what was done, when, and the observed before/after state, locally.
+8. Refuse to act on protected or system processes, or when running without the
+   expected privileges.
+9. Add tests that prove unapproved targets are never touched.
+10. Keep the default configuration read-only.
+
+## Reporting a safety issue
+
+If you find a way for StackBroom to change system state, treat it as a security
+bug: do not publish exploit details before the maintainer has responded. Include
+the command line, the observed effect and the version (`stackbroom version`).
+
