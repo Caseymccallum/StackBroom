@@ -1,0 +1,24 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.exe~
+*.test
+*.out
+
+# Go workspace / tooling
+go.work
+go.work.sum
+coverage.txt
+
+# Editor and OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local scratch output (never committed)
+/tmp/
+*.local.json
+stackbroom-scan.json
