@@ -26,4 +26,9 @@ describe("process filtering", () => {
     expect(sorted.map((p) => p.name)).toEqual(["Code.exe", "node.exe", "python.exe"]);
     expect(processes.map((p) => p.pid)).toEqual([1, 2, 3]);
   });
+
+  it("reverses measured memory while keeping unavailable observations last", () => {
+    expect(filterAndSortProcesses(processes, { query: "", category: "all", sort: "memory", reverse: true })
+      .map(p => p.pid)).toEqual([1, 2, 3]);
+  });
 });

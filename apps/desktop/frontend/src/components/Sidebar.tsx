@@ -39,7 +39,7 @@ export function Sidebar({
         </div>
         <div className="brand-copy">
           <div className="brand-name">StackBroom</div>
-          <div className="brand-sub">PC health, read-only</div>
+          <div className="brand-sub">Your PC, understood</div>
         </div>
       </div>
 
@@ -52,6 +52,7 @@ export function Sidebar({
               key={item.key}
               type="button"
               className="nav-item"
+              aria-label={item.label}
               aria-current={active === item.key ? "page" : undefined}
               title={`${item.label} (${item.shortcut})`}
               onClick={() => onNavigate(item.key)}

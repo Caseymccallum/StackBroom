@@ -10,8 +10,8 @@ export interface Settings {
 
 export interface Sample {
   at: string;
-  memoryPercent: number;
-  cpuPercent: number;
+  memoryPercent: number | null;
+  cpuPercent: number | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

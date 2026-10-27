@@ -4,7 +4,8 @@ import { formatBytes, formatPercent } from "../lib/format";
 import { Badge, Card, CardBody, CardHeader, EmptyState, Progress } from "../components/ui";
 
 export function StoragePage({ quick, full }: { quick: QuickResult | null; full: { overview: QuickResult["overview"] } | null }) {
-  const overview = quick?.overview ?? full?.overview ?? null;
+  const overview = quick && (!full || new Date(quick.overview.capturedAt) >= new Date(full.overview.capturedAt))
+    ? quick.overview : full?.overview ?? null;
   const volumes = overview?.volumes ?? [];
   const total = volumes.reduce((sum, volume) => sum + volume.totalBytes, 0);
   const free = volumes.reduce((sum, volume) => sum + volume.freeBytes, 0);
@@ -58,7 +59,7 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
               Removable and network volumes are intentionally not inspected.
             </EmptyState>
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
               <table className="table">
                 <caption className="sr-only">Fixed volume capacity</caption>
                 <thead>
@@ -94,16 +95,15 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
       </Card>
 
       <Card>
-        <CardHeader title="What this view does not do" subtitle="Capacity is an observation, not a clean-up plan." />
+        <CardHeader title="Storage exploration" subtitle="Folder analysis and cleanup previews are planned." />
         <CardBody>
           <div className="banner" style={{ alignItems: "flex-start" }}>
             <ShieldCheck size={16} aria-hidden="true" />
             <div>
               <strong style={{ color: "var(--text)" }}>Used space is not presented as safely reclaimable.</strong>
               <p style={{ margin: "5px 0 0" }}>
-                StackBroom does not scan folders recursively, detect duplicate files, claim that caches are safe to
-                delete, or remove anything. A future storage analysis must separately design reparse-point safety,
-                permissions, exclusions, hard links and large-directory traversal before it can be trusted.
+                This version measures drive capacity. Folder sizes, duplicate detection and cleanup previews will
+                come in a future version. No files are scanned or removed from this view.
               </p>
             </div>
           </div>

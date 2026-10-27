@@ -65,7 +65,7 @@ export function ListenerTable({ listeners }: { listeners: ListenerRow[] }) {
         </div>
       ) : (
         <>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
             <table className="table">
               <caption className="sr-only">Observed TCP listeners</caption>
               <thead>

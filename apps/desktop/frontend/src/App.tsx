@@ -93,7 +93,10 @@ export default function App() {
   }, [desktop.appInfo?.preview, desktop.appInfo?.previewTheme, desktop.appInfo?.previewScreen]);
 
   useEffect(() => {
-    const onHashChange = () => setActive(navFromHash());
+    const onHashChange = () => {
+      const value = window.location.hash.replace(/^#\/?/, "") as NavKey;
+      if (VALID_NAV.includes(value)) setActive(value);
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);

@@ -1,11 +1,12 @@
 import { ListTree, RefreshCw, ShieldCheck, Wrench } from "lucide-react";
 import type { FullResult } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { formatPorts } from "../lib/format";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, LoadingBlock, Notice } from "../components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, LoadingBlock } from "../components/ui";
 import { DockerPanel } from "../components/DockerPanel";
 import { WSLPanel } from "../components/WSLPanel";
 import { ListenerTable } from "../components/ListenerTable";
 import { ReviewCard } from "../components/ReviewCard";
+import { ObservationNotes } from "../components/ObservationNotes";
 
 interface Props {
   full: FullResult | null;
@@ -50,19 +51,20 @@ export function DeveloperPage({ full, busy, onScan }: Props) {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
-      {warnings.length > 0 ? (
-        <Notice tone="warn">
-          {warnings[0]}
-          {warnings.length > 1 ? ` (+${warnings.length - 1} more scan notes in Settings)` : ""}
-        </Notice>
-      ) : null}
+      <ObservationNotes warnings={warnings} />
+      <nav className="section-links" aria-label="Developer sections">
+        <a href="#developer-environments">Docker &amp; WSL</a>
+        <a href="#developer-listeners">TCP listeners</a>
+        <a href="#developer-ports">Process evidence</a>
+        <a href="#developer-reviews">Review opportunities</a>
+      </nav>
 
-      <div className="grid two-col">
+      <div className="grid two-col" id="developer-environments">
         <DockerPanel docker={developer.docker} />
         <WSLPanel wsl={developer.wsl} />
       </div>
 
-      <Card>
+      <Card id="developer-listeners">
         <CardHeader
           title="TCP listeners"
           subtitle="Observed sockets from the Windows TCP table. Ownership is confirmed only when PID and creation time match before and after sampling."
@@ -80,7 +82,7 @@ export function DeveloperPage({ full, busy, onScan }: Props) {
         </CardBody>
       </Card>
 
-      <div className="grid two-col">
+      <div className="grid two-col" id="developer-ports">
         <Card>
           <CardHeader
             title="Requested vs observed ports"
@@ -93,7 +95,7 @@ export function DeveloperPage({ full, busy, onScan }: Props) {
                 No development process requested or was observed listening on a port in this scan.
               </EmptyState>
             ) : (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="table">
                   <caption className="sr-only">Requested and observed ports by process</caption>
                   <thead><tr><th>Process</th><th>PID</th><th>Requested</th><th>Observed</th><th>Ownership</th></tr></thead>
@@ -152,7 +154,7 @@ export function DeveloperPage({ full, busy, onScan }: Props) {
         </Card>
       </div>
 
-      <Card>
+      <Card id="developer-reviews">
         <CardHeader
           title="Review opportunities"
           subtitle="Full evidence from the existing analysis engine. No control on this screen performs an action."

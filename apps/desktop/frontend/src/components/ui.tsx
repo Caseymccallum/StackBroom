@@ -28,12 +28,14 @@ export function Card({
   children,
   className,
   style,
+  id,
 }: {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  id?: string;
 }) {
-  return <section className={cx("card", className)} style={style}>{children}</section>;
+  return <section id={id} className={cx("card", className)} style={style}>{children}</section>;
 }
 
 export function CardHeader({
@@ -60,15 +62,18 @@ export function CardBody({ children, className }: { children: ReactNode; classNa
   return <div className={cx("card-body", className)}>{children}</div>;
 }
 
-export function Progress({ value, tone = "teal" }: { value: number; tone?: "teal" | "amber" | "red" }) {
-  const clamped = Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
+export function Progress({ value, tone = "teal", label = "Usage" }: { value: number | null; tone?: "teal" | "amber" | "red"; label?: string }) {
+  const known = value !== null && Number.isFinite(value);
+  const clamped = Math.min(100, Math.max(0, known ? value! : 0));
   return (
     <div
       className="progress"
       role="progressbar"
+      aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(clamped)}
+      aria-valuenow={known ? Math.round(clamped) : undefined}
+      aria-valuetext={known ? undefined : "Unavailable"}
     >
       <div className={cx("progress-bar", tone !== "teal" && tone)} style={{ width: `${clamped}%` }} />
     </div>

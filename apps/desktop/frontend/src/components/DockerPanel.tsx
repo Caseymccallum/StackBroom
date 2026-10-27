@@ -42,7 +42,7 @@ export function DockerPanel({ docker }: { docker: DockerView }) {
             ) : null}
 
             {diskUsage.length > 0 ? (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="table">
                   <caption className="sr-only">Docker storage categories</caption>
                   <thead>
@@ -70,7 +70,7 @@ export function DockerPanel({ docker }: { docker: DockerView }) {
               {containers.length === 0 ? (
                 <div className="muted" style={{ fontSize: 11.5 }}>No containers reported.</div>
               ) : (
-                <div className="table-wrap">
+                <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                   <table className="table">
                     <caption className="sr-only">Docker containers</caption>
                     <thead>

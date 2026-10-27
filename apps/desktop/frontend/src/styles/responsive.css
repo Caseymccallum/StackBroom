@@ -103,3 +103,82 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Desktop polish: keep the resource readings above the fold without sacrificing labels. */
+.hero { padding: 16px 20px; gap: 16px; background: var(--surface); }
+.hero-title { font-size: 22px; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.hero-subtitle { margin-top: 4px; font-size: 12px; }
+.hero-meta { margin-top: 10px; gap: 6px; }
+.hero-mark { width: 60px; height: 60px; border-radius: 18px; box-shadow: none; }
+.hero-mark::after { display: none; }
+.hero-mark svg { width: 32px; height: 32px; }
+.topbar { padding-block: 16px; backdrop-filter: none; background: var(--bg); }
+.page-subtitle { max-width: 62ch; }
+.content { padding-top: 20px; }
+.card { box-shadow: none; background: var(--surface); }
+.metric-card { padding: 16px; }
+.metric-value { margin-top: 10px; font-size: 28px; line-height: 1.25; }
+.metric-unit { display: inline-block; margin-left: 5px; }
+.metric-note, .card-subtitle { font-size: 12px; }
+.empty-state { min-height: 130px; padding: 20px; }
+.card-header { flex-wrap: wrap; }
+.card-header > div { min-width: 0; }
+.observation-notes { padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 12px; color: var(--text-soft); background: var(--surface-2); font-size: 12px; overflow-wrap: anywhere; }
+.observation-notes summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.observation-notes p { margin-block: 12px 6px; }
+.observation-notes ul { margin: 0; padding-left: 20px; }
+.observation-notes li + li { margin-top: 6px; }
+.section-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.section-links a { padding: 8px 12px; color: var(--accent-strong); background: var(--accent-soft); border-radius: 8px; text-decoration: none; }
+.section-links a:hover { text-decoration: underline; }
+[id^="developer-"] { scroll-margin-top: 16px; }
+.table-wrap { max-height: 55vh; scrollbar-gutter: stable; }
+.table td.name { white-space: normal; overflow-wrap: anywhere; min-width: 140px; }
+.table td { overflow-wrap: anywhere; }
+.sort-btn { min-height: 28px; }
+.table-wrap:focus-visible { outline-offset: -3px; }
+.btn, .icon-btn, .input, .select { min-height: 40px; }
+.icon-btn { width: 40px; }
+.segmented button { min-height: 34px; }
+.search-wrap { min-width: min(230px, 100%); }
+.toolbar > label { max-width: 100%; }
+.select { max-width: 100%; }
+.setting-row { flex-wrap: wrap; }
+.setting-row > div:first-child { flex: 1 1 200px; }
+.switch { flex-shrink: 0; }
+[data-theme="light"] .btn-primary { background: #08786f; color: #fff; }
+[data-theme="light"] .btn-primary:hover { background: #07675f; }
+[data-theme="light"] .skip-link { background: #08786f; color: #fff; }
+[data-theme="light"] { --accent: #08786f; --faint: #526b79; }
+@media (max-width: 1280px) {
+  .app-shell { grid-template-columns: 100px minmax(0,1fr); }
+  .nav-item { flex-direction: column; gap: 5px; padding: 10px 4px; }
+  .nav-item-text { display: flex; text-align: center; }
+  .nav-item-title { font-size: 11px; line-height: 1.25; }
+  .nav-item-hint { display: none; }
+  .sidebar { padding-inline: 8px; }
+}
+@media (min-width: 1000px) and (max-width: 1280px) {
+  .metric-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
+@media (min-width: 1000px) and (max-width: 1200px) {
+  .topbar { flex-direction: row; align-items: center; gap: 12px; }
+  .topbar-actions { width: auto; max-width: 44%; }
+  .page-subtitle { font-size: 12px; }
+}
+@media (min-width: 1000px) {
+  .chart-card { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 700px) {
+  .app-shell { grid-template-columns: 82px minmax(0,1fr); }
+  .volume-row { grid-template-columns: minmax(0,1fr); }
+  .volume-figures { text-align: left; white-space: normal; }
+}
+@media (max-height: 620px) {
+  .topbar { padding-block: 10px; }
+  .page-eyebrow, .page-subtitle { display: none; }
+  .brand { padding-bottom: 12px; }
+  .sidebar { padding-top: 12px; }
+}
+[data-theme="light"] { --muted: #526b79; }
+kbd { padding: 3px 6px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-2); font: 11px var(--mono); }

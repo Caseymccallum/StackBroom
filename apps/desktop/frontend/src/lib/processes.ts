@@ -6,6 +6,7 @@ export interface ProcessFilter {
   query: string;
   category: string;
   sort: ProcessSort;
+  reverse?: boolean;
 }
 
 export function filterAndSortProcesses(processes: ProcessRow[], filter: ProcessFilter): ProcessRow[] {
@@ -26,7 +27,11 @@ export function filterAndSortProcesses(processes: ProcessRow[], filter: ProcessF
   });
 
   return filtered.sort((a, b) => {
-    switch (filter.sort) {
+    // Missing observations remain last in either direction.
+    if (filter.sort === "memory" && a.memoryKnown !== b.memoryKnown) return a.memoryKnown ? -1 : 1;
+    if (filter.sort === "started" && a.startTimeKnown !== b.startTimeKnown) return a.startTimeKnown ? -1 : 1;
+    const compare = () => {
+      switch (filter.sort) {
       case "name":
         return a.name.localeCompare(b.name);
       case "pid":
@@ -41,5 +46,7 @@ export function filterAndSortProcesses(processes: ProcessRow[], filter: ProcessF
         if (a.memoryBytes !== b.memoryBytes) return b.memoryBytes - a.memoryBytes;
         return a.name.localeCompare(b.name);
     }
+    };
+    return compare() * (filter.reverse ? -1 : 1);
   });
 }

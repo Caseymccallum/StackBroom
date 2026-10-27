@@ -2,9 +2,10 @@ import { Activity, ArrowRight, Cpu, Gauge, HardDrive, List, RefreshCw, ShieldChe
 import type { FullResult, QuickResult } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import type { Sample } from "../types";
 import { formatBytes, formatDuration, formatPercent, formatWhen } from "../lib/format";
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, LoadingBlock, Notice, Progress } from "../components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, LoadingBlock, Progress } from "../components/ui";
 import { ReviewCard } from "../components/ReviewCard";
 import { Sparkline } from "../components/Sparkline";
+import { ObservationNotes } from "../components/ObservationNotes";
 
 interface Props {
   quick: QuickResult | null;
@@ -30,7 +31,6 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
     return quickAt >= fullAt ? quick.overview : full.overview;
   })();
   const warnings = overview?.scanMode === "full" ? (full?.warnings ?? []) : (quick?.warnings ?? []);
-  const practicalWarnings = warnings.filter((warning) => !warning.startsWith("Network:"));
   if (!overview) {
     return (
       <Card>
@@ -88,13 +88,7 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
         </div>
       </Card>
 
-      {warnings.length > 0 ? (
-        <Notice tone="warn">
-          {practicalWarnings.length > 0
-            ? `Some observations are partial. ${practicalWarnings[0]}`
-            : "Some listener ownership could not be verified. Details and uncertainty labels are in Developer Tools."}
-        </Notice>
-      ) : null}
+      <ObservationNotes warnings={warnings} />
       <div className="grid metric-grid">
         <Card className="metric-card" style={{ ["--metric-accent" as string]: "var(--cyan)" }}>
           <div className="metric-top">
@@ -107,7 +101,7 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
           </div>
           <div className="metric-note">{formatPercent(overview.memoryUsedPercent, overview.memoryKnown)} used · {formatBytes(overview.availableMemoryBytes, overview.memoryKnown)} available</div>
           <div style={{ marginTop: 12 }}>
-            <Progress value={overview.memoryUsedPercent} tone={memoryTone(overview.memoryUsedPercent)} />
+            <Progress label="Memory used" value={overview.memoryKnown ? overview.memoryUsedPercent : null} tone={memoryTone(overview.memoryUsedPercent)} />
           </div>
         </Card>
 
@@ -122,7 +116,7 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
           </div>
           <div className="metric-note">{overview.cpuKnown ? "Short interval sample from Windows system counters" : "The CPU counters could not be sampled"}</div>
           <div style={{ marginTop: 12 }}>
-            <Progress value={overview.cpuKnown ? overview.cpuPercent : 0} />
+            <Progress label="CPU usage" value={overview.cpuKnown ? overview.cpuPercent : null} />
           </div>
         </Card>
 
@@ -132,12 +126,12 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
             <span className="metric-icon"><HardDrive size={16} /></span>
           </div>
           <div className="metric-value">
-            {formatBytes(freeStorage)}
+            {formatBytes(freeStorage, totalStorage > 0)}
             <span className="metric-unit">free</span>
           </div>
           <div className="metric-note">{volumes.length} fixed volume{volumes.length === 1 ? "" : "s"} · {formatBytes(totalStorage)} capacity</div>
           <div style={{ marginTop: 12 }}>
-            <Progress value={storagePercent} tone={storagePercent >= 90 ? "red" : storagePercent >= 75 ? "amber" : "teal"} />
+            <Progress label="Storage used" value={totalStorage > 0 ? storagePercent : null} tone={storagePercent >= 90 ? "red" : storagePercent >= 75 ? "amber" : "teal"} />
           </div>
         </Card>
 
@@ -233,7 +227,7 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
                 Process memory was unavailable or no processes were returned.
               </EmptyState>
             ) : (
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="table">
                   <caption className="sr-only">Top processes by working set memory</caption>
                   <thead>

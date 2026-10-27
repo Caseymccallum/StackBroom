@@ -111,13 +111,20 @@ export function SettingsPage({
         </Card>
 
         <Card>
-          <CardHeader title="Validation note" subtitle="Go toolchain security." />
+          <CardHeader title="Keyboard shortcuts" subtitle="Move around StackBroom without a mouse." />
           <CardBody>
-            <p className="setting-note" style={{ maxWidth: "none", margin: 0 }}>
-              This build is compiled with the installed Go toolchain reported above. The project baseline was Go 1.27.0;
-              Go 1.27.3 contains a security update. No system-wide toolchain was changed during this milestone. Release
-              builds should be produced with Go 1.27.3 or later after the owner validates it.
-            </p>
+            <div className="setting-row"><span>Open a screen</span><kbd>Ctrl + 1–5</kbd></div>
+            <div className="setting-row"><span>Refresh this screen</span><kbd>Ctrl + R</kbd></div>
+            <div className="setting-row"><span>Dark / light theme</span><kbd>Ctrl + Shift + D / L</kbd></div>
+            <div className="setting-row"><span>Scroll focused pane</span><kbd>Page Up / Down</kbd></div>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Coming later" subtitle="Planned capabilities; unavailable in this version." />
+          <CardBody>
+            <p className="setting-note">Application and startup management, storage cleanup previews, security observations
+              and an optional adviser using your own AI key are planned. Each action will explain its target and risk
+              and ask for your confirmation.</p>
           </CardBody>
         </Card>
       </div>

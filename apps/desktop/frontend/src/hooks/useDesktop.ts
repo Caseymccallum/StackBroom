@@ -40,8 +40,8 @@ export function useDesktop(autoRefreshSeconds: number): DesktopState {
         ...current,
         {
           at: overview.capturedAt,
-          memoryPercent: overview.memoryUsedPercent,
-          cpuPercent: overview.cpuKnown ? overview.cpuPercent : 0,
+          memoryPercent: overview.memoryKnown ? overview.memoryUsedPercent : null,
+          cpuPercent: overview.cpuKnown ? overview.cpuPercent : null,
         },
       ];
       return next.slice(-40);

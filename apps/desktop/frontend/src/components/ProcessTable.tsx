@@ -12,11 +12,11 @@ function categoryTone(category: string): "teal" | "blue" | "neutral" {
   return "neutral";
 }
 
-function SortHeader({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function SortHeader({ label, active, descending, onClick }: { label: string; active: boolean; descending: boolean; onClick: () => void }) {
   return (
     <button type="button" className="sort-btn" aria-pressed={active} onClick={onClick}>
       {label}
-      {active ? " ↓" : ""}
+      {active ? descending ? " ↓" : " ↑" : ""}
     </button>
   );
 }
@@ -25,31 +25,34 @@ export function ProcessTable({
   rows,
   page,
   sort,
+  reverse = false,
   onSort,
   onPage,
 }: {
   rows: ProcessRow[];
   page: number;
   sort: ProcessSort;
+  reverse?: boolean;
   onSort: (sort: ProcessSort) => void;
   onPage: (page: number) => void;
 }) {
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visible = rows.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const descending = (sort === "memory") !== reverse;
   return (
     <>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table className="table">
           <caption className="sr-only">Observed Windows processes</caption>
           <thead>
             <tr>
-              <th><SortHeader label="Process" active={sort === "name"} onClick={() => onSort("name")} /></th>
-              <th><SortHeader label="PID" active={sort === "pid"} onClick={() => onSort("pid")} /></th>
-              <th><SortHeader label="Category" active={sort === "category"} onClick={() => onSort("category")} /></th>
-              <th><SortHeader label="Memory" active={sort === "memory"} onClick={() => onSort("memory")} /></th>
+              <th aria-sort={sort === "name" ? descending ? "descending" : "ascending" : "none"}><SortHeader label="Process" descending={descending} active={sort === "name"} onClick={() => onSort("name")} /></th>
+              <th aria-sort={sort === "pid" ? descending ? "descending" : "ascending" : "none"}><SortHeader label="PID" descending={descending} active={sort === "pid"} onClick={() => onSort("pid")} /></th>
+              <th aria-sort={sort === "category" ? descending ? "descending" : "ascending" : "none"}><SortHeader label="Category" descending={descending} active={sort === "category"} onClick={() => onSort("category")} /></th>
+              <th aria-sort={sort === "memory" ? descending ? "descending" : "ascending" : "none"}><SortHeader label="Memory" descending={descending} active={sort === "memory"} onClick={() => onSort("memory")} /></th>
               <th>Project</th>
-              <th><SortHeader label="Started" active={sort === "started"} onClick={() => onSort("started")} /></th>
+              <th aria-sort={sort === "started" ? descending ? "descending" : "ascending" : "none"}><SortHeader label="Started" descending={descending} active={sort === "started"} onClick={() => onSort("started")} /></th>
               <th>Ports</th>
             </tr>
           </thead>

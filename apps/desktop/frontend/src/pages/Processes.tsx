@@ -15,14 +15,19 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<ProcessSort>("memory");
+  const [reverse, setReverse] = useState(false);
   const [page, setPage] = useState(0);
   const deferredQuery = useDeferredValue(query);
 
   const rows = useMemo(
-    () => (full ? filterAndSortProcesses(full.processes ?? [], { query: deferredQuery, category, sort }) : []),
-    [full, deferredQuery, category, sort],
+    () => (full ? filterAndSortProcesses(full.processes ?? [], { query: deferredQuery, category, sort, reverse }) : []),
+    [full, deferredQuery, category, sort, reverse],
   );
-  useEffect(() => setPage(0), [deferredQuery, category, sort]);
+  useEffect(() => setPage(0), [deferredQuery, category, sort, reverse]);
+  function chooseSort(next: ProcessSort) {
+    setSort(next);
+    setReverse(false);
+  }
 
   if (!full) {
     return (
@@ -84,7 +89,7 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
           </label>
           <label>
             <span className="sr-only">Sort processes</span>
-            <select className="select" value={sort} onChange={(event) => setSort(event.target.value as ProcessSort)}>
+            <select className="select" value={sort} onChange={(event) => chooseSort(event.target.value as ProcessSort)}>
               <option value="memory">Memory, high to low</option>
               <option value="name">Name</option>
               <option value="pid">PID</option>
@@ -92,7 +97,10 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
               <option value="category">Category</option>
             </select>
           </label>
-          <span className="muted" style={{ fontSize: 11 }}>
+          <Button onClick={() => setReverse(current => !current)} aria-label="Reverse sort order">
+            {(sort === "memory") !== reverse ? "High to low ↓" : "Low to high ↑"}
+          </Button>
+          <span className="muted" role="status" style={{ fontSize: 11 }}>
             {rows.length} match{rows.length === 1 ? "" : "es"}
           </span>
         </div>
@@ -102,7 +110,10 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
             Try a different name, project, PID or category.
           </EmptyState>
         ) : (
-          <ProcessTable rows={rows} page={page} sort={sort} onSort={setSort} onPage={setPage} />
+          <ProcessTable rows={rows} page={page} sort={sort} reverse={reverse} onSort={(next) => {
+            if (next === sort) setReverse(current => !current);
+            else chooseSort(next);
+          }} onPage={setPage} />
         )}
       </CardBody>
     </Card>
