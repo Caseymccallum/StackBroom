@@ -58,6 +58,7 @@ func ResolveTarget(ctx context.Context, runner run.Runner, binary string, lookup
 			Context:  activeContextName(ctx, runner, binary),
 			Source:   SourceHostEnv,
 			Local:    class.Local,
+			Valid:    class.Valid,
 			Reason:   class.Reason,
 		}
 	}
@@ -123,16 +124,16 @@ func inspectContext(ctx context.Context, runner run.Runner, binary, name, source
 		return target
 	}
 
-	host := ""
-	for _, endpoint := range entries[0].Endpoints {
-		if strings.TrimSpace(endpoint.Host) != "" {
-			host = strings.TrimSpace(endpoint.Host)
-			break
-		}
+	endpoint, ok := entries[0].Endpoints[dockerEndpointKey]
+	if !ok {
+		target.Source = SourceUnknown
+		target.Reason = "the Docker context " + name + " has no \"docker\" endpoint; no daemon was contacted"
+		return target
 	}
+	host := strings.TrimSpace(endpoint.Host)
 	if host == "" {
 		target.Source = SourceUnknown
-		target.Reason = "the Docker context " + name + " has no daemon endpoint"
+		target.Reason = "the Docker context " + name + " has a blank \"docker\" endpoint; no daemon was contacted"
 		return target
 	}
 
@@ -140,6 +141,7 @@ func inspectContext(ctx context.Context, runner run.Runner, binary, name, source
 	target.Endpoint = host
 	target.Display = displayEndpoint(host)
 	target.Local = class.Local
+	target.Valid = class.Valid
 	target.Reason = class.Reason
 	return target
 }

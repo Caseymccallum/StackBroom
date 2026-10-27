@@ -13,21 +13,49 @@ func TestClassifyEndpoint(t *testing.T) {
 		name     string
 		endpoint string
 		local    bool
+		valid    bool
 		reason   string
 	}{
-		{"docker desktop pipe", "npipe:////./pipe/dockerDesktopLinuxEngine", true, "local named pipe"},
-		{"classic pipe", "npipe:////./pipe/docker_engine", true, "local named pipe"},
-		{"unix socket", "unix:///var/run/docker.sock", true, "local Unix socket"},
-		{"file descriptor", "fd://3", true, "local file descriptor"},
-		{"remote tcp", "tcp://192.0.2.10:2375", false, "network destination"},
-		{"loopback tcp", "tcp://127.0.0.1:2375", false, "loopback"},
-		{"localhost tcp", "tcp://localhost:2375", false, "localhost"},
-		{"ssh host", "ssh://builder@example.com", false, "network destination"},
-		{"https", "https://docker.example.com:2376", false, "network destination"},
-		{"unknown scheme", "docker-container://builder", false, "network destination"},
-		{"bare path", "C:\\docker\\npipe", false, "recognised transport scheme"},
-		{"empty", "   ", false, "no Docker endpoint"},
-		{"missing pipe path", "npipe://", false, "no path"},
+		// Canonical local channels.
+		{"docker desktop pipe", "npipe:////./pipe/dockerDesktopLinuxEngine", true, true, "local named pipe"},
+		{"classic pipe", "npipe:////./pipe/docker_engine", true, true, "local named pipe"},
+		{"pipe case insensitive", "NPIPE:////./PIPE/docker_engine", true, true, "local named pipe"},
+		{"unix socket", "unix:///var/run/docker.sock", true, true, "local Unix socket"},
+		{"file descriptor", "fd://3", true, true, "local file descriptor"},
+
+		// Well-formed network destinations: valid, never local.
+		{"remote tcp", "tcp://192.0.2.10:2375", false, true, "network destination"},
+		{"loopback tcp", "tcp://127.0.0.1:2375", false, true, "loopback"},
+		{"localhost tcp", "tcp://localhost:2375", false, true, "localhost"},
+		{"ipv6 loopback tcp", "tcp://[::1]:2375", false, true, "loopback"},
+		{"ssh host", "ssh://builder@example.com", false, true, "network destination"},
+
+		// Unsupported or malformed endpoints: invalid and never contacted.
+		{"host-qualified pipe", "npipe:////fileserver/pipe/docker_engine", false, false, "not supported"},
+		{"localhost pipe", "npipe:////localhost/pipe/docker_engine", false, false, "not supported"},
+		{"https unsupported", "https://docker.example.com:2376", false, false, "not supported"},
+		{"http unsupported", "http://docker.example.com:2375", false, false, "not supported"},
+		{"unknown scheme", "docker-container://builder", false, false, "unsupported transport"},
+		{"bare path", "C:\\docker\\npipe", false, false, "recognised transport scheme"},
+		{"empty", "   ", false, false, "no Docker endpoint"},
+		{"pipe no path", "npipe://", false, false, "no path"},
+		{"pipe three slashes", "npipe:///./pipe/docker_engine", false, false, "form"},
+		{"pipe two slashes", "npipe://server/pipe/docker_engine", false, false, "form"},
+		{"pipe empty name", "npipe:////./pipe/", false, false, "name"},
+		{"pipe nested name", "npipe:////./pipe/a/b", false, false, "name"},
+		{"pipe parent traversal", "npipe:////./pipe/../x", false, false, "name"},
+		{"pipe encoded name", "npipe:////./pipe/docker%5Fengine", false, false, "unsupported characters"},
+		{"pipe query", "npipe:////./pipe/engine?x=1", false, false, "unsupported characters"},
+		{"pipe fragment", "npipe:////./pipe/engine#x", false, false, "unsupported characters"},
+		{"pipe space", "npipe:////./pipe/docker engine", false, false, "name"},
+		{"remote pipe empty name", "npipe:////server/pipe/", false, false, "name"},
+		{"tcp no host", "tcp://", false, false, "no host"},
+		{"tcp credentials", "tcp://user:pass@example.com:2375", false, false, "credentials"},
+		{"tcp query", "tcp://example.com:2375?x=1", false, false, "query"},
+		{"unix relative", "unix://relative.sock", false, false, "not absolute"},
+		{"unix empty", "unix://", false, false, "no path"},
+		{"fd empty", "fd://", false, false, "no descriptor"},
+		{"fd non numeric", "fd://abc", false, false, "not numeric"},
 	}
 
 	for _, tc := range tests {
@@ -35,6 +63,9 @@ func TestClassifyEndpoint(t *testing.T) {
 			got := ClassifyEndpoint(tc.endpoint)
 			if got.Local != tc.local {
 				t.Errorf("Local = %v, want %v (%+v)", got.Local, tc.local, got)
+			}
+			if got.Valid != tc.valid {
+				t.Errorf("Valid = %v, want %v (%+v)", got.Valid, tc.valid, got)
 			}
 			if !strings.Contains(strings.ToLower(got.Reason), strings.ToLower(tc.reason)) {
 				t.Errorf("Reason = %q, want it to contain %q", got.Reason, tc.reason)
@@ -136,6 +167,85 @@ func TestResolveTargetInspectFailureIsUnknown(t *testing.T) {
 	}
 }
 
+func TestInspectContextSelectsOnlyDockerEndpoint(t *testing.T) {
+	// Only the "docker" key addresses the daemon. Map iteration order and the
+	// presence of an unrelated local endpoint must never change the result.
+	remoteDocker := `[{"Name":"mixed","Endpoints":{
+		"local":{"Host":"npipe:////./pipe/docker_engine"},
+		"docker":{"Host":"tcp://192.0.2.10:2375"},
+		"ssh":{"Host":"ssh://builder@example.com"}}}]`
+	localDocker := `[{"Name":"mixed","Endpoints":{
+		"ssh":{"Host":"ssh://builder@example.com"},
+		"other":{"Host":"tcp://192.0.2.10:2375"},
+		"docker":{"Host":"npipe:////./pipe/docker_engine"}}}]`
+
+	for i := 0; i < 50; i++ {
+		runner := newFakeRunner(map[string]run.Result{
+			"context inspect mixed": {Stdout: remoteDocker},
+		})
+		target := ResolveTarget(context.Background(), runner, "docker",
+			envLookup(map[string]string{"DOCKER_CONTEXT": "mixed"}))
+		if !target.Valid || target.Local {
+			t.Fatalf("iteration %d: target = %+v, want valid remote endpoint", i, target)
+		}
+		if target.Display != "tcp://192.0.2.10:2375" {
+			t.Fatalf("iteration %d: selected %q", i, target.Display)
+		}
+	}
+
+	runner := newFakeRunner(map[string]run.Result{
+		"context inspect mixed": {Stdout: localDocker},
+	})
+	target := ResolveTarget(context.Background(), runner, "docker",
+		envLookup(map[string]string{"DOCKER_CONTEXT": "mixed"}))
+	if !target.Valid || !target.Local {
+		t.Fatalf("target = %+v, want local docker endpoint", target)
+	}
+	if !strings.Contains(target.Display, "./pipe/docker_engine") {
+		t.Errorf("selected %q, want the local docker endpoint", target.Display)
+	}
+}
+
+func TestInspectContextFailsClosedWithoutDockerEndpoint(t *testing.T) {
+	tests := []struct {
+		name string
+		out  string
+	}{
+		{
+			name: "missing docker key",
+			out:  `[{"Name":"x","Endpoints":{"local":{"Host":"npipe:////./pipe/docker_engine"}}}]`,
+		},
+		{
+			name: "capitalised key is not docker",
+			out:  `[{"Name":"x","Endpoints":{"Docker":{"Host":"npipe:////./pipe/docker_engine"}}}]`,
+		},
+		{
+			name: "blank host",
+			out:  `[{"Name":"x","Endpoints":{"docker":{"Host":"   "}}}]`,
+		},
+		{
+			name: "no endpoints",
+			out:  `[{"Name":"x"}]`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := newFakeRunner(map[string]run.Result{
+				"context inspect x": {Stdout: tc.out},
+			})
+			target := ResolveTarget(context.Background(), runner, "docker",
+				envLookup(map[string]string{"DOCKER_CONTEXT": "x"}))
+			if target.Valid || target.Local {
+				t.Fatalf("target = %+v, want an unresolved endpoint", target)
+			}
+			if !strings.Contains(strings.ToLower(target.Reason), "docker") {
+				t.Errorf("reason = %q, want it to mention the docker endpoint", target.Reason)
+			}
+		})
+	}
+}
+
 func TestCollectRefusesRemoteEndpointByDefault(t *testing.T) {
 	runner := newFakeRunner(nil)
 	info := Inspector{
@@ -180,6 +290,117 @@ func TestCollectRemoteEndpointWithApproval(t *testing.T) {
 	}
 	if len(info.Warnings) == 0 || !strings.Contains(info.Warnings[0], "read-only") {
 		t.Errorf("warnings = %v", info.Warnings)
+	}
+}
+
+func TestRemoteApprovalDoesNotRescueInvalidEndpoint(t *testing.T) {
+	endpoints := []string{
+		"tcp://",
+		"tcp://user:pass@example.com:2375",
+		"https://example.com:2376",
+		"npipe://",
+		"npipe://server/pipe/docker_engine",
+		"npipe:////fileserver/pipe/docker_engine",
+		"unix://relative.sock",
+	}
+
+	for _, endpoint := range endpoints {
+		t.Run(endpoint, func(t *testing.T) {
+			runner := newFakeRunner(nil)
+			info := Inspector{
+				Runner:      runner,
+				AllowRemote: true,
+				LookupEnv:   envLookup(map[string]string{"DOCKER_HOST": endpoint}),
+			}.Collect(context.Background())
+
+			if info.Status.Available {
+				t.Fatalf("invalid endpoint was contacted: %+v", info.Status)
+			}
+			if !strings.Contains(info.Status.Reason, "could not be resolved") {
+				t.Errorf("reason = %q", info.Status.Reason)
+			}
+			for _, call := range runner.calls {
+				if strings.Contains(call, "version") || strings.Contains(call, " ps ") {
+					t.Errorf("daemon was contacted for an invalid endpoint: %s", call)
+				}
+			}
+		})
+	}
+}
+
+func TestRemoteApprovalDoesNotRescueUnresolvedContext(t *testing.T) {
+	runner := newFakeRunner(map[string]run.Result{
+		"context inspect missing": {ExitCode: 1, Stderr: "context not found"},
+	})
+	info := Inspector{
+		Runner:      runner,
+		AllowRemote: true,
+		LookupEnv:   envLookup(map[string]string{"DOCKER_CONTEXT": "missing"}),
+	}.Collect(context.Background())
+
+	if info.Status.Available {
+		t.Fatal("unresolved context must not be contacted with --allow-remote-docker")
+	}
+	for _, call := range runner.calls {
+		if strings.Contains(call, "version") {
+			t.Errorf("daemon was contacted despite an unresolved context: %s", call)
+		}
+	}
+}
+
+func TestHostQualifiedNamedPipeIsNeverContacted(t *testing.T) {
+	endpoints := []string{
+		"npipe:////fileserver/pipe/docker_engine",
+		"npipe:////localhost/pipe/docker_engine",
+		"npipe://server/pipe/docker_engine",
+	}
+
+	for _, endpoint := range endpoints {
+		t.Run(endpoint, func(t *testing.T) {
+			for _, allow := range []bool{false, true} {
+				runner := newFakeRunner(nil)
+				info := Inspector{
+					Runner:      runner,
+					AllowRemote: allow,
+					LookupEnv:   envLookup(map[string]string{"DOCKER_HOST": endpoint}),
+				}.Collect(context.Background())
+
+				if info.Status.Available {
+					t.Fatalf("allowRemote=%v: host-qualified pipe was contacted", allow)
+				}
+				if info.Status.EndpointLocal {
+					t.Errorf("allowRemote=%v: host-qualified pipe classified as local", allow)
+				}
+				for _, call := range runner.calls {
+					if strings.Contains(call, "version") || strings.Contains(call, " ps ") {
+						t.Errorf("allowRemote=%v: daemon command issued: %s", allow, call)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestTargetApprovedRequiresValidEndpoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		target Target
+		allow  bool
+		want   bool
+	}{
+		{"local valid", Target{Valid: true, Local: true}, false, true},
+		{"remote valid without approval", Target{Valid: true}, false, false},
+		{"remote valid with approval", Target{Valid: true}, true, true},
+		{"invalid with approval", Target{}, true, false},
+		{"invalid local with approval", Target{Local: true}, true, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.target.Approved(tc.allow); got != tc.want {
+				t.Errorf("Approved(%v) = %v, want %v (%+v)", tc.allow, got, tc.want, tc.target)
+			}
+		})
 	}
 }
 

@@ -65,14 +65,17 @@ func (i Inspector) Collect(ctx context.Context) model.DockerInfo {
 		EndpointLocal: target.Local,
 	}
 
+	if !target.Valid {
+		info.Status.Available = false
+		info.Status.Reason = "Docker endpoint could not be resolved: " + target.Reason +
+			". StackBroom did not contact Docker."
+		return info
+	}
+
 	if !target.Local && !i.AllowRemote {
 		info.Status.Available = false
-		if target.Source == SourceUnknown {
-			info.Status.Reason = target.Reason + ". StackBroom did not contact Docker."
-		} else {
-			info.Status.Reason = "Docker endpoint refused: " + target.Reason +
-				". StackBroom did not contact it. Re-run with --allow-remote-docker to inspect it read-only."
-		}
+		info.Status.Reason = "Docker endpoint refused: " + target.Reason +
+			". StackBroom did not contact it. Re-run with --allow-remote-docker to inspect it read-only."
 		return info
 	}
 	if !target.Local && i.AllowRemote {
