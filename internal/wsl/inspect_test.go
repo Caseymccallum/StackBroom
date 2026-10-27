@@ -111,6 +111,25 @@ func TestCollectUnavailableReasons(t *testing.T) {
 	}
 }
 
+func TestCollectWarnsWhenOutputIsTruncated(t *testing.T) {
+	out := utf16leString("  NAME  STATE  VERSION\r\n  Ubuntu  Running  2\r\n")
+	runner := &fakeRunner{result: run.Result{Stdout: out, Truncated: true}}
+	info := Inspector{Runner: runner}.Collect(context.Background())
+
+	if !info.Available {
+		t.Fatalf("wsl should still be available: %+v", info)
+	}
+	found := false
+	for _, warning := range info.Warnings {
+		if strings.Contains(warning, "truncated") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no truncation warning: %v", info.Warnings)
+	}
+}
+
 func TestCollectIssuesOnlyListCommand(t *testing.T) {
 	runner := &fakeRunner{result: run.Result{Stdout: "  NAME  STATE  VERSION\n"}}
 	Inspector{Runner: runner}.Collect(context.Background())

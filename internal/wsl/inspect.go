@@ -72,6 +72,10 @@ func (i Inspector) Collect(ctx context.Context) model.WSLInfo {
 	info.Available = true
 	dists, warnings := ParseDistributionList(stdout)
 	info.Distributions = dists
+	if res.Truncated {
+		warnings = append(warnings, "wsl.exe output exceeded the capture limit and was truncated; the distribution list may be incomplete")
+	}
+	info.Warnings = warnings
 	if len(warnings) > 0 {
 		info.Reason = warnings[0]
 	}
