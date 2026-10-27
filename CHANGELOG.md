@@ -4,6 +4,47 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [0.1.2] - 2026-10-27
+
+Final Docker boundary hardening from independent review of v0.1.1. No new product
+features; the read-only command allowlist is unchanged.
+
+### Security
+
+- **Deterministic context endpoint selection.** A Docker context's endpoint is now
+  read from the explicit `Endpoints["docker"]` entry only. The previous code
+  iterated the endpoint map and could select an unrelated local endpoint from a
+  context whose Docker endpoint was remote. Missing, blank, capitalised or
+  otherwise unexpected keys fail closed.
+- **Named-pipe locality validation.** Only the canonical local form
+  `npipe:////./pipe/<name>` is classified as local. Host-qualified UNC pipes
+  (`npipe:////<host>/pipe/<name>`) address another machine over SMB and are
+  rejected as unsupported, so they are never contacted even with
+  `--allow-remote-docker`. Malformed, ambiguous, encoded, traversal, query-bearing
+  and empty pipe forms are also invalid. Remote daemons require `tcp` or `ssh`.
+- **Fail-closed remote approval.** `--allow-remote-docker` no longer rescues an
+  unresolved or malformed endpoint. Approval requires a successfully resolved,
+  valid endpoint; invalid endpoints are never contacted.
+- `http://` and `https://` are rejected as unsupported Docker daemon transports
+  rather than being offered for remote approval.
+- Unix sockets must be absolute and non-empty; file descriptors must be numeric.
+
+### Added
+
+- Regression tests for multi-endpoint contexts in different JSON orders (50
+  iterations), unrelated local endpoints beside a remote Docker endpoint, missing
+  and blank Docker keys, local/remote/malformed pipe forms, and
+  approval-with-invalid-endpoint cases.
+
+### Changed
+
+- Docker status now distinguishes "endpoint could not be resolved" from
+  "remote endpoint refused" in its reason text.
+- Safety and architecture documentation describe the canonical pipe form and the
+  invalid-endpoint rule.
+
+[0.1.2]: https://github.com/Caseymccallum/StackBroom/compare/v0.1.1...v0.1.2
+
 ## [0.1.1] - 2026-10-27
 
 ### Security and privacy

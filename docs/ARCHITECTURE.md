@@ -137,11 +137,17 @@ its endpoint from `DOCKER_HOST`. StackBroom reads the endpoint Docker reports wi
 `docker context show` and `docker context inspect` (local metadata only) and
 classifies that effective target.
 
-Only `npipe`, `unix` and `fd` are treated as local. Every network transport,
-including loopback TCP, is refused unless `--allow-remote-docker` is passed. An
-endpoint that cannot be determined is refused. The resolved endpoint, locality and
-approval state are reported in `docker.status`, so "Docker unavailable" is never
-ambiguous between "daemon stopped" and "remote endpoint declined".
+Only the context's explicit `Endpoints["docker"]` entry is used; other endpoint
+types are never selected. Only canonical local named pipes
+(`npipe:////./pipe/<name>`), absolute Unix sockets and numeric file descriptors are
+treated as local. Host-qualified named pipes address another machine over SMB and
+are rejected as unsupported, so they are never contacted even with
+`--allow-remote-docker`; remote daemons use `tcp` or `ssh`. Malformed endpoints are
+invalid, every network transport requires explicit approval, and invalid or
+unresolved endpoints are refused even with that flag. The resolved endpoint,
+validity, locality and approval state are reported in `docker.status`, so "Docker
+unavailable" is never ambiguous between "daemon stopped", "remote endpoint
+declined" and "endpoint could not be resolved".
 
 Container sizes shown by `docker ps` are ignored; per-container disk usage is
 reported as unmeasured rather than approximated.

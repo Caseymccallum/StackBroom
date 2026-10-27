@@ -220,13 +220,23 @@ Endpoint classification:
 
 | Endpoint | Classification | Default behaviour |
 | --- | --- | --- |
-| `npipe://...` | local IPC | allowed |
-| `unix://...` | local IPC | allowed |
-| `fd://...` | local IPC | allowed |
-| `tcp://...` (including 127.0.0.1 and localhost) | network | **refused** |
-| `ssh://...` | network | **refused** |
-| `http://`, `https://` | network | **refused** |
-| unparseable, missing, unsupported scheme | unknown | **refused** |
+| `npipe:////./pipe/<name>` | local named pipe (canonical Docker form) | allowed |
+| `npipe:////<host>/pipe/<name>` | UNC pipe to another machine | **invalid; never contacted** |
+| any other `npipe:` form | malformed or ambiguous | **invalid; never contacted** |
+| `unix:///absolute/path` | local Unix socket | allowed |
+| `unix:` with a relative or empty path | malformed | **invalid; never contacted** |
+| `fd://<number>` | local file descriptor | allowed |
+| `tcp://...` (including 127.0.0.1 and localhost) | network | refused; requires `--allow-remote-docker` |
+| `ssh://...` | network | refused; requires `--allow-remote-docker` |
+| `http://`, `https://` | not a Docker daemon transport | **invalid; never contacted** |
+| unparseable, empty, missing host, unsupported scheme | unknown | **invalid; never contacted** |
+
+Only the canonical local pipe form is classified as local. Host-qualified UNC
+pipes address another machine over SMB and are rejected outright: StackBroom does
+not support remote named pipes, so they are never contacted, even with
+`--allow-remote-docker`. A malformed pipe is also never contacted. Remote daemons
+remain available through `tcp://` or `ssh://` with explicit approval, but that
+approval requires a successfully resolved, valid endpoint.
 
 Loopback TCP is refused because a local port can be an SSH tunnel to a remote
 daemon. Refusal is explicit: the Docker section reports the endpoint, the reason

@@ -6,7 +6,7 @@ StackBroom is a lightweight, open-source, Windows-first resource inspector for
 software developers. It shows what development processes, Docker and WSL2 are
 using, and suggests things worth reviewing. It never cleans up anything itself.
 
-- **Version:** 0.1.1 (read-only hardening release)
+- **Version:** 0.1.2 (read-only boundary hardening release)
 - **Platform:** Windows 10/11 (process inspection is Windows-only; Docker and WSL
   inspection degrade gracefully elsewhere)
 - **Dependencies:** Go standard library only, plus the tools it inspects
@@ -71,13 +71,13 @@ other users or protected by the OS show `Unknown` memory, which is expected.
 ```powershell
 git clone https://github.com/Caseymccallum/StackBroom.git
 cd StackBroom
-go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.1.1" -o bin/stackbroom.exe ./cmd/stackbroom
+go build -trimpath -ldflags "-s -w -X github.com/Caseymccallum/StackBroom/internal/version.Version=0.1.2" -o bin/stackbroom.exe ./cmd/stackbroom
 ```
 
 Or use the validation script, which formats, vets, tests and builds:
 
 ```powershell
-pwsh -File scripts/build.ps1 -Version 0.1.1
+pwsh -File scripts/build.ps1 -Version 0.1.2
 ```
 
 The result is a single self-contained `bin\stackbroom.exe` (about 3 MB). Copy it
@@ -100,7 +100,7 @@ stackbroom help              Show help
 | `--timeout DURATION` | scan, plan | Limit for **each** external command (default `20s`) |
 | `--skip-docker` | scan, plan | Do not query Docker at all |
 | `--skip-wsl` | scan, plan | Do not query WSL at all |
-| `--allow-remote-docker` | scan, plan | Permit a Docker endpoint that is not a local IPC channel. Refused by default; still read-only |
+| `--allow-remote-docker` | scan, plan | Permit a valid non-local Docker endpoint. Refused by default; malformed or unresolved endpoints are never contacted |
 | `--diagnostics` | scan, plan | Include command lines with secrets masked and home paths tokenised. Still sensitive; see Privacy |
 | `--no-command-lines` | scan, plan | Skip the PowerShell CIM lookup (faster, but roles and projects cannot be identified) |
 
@@ -110,10 +110,10 @@ could not read.
 
 ### Example: a real scan
 
-Genuine output from v0.1.0 (layout unchanged in v0.1.1 apart from the "estimate"
-label and the output-policy note) on a Windows 10 development machine on
-27 October 2026 (Docker Desktop 29.4.0 running, one WSL2 distribution), with some
-rows and project names shortened for readability:
+Genuine output from v0.1.0 (layout unchanged through v0.1.2 apart from the
+"estimate" label and the output-policy note) on a Windows 10 development machine
+on 27 October 2026 (Docker Desktop 29.4.0 running, one WSL2 distribution), with
+some rows and project names shortened for readability:
 
 ```
 stackbroom 0.1.0 - read-only scan
@@ -279,7 +279,7 @@ Saved JSON contains local paths and, in diagnostics mode, command detail; treat 
 as sensitive either way. See [docs/JSON-SCHEMA.md](docs/JSON-SCHEMA.md) for the
 full privacy contract.
 
-## Known limitations (v0.1.1)
+## Known limitations (v0.1.2)
 
 - Port-based duplicate detection uses requested ports from command lines, not the
   actual listening socket. Two processes may request the same port while only one

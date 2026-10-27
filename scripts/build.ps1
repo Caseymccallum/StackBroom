@@ -6,7 +6,7 @@
 # not touch anything outside this repository.
 
 param(
-    [string]$Version = "0.1.1-dev",
+    [string]$Version = "0.1.2-dev",
     [switch]$SkipLiveTests
 )
 

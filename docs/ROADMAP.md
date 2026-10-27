@@ -39,6 +39,17 @@ must not weaken the safety contract.
 
 **Not in scope, by design:** any form of cleanup.
 
+## v0.1.2 -- Docker boundary hardening (delivered)
+
+- Context endpoints are selected only from the explicit `docker` key, so map
+  iteration can never pick an unrelated local endpoint beside a remote daemon.
+- Named pipes are local only in the canonical `npipe:////./pipe/<name>` form;
+  host-qualified UNC pipes are rejected as unsupported and are never contacted,
+  even with approval. Remote daemons use `tcp` or `ssh`.
+- `--allow-remote-docker` requires a successfully resolved, valid endpoint.
+- Unsupported `http(s)://` transports, relative Unix sockets and non-numeric file
+  descriptors are rejected without any connection attempt.
+
 ## v0.1.x -- remaining small hardening
 
 - Add a `--max-processes` safety valve for machines with very large process lists.
