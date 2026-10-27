@@ -182,3 +182,6 @@
 }
 [data-theme="light"] { --muted: #526b79; }
 kbd { padding: 3px 6px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-2); font: 11px var(--mono); }
+.review-card { min-width: 0; overflow-wrap: anywhere; }
+.review-head { flex-wrap: wrap; }
+.review-meta .badge { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
