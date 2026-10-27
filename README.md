@@ -10,7 +10,9 @@ using, and suggests things worth reviewing. It never cleans up anything itself.
 - **Platform:** Windows 10/11 (process inspection is Windows-only; Docker and WSL
   inspection degrade gracefully elsewhere)
 - **Dependencies:** Go standard library only, plus the tools it inspects
-- **Network:** none. No telemetry, no accounts, no cloud services.
+- **Network:** no cloud services, telemetry or accounts. Docker is contacted over a
+  local named pipe or socket by default; a network daemon requires
+  `--allow-remote-docker`.
 
 > **Safety first.** StackBroom v0.1 has no cleanup capability. It cannot stop a
 > process, remove a container or image, prune Docker, delete a volume or stop a
@@ -255,10 +257,11 @@ Further reading: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 
 ## Privacy
 
-StackBroom makes no outbound network calls. It reads local process metadata,
-talks to Docker through a local named pipe or Unix socket, and invokes WSL
-locally. A Docker endpoint that is not a local IPC channel is refused unless you
-pass `--allow-remote-docker`.
+StackBroom contacts no service of its own. By default it reads local process
+metadata, talks to Docker through a local named pipe or Unix socket, and invokes
+WSL locally. A Docker endpoint that is not a local IPC channel is refused unless
+you pass `--allow-remote-docker`; with that flag, read-only Docker commands go to
+the configured daemon over the network.
 
 **Command lines are omitted by default.** They routinely contain tokens,
 passwords, connection strings and private paths. They are still used internally

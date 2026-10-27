@@ -96,7 +96,9 @@ text.
   still treat strings as data.
 - No files are written by StackBroom, so observed paths cannot cause file
   overwrites.
-- StackBroom makes no network requests, so no data leaves the machine.
+- StackBroom contacts no service of its own. Docker is reached over local IPC by
+  default; with `--allow-remote-docker`, read-only commands go to the configured
+  daemon over the network instead. Nothing is sent to StackBroom or a third party.
 
 ## Evidence rules (why nothing is called "unnecessary")
 
@@ -163,9 +165,11 @@ Risk is derived from the operation, not from how much space it frees.
 ## Privacy
 
 - No telemetry, analytics, update checks or crash reporting.
-- No network access of any kind.
-- Reports contain process command lines and local paths. Treat saved JSON as
-  sensitive: it can reveal usernames, project names and arguments.
+- No network access by default. With `--allow-remote-docker`, read-only Docker
+  commands go to the configured daemon over the network; nothing is sent to
+  StackBroom or any third party.
+- Reports contain local paths and, in diagnostics mode, command lines. Treat saved
+  JSON as sensitive: it can reveal usernames, project names and arguments.
 - StackBroom writes no files unless you redirect its output yourself.
 
 ## What a future cleanup feature would require
