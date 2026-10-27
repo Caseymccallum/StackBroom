@@ -3,8 +3,8 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,183,104 bytes** (about 11.2 MB)
-- SHA-256: `460C8A1FB8C21F656C1955EF47F1C30EFE683028278984BDD4C0AC6E3FBB5932`
+- Size: **11,183,616 bytes** (about 11.2 MB)
+- SHA-256: `45879BAF92DC8C476C7512169E989DA881B0EEE9AC20A2FED061EE27141BFDC0`
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.

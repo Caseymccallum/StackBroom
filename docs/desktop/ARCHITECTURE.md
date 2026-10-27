@@ -77,11 +77,11 @@ The bridge returns purpose-built DTOs, not `model.Snapshot`. In particular, thes
 
 ## Preview mode
 
-Screenshot automation sets `STACKBROOM_PREVIEW=1` and `STACKBROOM_PREVIEW_THEME=dark|light`. In that mode only:
+Screenshot automation sets `STACKBROOM_PREVIEW=1`, `STACKBROOM_PREVIEW_THEME=dark|light` and `STACKBROOM_PREVIEW_SCREEN=overview|processes|storage|developer|settings`. In that mode only:
 
 - the window is frameless so an exact 1920×1080 client area can be captured on a smaller display;
 - auto-refresh is forced off;
-- the requested theme is applied without writing preferences.
+- the requested theme and screen are applied without writing preferences.
 
 Preview mode does not change what data is read, does not perform actions and is not used in normal production launches.
 
