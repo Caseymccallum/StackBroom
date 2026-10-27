@@ -126,8 +126,24 @@ func longRunningRecommendations(procs []model.Process, now time.Time, opts Optio
 				"server is not serving work you still need.",
 			Subjects: []model.Subject{{Kind: "process", ID: fmt.Sprintf("%d", p.PID), Detail: p.CommandLine}},
 		}
-		if len(p.Ports) > 0 {
-			rec.Evidence = append(rec.Evidence, "Command line requests port "+joinPorts(p.Ports)+".")
+		if len(p.RequestedPorts) > 0 {
+			rec.Evidence = append(rec.Evidence, "Command line requests port "+joinPorts(p.RequestedPorts)+".")
+		}
+		if len(p.ListeningPorts) > 0 {
+			if p.PortOwnership == model.Confirmed {
+				rec.Evidence = append(rec.Evidence, "Windows reported this PID listening on port "+joinPorts(p.ListeningPorts)+".")
+			} else {
+				ownership := p.PortOwnership
+				if ownership == "" {
+					ownership = model.Unknown
+				}
+				rec.Evidence = append(rec.Evidence,
+					"Listener rows are associated with this PID on port "+joinPorts(p.ListeningPorts)+
+						", but ownership is "+string(ownership)+" rather than confirmed.")
+			}
+		} else if len(p.RequestedPorts) > 0 {
+			rec.Evidence = append(rec.Evidence,
+				"No listener owned by this PID was observed for the requested port; a request is not proof of a binding.")
 		}
 		if p.MemoryKnown {
 			rec.Resource = units.Bytes(p.WorkingSetBytes) + " working set (Windows measurement)."

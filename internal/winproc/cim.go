@@ -162,7 +162,10 @@ func ApplyEnrichment(procs []model.Process, enrich map[int32]Enrichment) {
 			procs[i].CommandLine = e.CommandLine
 			procs[i].CommandLineKnown = true
 		}
-		if e.StartedAt != nil {
+		// The native creation time is preferred: it is immutable and is used to
+		// detect PID reuse when listeners are sampled later. CIM fills the gap
+		// only when the process API could not be read.
+		if e.StartedAt != nil && !procs[i].StartTimeKnown {
 			procs[i].StartedAt = e.StartedAt
 			procs[i].StartTimeKnown = true
 		}

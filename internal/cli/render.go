@@ -40,6 +40,7 @@ func renderScan(w io.Writer, s model.Snapshot) {
 	renderResourceOverview(w, s)
 	renderProcesses(w, s)
 	renderTopMemory(w, s)
+	renderNetwork(w, s)
 	renderDocker(w, s)
 	renderWSL(w, s)
 	renderDuplicates(w, s)
@@ -88,6 +89,17 @@ func renderResourceOverview(w io.Writer, s model.Snapshot) {
 	default:
 		fmt.Fprintf(tw, "  WSL2 utility VM\tmemory unknown\t%d of %d distributions running\n",
 			s.Summary.WSLRunningDistributions, len(s.WSL.Distributions))
+	}
+
+	switch {
+	case !s.Network.Available:
+		fmt.Fprintf(tw, "  TCP listeners\tunavailable\t%s\n", dashIfEmpty(s.Network.Reason))
+	default:
+		detail := fmt.Sprintf("%d development-related", len(relevantListeners(s)))
+		if !s.Network.IPv6 {
+			detail += " (IPv6 unavailable)"
+		}
+		fmt.Fprintf(tw, "  TCP listeners\t%d observed\t%s\n", s.Summary.TCPListenerCount, detail)
 	}
 	_ = tw.Flush()
 	fmt.Fprintln(w)
@@ -169,12 +181,11 @@ func processDetail(p model.Process) string {
 	if p.DevServerKind != "" {
 		parts = append(parts, p.DevServerKind)
 	}
-	if len(p.Ports) > 0 {
-		portParts := make([]string, 0, len(p.Ports))
-		for _, port := range p.Ports {
-			portParts = append(portParts, fmt.Sprintf("%d", port))
-		}
-		parts = append(parts, "port "+strings.Join(portParts, ","))
+	if len(p.RequestedPorts) > 0 {
+		parts = append(parts, "requests "+portText(p.RequestedPorts))
+	}
+	if len(p.ListeningPorts) > 0 {
+		parts = append(parts, "listening "+portText(p.ListeningPorts))
 	}
 	if p.ParentName != "" && p.ParentPID > 0 {
 		parts = append(parts, "parent "+sanitize(p.ParentName))
@@ -186,6 +197,14 @@ func processDetail(p model.Process) string {
 		return "command line unavailable"
 	}
 	return strings.Join(parts, " | ")
+}
+
+func portText(ports []int) string {
+	parts := make([]string, 0, len(ports))
+	for _, port := range ports {
+		parts = append(parts, fmt.Sprintf("%d", port))
+	}
+	return strings.Join(parts, ",")
 }
 
 func dashIfEmpty(s string) string {

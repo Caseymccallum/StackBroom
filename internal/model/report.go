@@ -55,6 +55,10 @@ type Summary struct {
 	WSLRunningDistributions int    `json:"wslRunningDistributions"`
 	WSLVMMemoryBytes        uint64 `json:"wslVmMemoryBytes"`
 	WSLVMMemoryKnown        bool   `json:"wslVmMemoryKnown"`
+
+	// TCPListenerCount is every listening TCP row observed, including system
+	// services. Development-related subsets are derived by consumers.
+	TCPListenerCount int `json:"tcpListenerCount"`
 }
 
 // DuplicateKind distinguishes how a potential duplicate was identified.
@@ -62,6 +66,17 @@ const (
 	DuplicateByPort    = "port"
 	DuplicateByProject = "project"
 )
+
+// ListenerRef is the observed-socket evidence attached to a duplicate group.
+// It deliberately omits process names and command lines; those live on the
+// listener and process records and obey the same privacy policy.
+type ListenerRef struct {
+	Family    string     `json:"family"`
+	Address   string     `json:"address"`
+	Port      int        `json:"port"`
+	PID       int32      `json:"pid"`
+	Ownership Confidence `json:"ownership"`
+}
 
 // DuplicateGroup is a set of development server processes that appear to serve
 // the same purpose. A group is always a prompt to check, never a verdict.
@@ -76,6 +91,11 @@ type DuplicateGroup struct {
 	MemoryKnown int        `json:"memoryKnownCount"`
 	Confidence  Confidence `json:"confidence"`
 	Evidence    []string   `json:"evidence"`
+	// Listeners holds every observed socket on the group's port, including
+	// sockets owned by processes outside the group. That is intentional: an
+	// unrelated process holding the port explains why a requested port may not
+	// be available.
+	Listeners []ListenerRef `json:"listeners,omitempty"`
 }
 
 // Risk levels for recommendations. Nothing above Low is ever acted upon by
@@ -136,6 +156,7 @@ type RedactionInfo struct {
 // skipped or a fake clock was injected.
 type Timings struct {
 	ProcessesMS int64 `json:"processesMs"`
+	NetworkMS   int64 `json:"networkMs"`
 	DockerMS    int64 `json:"dockerMs"`
 	WSLMS       int64 `json:"wslMs"`
 	AnalysisMS  int64 `json:"analysisMs"`
@@ -152,6 +173,7 @@ type Snapshot struct {
 	Timings         *Timings         `json:"timings,omitempty"`
 	Host            Host             `json:"host"`
 	Processes       []Process        `json:"processes"`
+	Network         NetworkInfo      `json:"network"`
 	Docker          DockerInfo       `json:"docker"`
 	WSL             WSLInfo          `json:"wsl"`
 	Summary         Summary          `json:"summary"`

@@ -26,11 +26,12 @@ func TestRunHandlesLargeProcessInventory(t *testing.T) {
 			Runtime:         model.RuntimeNode,
 			MemoryKnown:     i%2 == 0,
 			WorkingSetBytes: uint64(i) * 512,
-			Ports:           []int{3000 + i%100},
+			RequestedPorts:  []int{3000 + i%100},
 		}
 	}
 
 	scanner := New(Options{
+		Network:   fakeNetwork{},
 		Now:       func() time.Time { return time.Unix(0, 0) },
 		Processes: fakeProcesses{result: winproc.Result{Processes: procs}},
 		Docker:    fakeDocker{},

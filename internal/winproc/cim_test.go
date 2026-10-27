@@ -126,6 +126,16 @@ func TestApplyEnrichment(t *testing.T) {
 	}
 }
 
+func TestApplyEnrichmentDoesNotOverwriteNativeStartTime(t *testing.T) {
+	native := time.Date(2026, 10, 27, 8, 0, 0, 0, time.UTC)
+	cim := native.Add(time.Hour)
+	procs := []model.Process{{PID: 1, StartedAt: &native, StartTimeKnown: true}}
+	ApplyEnrichment(procs, map[int32]Enrichment{1: {StartedAt: &cim}})
+	if !procs[0].StartedAt.Equal(native) {
+		t.Errorf("native start time was overwritten by CIM: got %s want %s", procs[0].StartedAt, native)
+	}
+}
+
 func TestCIMScriptIsStatic(t *testing.T) {
 	// The query must never be assembled from observed data; it is a fixed
 	// string with no formatting verbs.

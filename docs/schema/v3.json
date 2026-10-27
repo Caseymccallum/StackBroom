@@ -1,0 +1,428 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Caseymccallum/StackBroom/blob/main/docs/schema/v3.json",
+  "title": "StackBroom scan snapshot",
+  "description": "Read-only resource observation produced by `stackbroom scan --json`. Schema version 3 adds observed TCP listeners and separates requested ports from listening ports.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "readOnly",
+    "tool",
+    "generatedAt",
+    "durationMs",
+    "host",
+    "processes",
+    "network",
+    "docker",
+    "wsl",
+    "summary",
+    "duplicateSuspects",
+    "recommendations",
+    "warnings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "3",
+      "description": "Contract version. Bumped when a field is removed, renamed or changes meaning."
+    },
+    "readOnly": {
+      "type": "boolean",
+      "const": true,
+      "description": "Always true. StackBroom has no cleanup path."
+    },
+    "redaction": { "$ref": "#/$defs/redaction" },
+    "tool": { "$ref": "#/$defs/tool" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "timings": { "$ref": "#/$defs/timings" },
+    "host": { "$ref": "#/$defs/host" },
+    "processes": { "type": "array", "items": { "$ref": "#/$defs/process" } },
+    "network": { "$ref": "#/$defs/network" },
+    "docker": { "$ref": "#/$defs/docker" },
+    "wsl": { "$ref": "#/$defs/wsl" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "duplicateSuspects": { "type": "array", "items": { "$ref": "#/$defs/duplicate" } },
+    "recommendations": { "type": "array", "items": { "$ref": "#/$defs/recommendation" } },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "redaction": {
+      "type": "object",
+      "description": "States exactly how output was reduced. Always present in CLI output.",
+      "required": ["mode", "commandLines", "paths", "secrets"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["default", "diagnostics"] },
+        "commandLines": {
+          "type": "string",
+          "enum": ["omitted", "redacted"],
+          "description": "default omits command lines; diagnostics masks secrets and tokenises home paths."
+        },
+        "paths": { "type": "string", "const": "user-profile-tokenised" },
+        "secrets": { "type": "string", "const": "masked" }
+      },
+      "additionalProperties": true
+    },
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "timings": {
+      "type": "object",
+      "description": "Per-stage duration in milliseconds. Zero when a stage was skipped or a fake clock was used.",
+      "required": ["processesMs", "networkMs", "dockerMs", "wslMs", "analysisMs"],
+      "properties": {
+        "processesMs": { "type": "integer", "minimum": 0 },
+        "networkMs": { "type": "integer", "minimum": 0 },
+        "dockerMs": { "type": "integer", "minimum": 0 },
+        "wslMs": { "type": "integer", "minimum": 0 },
+        "analysisMs": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "host": {
+      "type": "object",
+      "required": ["os", "arch", "totalMemoryBytes", "availableMemoryBytes", "memoryKnown"],
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "hostname": { "type": "string" },
+        "totalMemoryBytes": { "type": "integer", "minimum": 0 },
+        "availableMemoryBytes": { "type": "integer", "minimum": 0 },
+        "memoryKnown": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "project": {
+      "type": "object",
+      "required": ["root", "name", "confidence", "evidence"],
+      "properties": {
+        "root": { "type": "string" },
+        "name": { "type": "string" },
+        "marker": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["confirmed", "inferred", "unknown"] },
+        "evidence": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "process": {
+      "type": "object",
+      "required": ["pid", "parentPid", "name", "commandLineKnown", "workingSetBytes", "memoryKnown", "startTimeKnown", "runtime", "category"],
+      "properties": {
+        "pid": { "type": "integer" },
+        "parentPid": { "type": "integer" },
+        "name": { "type": "string" },
+        "parentName": { "type": "string" },
+        "exePath": { "type": "string" },
+        "commandLine": {
+          "type": "string",
+          "description": "Absent by default. Present only with --diagnostics, after secrets are masked and home paths tokenised."
+        },
+        "commandLineKnown": { "type": "boolean" },
+        "commandLineOmitted": {
+          "type": "boolean",
+          "description": "True when a command line was observed but withheld by the privacy policy."
+        },
+        "workingSetBytes": { "type": "integer", "minimum": 0 },
+        "memoryKnown": { "type": "boolean" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "startTimeKnown": { "type": "boolean" },
+        "runtime": { "type": "string" },
+        "category": { "type": "string", "enum": ["dev-server", "dev-tool", "runtime", "other"] },
+        "devServerKind": { "type": "string" },
+        "requestedPorts": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "description": "Ports found in the command line. A request is not proof that a socket was bound. Replaces the version-2 `ports` field."
+        },
+        "listeningPorts": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "description": "Ports this PID was observed listening on and that could be associated with it."
+        },
+        "portOwnership": {
+          "type": "string",
+          "enum": ["confirmed", "inferred", "unknown"],
+          "description": "Weakest ownership confidence across this process's associated listeners. Absent when no listener was associated."
+        },
+        "project": { "$ref": "#/$defs/project" }
+      },
+      "additionalProperties": true
+    },
+    "network": {
+      "type": "object",
+      "description": "Point-in-time TCP listener observation. A listener proves a socket was bound, not that a process is redundant.",
+      "required": ["available", "ipv4", "ipv6", "listeners"],
+      "properties": {
+        "available": {
+          "type": "boolean",
+          "description": "True when at least one address family could be read."
+        },
+        "reason": { "type": "string" },
+        "ipv4": { "type": "boolean" },
+        "ipv6": { "type": "boolean" },
+        "sampledAt": { "type": "string", "format": "date-time" },
+        "listeners": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/listener" }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "listener": {
+      "type": "object",
+      "required": ["protocol", "family", "address", "port", "pid", "wildcard", "ownership"],
+      "properties": {
+        "protocol": { "type": "string", "const": "tcp" },
+        "family": { "type": "string", "enum": ["ipv4", "ipv6"] },
+        "address": {
+          "type": "string",
+          "description": "Unbracketed local address; link-local IPv6 may carry a %scope suffix."
+        },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "pid": { "type": "integer" },
+        "processName": { "type": "string" },
+        "projectName": { "type": "string" },
+        "wildcard": { "type": "boolean" },
+        "ownership": {
+          "type": "string",
+          "enum": ["confirmed", "inferred", "unknown"],
+          "description": "confirmed only when the PID and its native creation time matched before and after sampling."
+        }
+      },
+      "additionalProperties": true
+    },
+    "listenerRef": {
+      "type": "object",
+      "required": ["family", "address", "port", "pid", "ownership"],
+      "properties": {
+        "family": { "type": "string", "enum": ["ipv4", "ipv6"] },
+        "address": { "type": "string" },
+        "port": { "type": "integer" },
+        "pid": { "type": "integer" },
+        "ownership": { "type": "string", "enum": ["confirmed", "inferred", "unknown"] }
+      },
+      "additionalProperties": true
+    },
+    "docker": {
+      "type": "object",
+      "required": ["status", "containers", "diskUsage", "images"],
+      "properties": {
+        "status": {
+          "type": "object",
+          "required": ["available", "endpointLocal"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "reason": { "type": "string" },
+            "serverVersion": { "type": "string" },
+            "context": { "type": "string" },
+            "endpoint": {
+              "type": "string",
+              "description": "Resolved daemon endpoint with credentials removed."
+            },
+            "endpointLocal": {
+              "type": "boolean",
+              "description": "True only for local IPC channels (npipe, unix, fd)."
+            },
+            "remoteApproved": {
+              "type": "boolean",
+              "description": "True when a network endpoint was inspected because --allow-remote-docker was passed."
+            }
+          },
+          "additionalProperties": true
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "image": { "type": "string" },
+              "state": { "type": "string" },
+              "status": { "type": "string" },
+              "createdAt": { "type": "string" },
+              "ports": { "type": "string" },
+              "composeProject": { "type": "string" },
+              "composeService": { "type": "string" },
+              "composeWorkingDir": { "type": "string" },
+              "statsKnown": { "type": "boolean" },
+              "cpuPercent": { "type": "string" },
+              "memoryUsage": { "type": "string" },
+              "memoryPercent": { "type": "string" },
+              "stoppedForText": { "type": "string" },
+              "stoppedForDays": { "type": "integer" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "diskUsage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "total", "active"],
+            "properties": {
+              "type": { "type": "string" },
+              "total": { "type": "integer" },
+              "active": { "type": "integer" },
+              "sizeText": { "type": "string" },
+              "size": { "type": "integer", "minimum": 0 },
+              "reclaimableText": { "type": "string" },
+              "reclaimable": { "type": "integer", "minimum": 0 },
+              "reclaimablePercent": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["repository", "tag", "inUse"],
+            "properties": {
+              "id": { "type": "string" },
+              "repository": { "type": "string" },
+              "tag": { "type": "string" },
+              "sizeText": { "type": "string" },
+              "size": { "type": "integer", "minimum": 0 },
+              "createdFor": { "type": "string" },
+              "inUse": { "type": "boolean" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "imagesTruncated": { "type": "boolean" },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "wsl": {
+      "type": "object",
+      "required": ["available", "distributions", "vmMemoryBytes", "vmMemoryKnown"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "distributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "state", "version", "isDefault"],
+            "properties": {
+              "name": { "type": "string" },
+              "state": { "type": "string" },
+              "version": { "type": "string" },
+              "isDefault": { "type": "boolean" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "vmMemoryBytes": { "type": "integer", "minimum": 0 },
+        "vmMemoryKnown": { "type": "boolean" },
+        "vmProcessName": { "type": "string" },
+        "vmNote": { "type": "string" },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "object",
+      "description": "Aggregated figures. Every byte figure carries an explicit known flag or row counts; nothing is estimated.",
+      "properties": {
+        "totalProcesses": { "type": "integer" },
+        "devProcessCount": { "type": "integer" },
+        "devServerCount": { "type": "integer" },
+        "devMemoryBytes": {
+          "type": "integer",
+          "description": "Sum of per-process working sets. Shared pages can be counted more than once, so this is not unique memory."
+        },
+        "devMemoryKnownCount": { "type": "integer" },
+        "topProcesses": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "topMemoryBytes": { "type": "integer" },
+        "runtimeTotals": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "dockerRunningContainers": { "type": "integer" },
+        "dockerStoppedContainers": { "type": "integer" },
+        "dockerTotalBytes": { "type": "integer" },
+        "dockerTotalKnown": { "type": "boolean" },
+        "dockerReclaimableBytes": {
+          "type": "integer",
+          "description": "Sum of Docker's reclaimable figures for the rows that reported one. An estimate, not guaranteed recovery."
+        },
+        "dockerReclaimableKnown": { "type": "boolean" },
+        "dockerSizeRowsKnown": { "type": "integer" },
+        "dockerSizeRowsTotal": { "type": "integer" },
+        "dockerReclaimRowsKnown": { "type": "integer" },
+        "dockerReclaimRowsTotal": { "type": "integer" },
+        "wslRunningDistributions": { "type": "integer" },
+        "wslVmMemoryBytes": { "type": "integer" },
+        "wslVmMemoryKnown": { "type": "boolean" },
+        "tcpListenerCount": {
+          "type": "integer",
+          "description": "Every listening TCP row observed, including system services. Development-related subsets are derived by consumers."
+        }
+      },
+      "additionalProperties": true
+    },
+    "duplicate": {
+      "type": "object",
+      "required": ["kind", "key", "pids", "confidence", "evidence"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["port", "project"] },
+        "key": { "type": "string" },
+        "runtime": { "type": "string" },
+        "port": { "type": "integer" },
+        "projectRoot": { "type": "string" },
+        "pids": { "type": "array", "items": { "type": "integer" } },
+        "memoryBytes": { "type": "integer" },
+        "memoryKnownCount": { "type": "integer" },
+        "confidence": { "type": "string", "enum": ["confirmed", "inferred", "unknown"] },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "listeners": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/listenerRef" },
+          "description": "Every observed socket on the group's port, including sockets owned by processes outside the group."
+        }
+      },
+      "additionalProperties": true
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["id", "kind", "title", "detected", "whyItMightBeUnnecessary", "evidence", "resource", "resourceUnknown", "reviewBeforeActing", "risk", "riskDetail", "confidence", "subjects"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string" },
+        "title": { "type": "string" },
+        "detected": { "type": "string" },
+        "whyItMightBeUnnecessary": { "type": "string" },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "resource": { "type": "string" },
+        "resourceBytes": { "type": "integer" },
+        "resourceUnknown": { "type": "boolean" },
+        "reviewBeforeActing": { "type": "array", "items": { "type": "string" } },
+        "risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "riskDetail": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["confirmed", "inferred", "unknown"] },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "id"],
+            "properties": {
+              "kind": { "type": "string" },
+              "id": { "type": "string" },
+              "detail": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

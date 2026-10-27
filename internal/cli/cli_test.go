@@ -24,10 +24,10 @@ func fixtureSnapshot() model.Snapshot {
 	rec := model.Recommendation{
 		ID:             "duplicate-dev-server-1",
 		Kind:           "duplicate-dev-server",
-		Title:          "Two node development servers appear to request port 5173",
-		Detected:       "2 node development server processes each request port 5173 (PIDs 100, 200).",
-		WhyUnnecessary: "Only one process can listen on a TCP port.",
-		Evidence:       []string{"PID 100 (node, vite) requests port 5173"},
+		Title:          "Two node development servers target port 5173; only PID 100 is observed listening",
+		Detected:       "2 node development server processes are associated with port 5173 (PIDs 100, 200); only PID 100 has an observed listener.",
+		WhyUnnecessary: "One process was observed bound; the other requested the port but no listener owned by its PID was observed.",
+		Evidence:       []string{"PID 100 (node, vite) requests port 5173; observed listening on 127.0.0.1:5173 (ipv4)"},
 		Resource:       "150 MB working set.",
 		ResourceBytes:  150 << 20,
 		Review:         []string{"Check the listening process with Get-NetTCPConnection."},
@@ -50,7 +50,8 @@ func fixtureSnapshot() model.Snapshot {
 		Processes: []model.Process{
 			{
 				PID: 100, Name: "node.exe", Runtime: model.RuntimeNode,
-				Category: model.CategoryDevServer, DevServerKind: "vite", Ports: []int{5173},
+				Category: model.CategoryDevServer, DevServerKind: "vite",
+				RequestedPorts: []int{5173}, ListeningPorts: []int{5173}, PortOwnership: model.Confirmed,
 				Project: project, WorkingSetBytes: 150 << 20, MemoryKnown: true,
 				StartTimeKnown: true, StartedAt: &started, CommandLineKnown: true,
 				ParentName: "Code.exe",
@@ -58,6 +59,15 @@ func fixtureSnapshot() model.Snapshot {
 			{
 				PID: 300, Name: "python.exe", Runtime: model.RuntimePython,
 				Category: model.CategoryDevTool, MemoryKnown: false, CommandLineKnown: true,
+			},
+		},
+		Network: model.NetworkInfo{
+			Available: true, IPv4: true, IPv6: true,
+			SampledAt: generated.Add(-time.Second),
+			Listeners: []model.TCPListener{
+				{Protocol: "tcp", Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 100, ProcessName: "node.exe", ProjectName: "demo", Ownership: model.Confirmed},
+				{Protocol: "tcp", Family: "ipv6", Address: "::1", Port: 3000, PID: 200, ProcessName: "node.exe", Ownership: model.Confirmed},
+				{Protocol: "tcp", Family: "ipv4", Address: "0.0.0.0", Port: 135, PID: 4, ProcessName: "svchost.exe", Wildcard: true, Ownership: model.Unknown},
 			},
 		},
 		Docker: model.DockerInfo{
@@ -90,11 +100,15 @@ func fixtureSnapshot() model.Snapshot {
 			DockerReclaimableBytes: 12410 << 20, DockerReclaimKnown: true,
 			DockerSizeRowsKnown: 2, DockerSizeRowsTotal: 2,
 			WSLRunningDistributions: 1, WSLVMMemoryBytes: 473 << 20, WSLVMMemoryKnown: true,
+			TCPListenerCount: 3,
 		},
 		Duplicates: []model.DuplicateGroup{{
 			Kind: model.DuplicateByPort, Key: "node on port 5173", Runtime: model.RuntimeNode,
 			Port: 5173, PIDs: []int32{100, 200}, MemoryBytes: 150 << 20, MemoryKnown: 1,
 			Confidence: model.Inferred, Evidence: []string{"PID 100 (node, vite) requests port 5173"},
+			Listeners: []model.ListenerRef{
+				{Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 100, Ownership: model.Confirmed},
+			},
 		}},
 		Recommendations: []model.Recommendation{rec},
 		Warnings:        []string{"Docker: example note."},
@@ -164,7 +178,10 @@ func TestScanTextOutput(t *testing.T) {
 		"RESOURCES",
 		"DEVELOPMENT PROCESSES (2)",
 		"demo (confirmed)",
-		"vite | port 5173",
+		"vite | requests 5173 | listening 5173",
+		"TCP LISTENERS (3 observed, 1 development-related)",
+		"127.0.0.1",
+		"confirmed",
 		"Unknown",
 		"DOCKER",
 		"Storage (Docker's own report",
@@ -178,6 +195,75 @@ func TestScanTextOutput(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("scan output missing %q\n---\n%s", want, text)
 		}
+	}
+}
+
+func TestNetworkSectionOmitsUnrelatedSystemListeners(t *testing.T) {
+	app, out, _ := newTestApp(fixtureSnapshot())
+	if code := app.Run(context.Background(), []string{"scan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	text := out.String()
+	if strings.Contains(text, "svchost.exe") || strings.Contains(text, "0.0.0.0") {
+		t.Errorf("system listener leaked into the text table:\n%s", text)
+	}
+	if !strings.Contains(text, "1 development-related") {
+		t.Errorf("development-related count missing:\n%s", text)
+	}
+}
+
+func TestNetworkNoDevelopmentRelatedListeners(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	snapshot.Processes = []model.Process{}
+	snapshot.Summary.DevProcessCount = 0
+	snapshot.Summary.TCPListenerCount = 1
+	snapshot.Network.Listeners = []model.TCPListener{{
+		Protocol: "tcp", Family: "ipv4", Address: "0.0.0.0", Port: 135, PID: 4,
+		ProcessName: "svchost.exe", Wildcard: true, Ownership: model.Inferred,
+	}}
+	app, out, _ := newTestApp(snapshot)
+	if code := app.Run(context.Background(), []string{"scan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	text := out.String()
+	if !strings.Contains(text, "None are owned by recognised development processes") {
+		t.Errorf("empty development-related set not explained:\n%s", text)
+	}
+	if !strings.Contains(text, "1 other TCP listener was observed") {
+		t.Errorf("full-table count missing:\n%s", text)
+	}
+}
+
+func TestNetworkUnavailableIsExplicit(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	snapshot.Network = model.NetworkInfo{
+		Available: false, Reason: "access denied while reading the IPV4 table",
+		Listeners: []model.TCPListener{},
+	}
+	snapshot.Summary.TCPListenerCount = 0
+	app, out, _ := newTestApp(snapshot)
+	if code := app.Run(context.Background(), []string{"scan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	text := out.String()
+	if !strings.Contains(text, "Unavailable: access denied") {
+		t.Errorf("network availability not stated:\n%s", text)
+	}
+	if strings.Contains(text, "No TCP listeners were observed") {
+		t.Error("unavailable network was reported as an observed empty table")
+	}
+}
+
+func TestNetworkNoListenersObserved(t *testing.T) {
+	snapshot := fixtureSnapshot()
+	snapshot.Network.Listeners = []model.TCPListener{}
+	snapshot.Summary.TCPListenerCount = 0
+	app, out, _ := newTestApp(snapshot)
+	if code := app.Run(context.Background(), []string{"scan"}); code != ExitOK {
+		t.Fatalf("exit code = %d", code)
+	}
+	if !strings.Contains(out.String(), "No TCP listeners were observed") {
+		t.Errorf("empty listener table not explained:\n%s", out.String())
 	}
 }
 
@@ -200,6 +286,20 @@ func TestScanJSONOutput(t *testing.T) {
 	if len(got.Processes) != 2 || len(got.Recommendations) != 1 {
 		t.Errorf("decoded snapshot = %d processes, %d recommendations", len(got.Processes), len(got.Recommendations))
 	}
+	if len(got.Network.Listeners) != 3 || got.Summary.TCPListenerCount != 3 {
+		t.Errorf("network = %+v summary count = %d", got.Network.Listeners, got.Summary.TCPListenerCount)
+	}
+	if len(got.Processes[0].RequestedPorts) != 1 || len(got.Processes[0].ListeningPorts) != 1 {
+		t.Errorf("port evidence = requested %v listening %v",
+			got.Processes[0].RequestedPorts, got.Processes[0].ListeningPorts)
+	}
+	body := out.String()
+	if !strings.Contains(body, `"requestedPorts"`) || !strings.Contains(body, `"listeningPorts"`) {
+		t.Error("schema v3 port field names are missing")
+	}
+	if strings.Contains(body, `"ports":`) {
+		t.Error("deprecated ports field is still emitted")
+	}
 }
 
 func TestPlanTextOutput(t *testing.T) {
@@ -211,7 +311,7 @@ func TestPlanTextOutput(t *testing.T) {
 
 	for _, want := range []string{
 		"review suggestions",
-		"1. Two node development servers appear to request port 5173",
+		"1. Two node development servers target port 5173; only PID 100 is observed listening",
 		"Risk: medium | Confidence: inferred",
 		"Detected:",
 		"Evidence:",
@@ -350,6 +450,9 @@ func sensitiveSnapshot() model.Snapshot {
 	snapshot.Processes[0].Project.Evidence = []string{`package.json found in C:\Users\Casey\Web Apps\demo`}
 	snapshot.Recommendations[0].Subjects[0].Detail = command
 	snapshot.Recommendations[0].Detected = `project at C:\Users\Casey\Web Apps\demo`
+	snapshot.Network.Listeners[0].ProcessName = `C:\Users\Casey\svc.exe`
+	snapshot.Network.Listeners[0].ProjectName = `C:\Users\Casey\Web Apps\demo`
+	snapshot.Network.Warnings = []string{`listener token API_TOKEN=xyz789 in C:\Users\Casey`}
 	snapshot.Warnings = append(snapshot.Warnings, `token used: API_TOKEN=xyz789 in C:\Users\Casey\Web Apps\demo`)
 	return snapshot
 }

@@ -91,8 +91,95 @@ func TestRecommendDuplicateServer(t *testing.T) {
 	if len(rec.Subjects) != 2 {
 		t.Errorf("subjects = %+v", rec.Subjects)
 	}
-	if !strings.Contains(strings.Join(rec.Evidence, " "), "did not check") {
-		t.Errorf("evidence should state the listener was not checked: %v", rec.Evidence)
+	if !strings.Contains(strings.Join(rec.Evidence, " "), "separate evidence") {
+		t.Errorf("evidence should separate requested ports from observed listeners: %v", rec.Evidence)
+	}
+	if !strings.Contains(rec.Title, "no listener was observed") {
+		t.Errorf("title should not claim a binding when none was observed: %q", rec.Title)
+	}
+}
+
+func TestRecommendDuplicateServerListenerEvidence(t *testing.T) {
+	tests := []struct {
+		name      string
+		group     model.DuplicateGroup
+		wantTitle string
+	}{
+		{
+			name: "one observed listener",
+			group: model.DuplicateGroup{
+				Kind: model.DuplicateByPort, Runtime: model.RuntimeNode, Port: 5173,
+				PIDs: []int32{100, 200}, Confidence: model.Inferred,
+				Evidence: []string{"PID 100 is observed listening on 127.0.0.1:5173"},
+				Listeners: []model.ListenerRef{
+					{Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 100, Ownership: model.Confirmed},
+				},
+			},
+			wantTitle: "only PID 100 is observed listening",
+		},
+		{
+			name: "two observed listeners",
+			group: model.DuplicateGroup{
+				Kind: model.DuplicateByPort, Runtime: model.RuntimeNode, Port: 5173,
+				PIDs: []int32{100, 200}, Confidence: model.Confirmed,
+				Listeners: []model.ListenerRef{
+					{Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 100, Ownership: model.Confirmed},
+					{Family: "ipv6", Address: "::1", Port: 5173, PID: 200, Ownership: model.Confirmed},
+				},
+			},
+			wantTitle: "are observed listening",
+		},
+		{
+			name: "another process holds the port",
+			group: model.DuplicateGroup{
+				Kind: model.DuplicateByPort, Runtime: model.RuntimeNode, Port: 5173,
+				PIDs: []int32{100, 200}, Confidence: model.Inferred,
+				Listeners: []model.ListenerRef{
+					{Family: "ipv4", Address: "0.0.0.0", Port: 5173, PID: 999, Ownership: model.Confirmed},
+				},
+			},
+			wantTitle: "held by another process",
+		},
+		{
+			name: "ownership uncertain",
+			group: model.DuplicateGroup{
+				Kind: model.DuplicateByPort, Runtime: model.RuntimeNode, Port: 5173,
+				PIDs: []int32{100, 200}, Confidence: model.Inferred,
+				Listeners: []model.ListenerRef{
+					{Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 200, Ownership: model.Unknown},
+				},
+			},
+			wantTitle: "ownership is uncertain",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			recs := Recommend(nil, model.DockerInfo{}, model.WSLInfo{}, []model.DuplicateGroup{tc.group}, testNow, DefaultOptions())
+			if len(recs) != 1 {
+				t.Fatalf("recommendations = %+v", recs)
+			}
+			rec := recs[0]
+			assertContract(t, recs)
+			if !strings.Contains(rec.Title, tc.wantTitle) {
+				t.Errorf("title = %q, want %q", rec.Title, tc.wantTitle)
+			}
+			listenerSubjects := 0
+			for _, subject := range rec.Subjects {
+				if subject.Kind == "listener" {
+					listenerSubjects++
+				}
+			}
+			if listenerSubjects != len(tc.group.Listeners) {
+				t.Errorf("listener subjects = %d, want %d", listenerSubjects, len(tc.group.Listeners))
+			}
+			text := strings.ToLower(strings.Join(append([]string{rec.Title, rec.Detected, rec.WhyUnnecessary}, rec.Evidence...), " "))
+			for _, forbidden := range []string{"failed to bind", "crashed", "orphaned", "process exited"} {
+				if strings.Contains(text, forbidden) {
+					t.Errorf("recommendation asserts an unsupported conclusion %q: %s", forbidden, text)
+				}
+			}
+		})
 	}
 }
 
@@ -104,7 +191,7 @@ func TestRecommendLongRunningServer(t *testing.T) {
 	base := model.Process{
 		PID: 9, Name: "node.exe", Runtime: model.RuntimeNode,
 		Category: model.CategoryDevServer, DevServerKind: "vite",
-		Ports: []int{5173}, Project: project,
+		RequestedPorts: []int{5173}, Project: project,
 		WorkingSetBytes: 200 << 20, MemoryKnown: true,
 	}
 

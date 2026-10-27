@@ -11,6 +11,7 @@ import (
 
 func TestRunRespectsSkipFlags(t *testing.T) {
 	scanner := New(Options{
+		Network:    fakeNetwork{},
 		Now:        func() time.Time { return time.Unix(0, 0) },
 		SkipDocker: true,
 		SkipWSL:    true,
@@ -34,7 +35,8 @@ func TestRunRespectsSkipFlags(t *testing.T) {
 
 func TestRunDoesNotPromoteInferredProjects(t *testing.T) {
 	scanner := New(Options{
-		Now: func() time.Time { return time.Unix(0, 0) },
+		Network: fakeNetwork{},
+		Now:     func() time.Time { return time.Unix(0, 0) },
 		Processes: fakeProcesses{result: winproc.Result{Processes: []model.Process{{
 			PID: 5, Name: "node.exe", Runtime: model.RuntimeNode, Category: model.CategoryRuntime,
 			CommandLine: "node x", CommandLineKnown: true,
@@ -53,7 +55,8 @@ func TestRunDoesNotPromoteInferredProjects(t *testing.T) {
 
 func TestRunPropagatesCollectorWarnings(t *testing.T) {
 	scanner := New(Options{
-		Now: func() time.Time { return time.Unix(0, 0) },
+		Network: fakeNetwork{},
+		Now:     func() time.Time { return time.Unix(0, 0) },
 		Processes: fakeProcesses{result: winproc.Result{
 			Warnings: []string{"Command lines could not be read."},
 		}},

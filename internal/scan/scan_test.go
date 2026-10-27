@@ -28,6 +28,16 @@ func (f fakeDocker) Collect(ctx context.Context) model.DockerInfo {
 	return f.info
 }
 
+type fakeNetwork struct{ info model.NetworkInfo }
+
+func (f fakeNetwork) Collect(ctx context.Context) model.NetworkInfo {
+	_ = ctx
+	if f.info.Listeners == nil {
+		f.info.Listeners = []model.TCPListener{}
+	}
+	return f.info
+}
+
 type fakeWSL struct{ info model.WSLInfo }
 
 func (f fakeWSL) Collect(ctx context.Context) model.WSLInfo {
@@ -62,7 +72,8 @@ func TestRunBuildsSnapshot(t *testing.T) {
 	}
 
 	scanner := New(Options{
-		Now: func() time.Time { return fixed },
+		Network: fakeNetwork{},
+		Now:     func() time.Time { return fixed },
 		Processes: fakeProcesses{result: winproc.Result{
 			Processes: procs,
 			Source:    winproc.SourceCIM,
@@ -132,6 +143,7 @@ func TestRunBuildsSnapshot(t *testing.T) {
 
 func TestRunSurvivesProcessCollectorFailure(t *testing.T) {
 	scanner := New(Options{
+		Network:   fakeNetwork{},
 		Now:       func() time.Time { return time.Unix(0, 0) },
 		Processes: fakeProcesses{err: errors.New("access denied")},
 		Docker:    fakeDocker{},

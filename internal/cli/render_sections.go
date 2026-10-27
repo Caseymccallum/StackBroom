@@ -3,10 +3,127 @@ package cli
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Caseymccallum/StackBroom/internal/model"
 )
+
+// maxListenerRows keeps a machine with many development sockets readable. The
+// full table is always present in --json.
+const maxListenerRows = 20
+
+func renderNetwork(w io.Writer, s model.Snapshot) {
+	if !s.Network.Available {
+		fmt.Fprintln(w, "TCP LISTENERS")
+		fmt.Fprintf(w, "  Unavailable: %s\n", dashIfEmpty(s.Network.Reason))
+		fmt.Fprintln(w)
+		return
+	}
+
+	rows := relevantListeners(s)
+	total := s.Summary.TCPListenerCount
+	if total == 0 {
+		fmt.Fprintln(w, "TCP LISTENERS")
+		fmt.Fprintln(w, "  No TCP listeners were observed.")
+		fmt.Fprintln(w)
+		return
+	}
+
+	fmt.Fprintf(w, "TCP LISTENERS (%d observed, %d development-related)\n", total, len(rows))
+	if len(rows) == 0 {
+		fmt.Fprintln(w, "  None are owned by recognised development processes or hold a port one requested.")
+		if total == 1 {
+			fmt.Fprintln(w, "  1 other TCP listener was observed; use --json for the full list.")
+		} else {
+			fmt.Fprintf(w, "  %d other TCP listeners were observed; use --json for the full list.\n", total)
+		}
+		fmt.Fprintln(w)
+		return
+	}
+
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "  PORT\tADDRESS\tPID\tPROCESS\tPROJECT\tOWNERSHIP")
+	shown := len(rows)
+	if shown > maxListenerRows {
+		shown = maxListenerRows
+	}
+	for _, listener := range rows[:shown] {
+		process := listener.ProcessName
+		if process == "" {
+			process = "unknown"
+		}
+		project := listener.ProjectName
+		if project == "" {
+			project = "-"
+		}
+		ownership := string(listener.Ownership)
+		if ownership == "" {
+			ownership = string(model.Unknown)
+		}
+		fmt.Fprintf(tw, "  %d\t%s\t%d\t%s\t%s\t%s\n",
+			listener.Port, listenerAddress(listener), listener.PID,
+			sanitize(process), sanitize(project), ownership)
+	}
+	_ = tw.Flush()
+	if len(rows) > shown {
+		fmt.Fprintf(w, "  ... %d more development-related listeners; use --json for the full list.\n", len(rows)-shown)
+	}
+	if !s.Network.IPv4 {
+		fmt.Fprintln(w, "  IPv4 listener data was unavailable.")
+	}
+	if !s.Network.IPv6 {
+		fmt.Fprintln(w, "  IPv6 listener data was unavailable.")
+	}
+	fmt.Fprintln(w, "  Listener rows are a point-in-time Windows TCP table sample, not proof that a process is redundant.")
+	fmt.Fprintln(w)
+}
+
+// relevantListeners selects rows a developer can act on: sockets owned by a
+// recognised development process, or sockets holding a port one of those
+// processes requested. System services are left to --json.
+func relevantListeners(s model.Snapshot) []model.TCPListener {
+	devPIDs := map[int32]bool{}
+	requestedPorts := map[int]bool{}
+	for _, p := range s.Processes {
+		if !p.IsDevelopment() {
+			continue
+		}
+		devPIDs[p.PID] = true
+		for _, port := range p.RequestedPorts {
+			requestedPorts[port] = true
+		}
+	}
+
+	var rows []model.TCPListener
+	for _, listener := range s.Network.Listeners {
+		if devPIDs[listener.PID] || requestedPorts[listener.Port] {
+			rows = append(rows, listener)
+		}
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		if rows[i].Port != rows[j].Port {
+			return rows[i].Port < rows[j].Port
+		}
+		if rows[i].Family != rows[j].Family {
+			return rows[i].Family < rows[j].Family
+		}
+		if rows[i].Address != rows[j].Address {
+			return rows[i].Address < rows[j].Address
+		}
+		return rows[i].PID < rows[j].PID
+	})
+	return rows
+}
+
+func listenerAddress(listener model.TCPListener) string {
+	address := listener.Address
+	if strings.Contains(address, ":") && !strings.HasPrefix(address, "[") {
+		address = "[" + address + "]"
+	}
+	return sanitize(address)
+}
 
 func renderDuplicates(w io.Writer, s model.Snapshot) {
 	if len(s.Duplicates) == 0 {
@@ -46,6 +163,10 @@ func renderNotes(w io.Writer, s model.Snapshot) {
 	fmt.Fprintln(w, "  - Docker totals and reclaimable sizes are separate Docker reports. Reclaimable is Docker's estimate of what")
 	fmt.Fprintln(w, "    clean-up could free, not space already freed and not a guarantee.")
 	fmt.Fprintln(w, "  - WSL memory is the host-side utility VM figure; per-distribution use is not measurable from outside.")
+	fmt.Fprintln(w, "  - Requested ports come from command lines; observed listeners come from the Windows TCP table. Neither proves that")
+	fmt.Fprintln(w, "    a process is redundant, and a request is not proof that a socket was bound.")
+	fmt.Fprintln(w, "  - Listener ownership is \"confirmed\" only when the PID's native creation time matched before and after sampling;")
+	fmt.Fprintln(w, "    otherwise it is \"inferred\" or \"unknown\". System services are omitted from the text table but present in --json.")
 	fmt.Fprintln(w, "  - Project associations are evidence-based: \"confirmed\" needs a manifest on disk and a referenced path inside it.")
 	if s.Redaction != nil {
 		fmt.Fprintf(w, "  - Output policy: mode=%s; command lines %s; paths tokenised as %%USERPROFILE%%; secrets masked.\n",

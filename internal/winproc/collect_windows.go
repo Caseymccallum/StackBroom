@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/Caseymccallum/StackBroom/internal/model"
@@ -22,6 +23,7 @@ var (
 	procCloseHandle                = kernel32.NewProc("CloseHandle")
 	procOpenProcess                = kernel32.NewProc("OpenProcess")
 	procQueryFullProcessImageNameW = kernel32.NewProc("QueryFullProcessImageNameW")
+	procGetProcessTimes            = kernel32.NewProc("GetProcessTimes")
 	procGetProcessMemoryInfo       = psapi.NewProc("GetProcessMemoryInfo")
 )
 
@@ -54,12 +56,21 @@ func collectProcesses(ctx context.Context, opts Options) (Result, error) {
 		return Result{}, fmt.Errorf("enumerating Windows processes: %w", err)
 	}
 
-	res := Result{Source: SourceNone}
+	res := Result{Source: SourceNone, CreationTimes: map[int32]time.Time{}}
 	procs := make([]model.Process, 0, len(entries))
 	for _, e := range entries {
 		p := model.Process{PID: e.PID, ParentPID: e.ParentPID, Name: e.Name}
 		if path, ok := imagePath(e.PID); ok {
 			p.ExePath = path
+		}
+		// Native creation time is immutable for the life of the process, so it
+		// is the identity anchor for listener ownership. CIM is only a
+		// fallback: its date formatting can be ambiguous and it is disabled by
+		// --no-command-lines.
+		if created, ok := CreationTime(e.PID); ok {
+			p.StartedAt = &created
+			p.StartTimeKnown = true
+			res.CreationTimes[e.PID] = created
 		}
 		if ws, ok := workingSetBytes(e.PID); ok {
 			p.WorkingSetBytes = ws
@@ -183,6 +194,36 @@ func workingSetBytes(pid int32) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+// CreationTime returns a process's immutable creation time. It is read-only,
+// uses PROCESS_QUERY_LIMITED_INFORMATION so it works for most other users'
+// processes without elevation, and returns false when Windows refuses access or
+// the process no longer exists. Callers must not interpret failure as evidence
+// that the process exited: access denial and exit are indistinguishable here.
+func CreationTime(pid int32) (time.Time, bool) {
+	if pid <= 0 {
+		return time.Time{}, false
+	}
+	h, err := openProcess(processQueryLimitedInfo, pid)
+	if err != nil {
+		return time.Time{}, false
+	}
+	defer closeHandle(h)
+
+	var creation, exit, kernel, user syscall.Filetime
+	r, _, _ := procGetProcessTimes.Call(
+		uintptr(h),
+		uintptr(unsafe.Pointer(&creation)),
+		uintptr(unsafe.Pointer(&exit)),
+		uintptr(unsafe.Pointer(&kernel)),
+		uintptr(unsafe.Pointer(&user)),
+	)
+	if r == 0 {
+		return time.Time{}, false
+	}
+	// Filetime.Nanoseconds is nanoseconds since the Unix epoch.
+	return time.Unix(0, creation.Nanoseconds()).UTC(), true
 }
 
 func openProcess(access uint32, pid int32) (syscall.Handle, error) {

@@ -12,7 +12,12 @@ import "time"
 //
 // Version 2 (v0.1.1) omits command lines by default and adds explicit redaction
 // metadata. Consumers must not assume commandLine is present.
-const SchemaVersion = "2"
+//
+// Version 3 (v0.2.0) adds observed TCP listener data ("network") and renames
+// processes[].ports to processes[].requestedPorts. Observed ports and requested
+// ports are separate evidence: a command-line port does not prove a socket is
+// bound, and a listener does not prove which project asked for it.
+const SchemaVersion = "3"
 
 // Confidence describes how strongly an association is supported by evidence.
 //
@@ -92,7 +97,17 @@ type Process struct {
 	Runtime       Runtime `json:"runtime"`
 	Category      string  `json:"category"`
 	DevServerKind string  `json:"devServerKind,omitempty"`
-	Ports         []int   `json:"ports,omitempty"`
+
+	// RequestedPorts are port numbers found in the process command line. They
+	// are a request, not proof that a socket was bound.
+	RequestedPorts []int `json:"requestedPorts,omitempty"`
+	// ListeningPorts are ports this PID was observed listening on. They are
+	// populated only when the listener could be associated with this process.
+	ListeningPorts []int `json:"listeningPorts,omitempty"`
+	// PortOwnership is the weakest ownership confidence across this process's
+	// associated listeners: confirmed, inferred or unknown. Empty means no
+	// listener was associated.
+	PortOwnership Confidence `json:"portOwnership,omitempty"`
 
 	Project *ProjectRef `json:"project,omitempty"`
 }
@@ -101,6 +116,38 @@ type Process struct {
 // process (server or tool). Plain runtime processes are not counted here.
 func (p Process) IsDevelopment() bool {
 	return p.Category == CategoryDevServer || p.Category == CategoryDevTool
+}
+
+// TCPListener is one observed listening TCP socket. A process can own several
+// rows (IPv4 and IPv6, wildcard and specific addresses), so rows are never
+// collapsed into a single port value.
+//
+// ProcessName, ProjectName and Ownership are filled by the association step.
+// Ownership is unknown until a PID and process creation time have been checked;
+// an absent process name does not imply that the process exited.
+type TCPListener struct {
+	Protocol    string     `json:"protocol"`
+	Family      string     `json:"family"`
+	Address     string     `json:"address"`
+	Port        int        `json:"port"`
+	PID         int32      `json:"pid"`
+	ProcessName string     `json:"processName,omitempty"`
+	ProjectName string     `json:"projectName,omitempty"`
+	Wildcard    bool       `json:"wildcard"`
+	Ownership   Confidence `json:"ownership"`
+}
+
+// NetworkInfo is a point-in-time observation of TCP listeners. Available is
+// true when at least one address family could be read; IPv4 and IPv6 report
+// each family independently so a partial result is never presented as complete.
+type NetworkInfo struct {
+	Available bool          `json:"available"`
+	Reason    string        `json:"reason,omitempty"`
+	IPv4      bool          `json:"ipv4"`
+	IPv6      bool          `json:"ipv6"`
+	SampledAt time.Time     `json:"sampledAt,omitempty"`
+	Listeners []TCPListener `json:"listeners"`
+	Warnings  []string      `json:"warnings,omitempty"`
 }
 
 // Host describes the machine and its physical memory.

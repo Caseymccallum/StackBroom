@@ -30,6 +30,16 @@ func fixtureSnapshot() model.Snapshot {
 				Evidence:   []string{`package.json found in C:\Users\Casey\Web Apps\demo`},
 			},
 		}},
+		Network: model.NetworkInfo{
+			Available: true, IPv4: true, IPv6: true,
+			Listeners: []model.TCPListener{{
+				Protocol: "tcp", Family: "ipv4", Address: "127.0.0.1", Port: 5173, PID: 100,
+				ProcessName: `C:\Users\Casey\svc.exe`,
+				ProjectName: `C:\Users\Casey\Web Apps\demo`,
+				Ownership:   model.Confirmed,
+			}},
+			Warnings: []string{`listener token API_TOKEN=xyz789 in C:\Users\Casey`},
+		},
 		Docker: model.DockerInfo{
 			Status: model.DockerStatus{Available: true, Endpoint: "npipe:////./pipe/docker_engine", EndpointLocal: true},
 			Containers: []model.DockerContainer{{
@@ -85,6 +95,12 @@ func TestApplyDefaultOmitsCommandLinesAndRedacts(t *testing.T) {
 	if out.Recommendations[0].Subjects[0].Detail != "" {
 		t.Errorf("subject detail leaked a command line: %q", out.Recommendations[0].Subjects[0].Detail)
 	}
+	if !strings.Contains(out.Network.Listeners[0].ProcessName, "%USERPROFILE%") {
+		t.Errorf("listener process path was not tokenised: %q", out.Network.Listeners[0].ProcessName)
+	}
+	if !strings.Contains(out.Network.Warnings[0], "%USERPROFILE%") {
+		t.Errorf("listener warning path was not tokenised: %q", out.Network.Warnings[0])
+	}
 	assertNoSecretsOrHome(t, out, "hunter2", "abc123", "xyz789")
 }
 
@@ -120,6 +136,9 @@ func TestApplyDoesNotMutateInput(t *testing.T) {
 	}
 	if input.Processes[0].Project.Root == "" {
 		t.Error("Apply mutated the input project")
+	}
+	if input.Network.Listeners[0].ProcessName != `C:\Users\Casey\svc.exe` {
+		t.Error("Apply mutated the input network listener")
 	}
 }
 

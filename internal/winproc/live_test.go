@@ -49,6 +49,27 @@ func TestLiveProcessCollection(t *testing.T) {
 	}
 }
 
+func TestLiveCreationTime(t *testing.T) {
+	if os.Getenv("STACKBROOM_LIVE") != "1" {
+		t.Skip("set STACKBROOM_LIVE=1 to run the read-only live inspection test")
+	}
+	self := int32(os.Getpid())
+	first, ok := CreationTime(self)
+	if !ok {
+		t.Fatal("CreationTime failed for the test process")
+	}
+	second, ok := CreationTime(self)
+	if !ok {
+		t.Fatal("CreationTime failed on the second read")
+	}
+	if !first.Equal(second) {
+		t.Fatalf("creation time changed: %s then %s", first, second)
+	}
+	if first.After(time.Now().Add(time.Minute)) {
+		t.Errorf("implausible creation time in the future: %s", first)
+	}
+}
+
 func TestLiveHostMemory(t *testing.T) {
 	if os.Getenv("STACKBROOM_LIVE") != "1" {
 		t.Skip("set STACKBROOM_LIVE=1 to run the read-only live inspection test")

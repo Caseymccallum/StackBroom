@@ -77,6 +77,14 @@ func Apply(snapshot model.Snapshot, policy Policy) model.Snapshot {
 		}
 	}
 
+	out.Network.Reason = redactText(out.Network.Reason, home)
+	out.Network.Warnings = redactSlice(out.Network.Warnings, home)
+	for i := range out.Network.Listeners {
+		listener := &out.Network.Listeners[i]
+		listener.ProcessName = redactText(listener.ProcessName, home)
+		listener.ProjectName = redactText(listener.ProjectName, home)
+	}
+
 	out.Docker.Status.Reason = redactText(out.Docker.Status.Reason, home)
 	out.Docker.Status.Endpoint = redactText(out.Docker.Status.Endpoint, home)
 	out.Docker.Status.Context = redactText(out.Docker.Status.Context, home)
@@ -111,6 +119,9 @@ func Apply(snapshot model.Snapshot, policy Policy) model.Snapshot {
 		g.Key = redactText(g.Key, home)
 		g.ProjectRoot = redactText(g.ProjectRoot, home)
 		g.Evidence = redactSlice(g.Evidence, home)
+		for j := range g.Listeners {
+			g.Listeners[j].Address = redactText(g.Listeners[j].Address, home)
+		}
 	}
 
 	for i := range out.Recommendations {

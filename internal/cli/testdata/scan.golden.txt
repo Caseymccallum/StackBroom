@@ -7,15 +7,21 @@ RESOURCES
   Top memory consumers   1 shown                         150 MB in listed processes
   Docker                 15.89 GB on disk                12.12 GB reclaimable (estimate)
   WSL2 utility VM        473 MB host-side (approximate)  1 of 1 distributions running
+  TCP listeners          3 observed                      1 development-related
 
 DEVELOPMENT PROCESSES (2)
   PID  RUNTIME  CATEGORY    PROJECT           MEMORY   AGE      DETAIL
-  100  node     dev-server  demo (confirmed)  150 MB   9h00m    vite | port 5173
+  100  node     dev-server  demo (confirmed)  150 MB   9h00m    vite | requests 5173 | listening 5173
   300  python   dev-tool    unknown           Unknown  Unknown  no recognisable role
 
 TOP MEMORY CONSUMERS
   PID  PROCESS   MEMORY  CATEGORY    PROJECT
   100  node.exe  150 MB  dev-server  demo
+
+TCP LISTENERS (3 observed, 1 development-related)
+  PORT  ADDRESS    PID  PROCESS   PROJECT  OWNERSHIP
+  5173  127.0.0.1  100  node.exe  demo     confirmed
+  Listener rows are a point-in-time Windows TCP table sample, not proof that a process is redundant.
 
 DOCKER
   Status: available (server 29.4.0, context desktop-linux)
@@ -40,7 +46,7 @@ POTENTIAL DUPLICATES (1)
     PID 100 (node, vite) requests port 5173
 
 REVIEW OPPORTUNITIES
-  1. Two node development servers appear to request port 5173  [risk: medium, confidence: inferred]
+  1. Two node development servers target port 5173; only PID 100 is observed listening  [risk: medium, confidence: inferred]
   Run `stackbroom plan` for the evidence and review steps behind each suggestion.
   Nothing has been stopped, deleted or pruned.
 
@@ -51,6 +57,10 @@ NOTES AND LIMITATIONS
   - Docker totals and reclaimable sizes are separate Docker reports. Reclaimable is Docker's estimate of what
     clean-up could free, not space already freed and not a guarantee.
   - WSL memory is the host-side utility VM figure; per-distribution use is not measurable from outside.
+  - Requested ports come from command lines; observed listeners come from the Windows TCP table. Neither proves that
+    a process is redundant, and a request is not proof that a socket was bound.
+  - Listener ownership is "confirmed" only when the PID's native creation time matched before and after sampling;
+    otherwise it is "inferred" or "unknown". System services are omitted from the text table but present in --json.
   - Project associations are evidence-based: "confirmed" needs a manifest on disk and a referenced path inside it.
   - Output policy: mode=default; command lines omitted; paths tokenised as %USERPROFILE%; secrets masked.
   - Scan notes:

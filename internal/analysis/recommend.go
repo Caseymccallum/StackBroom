@@ -114,24 +114,69 @@ func duplicateRecommendations(dups []model.DuplicateGroup) []model.Recommendatio
 		}
 
 		if g.Kind == model.DuplicateByPort {
-			rec.Title = fmt.Sprintf("Two %s development servers appear to request port %d", g.Runtime, g.Port)
-			rec.Detected = fmt.Sprintf("%d %s development server processes each request port %d (PIDs %s).",
-				len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs))
-			rec.WhyUnnecessary = "Only one process can listen on a TCP port. If both are still running, one is likely " +
-				"a leftover from an earlier session, or is failing to bind and retrying."
+			reliable, uncertain := participantListeningPIDs(g)
+			switch {
+			case len(reliable) == 0 && len(uncertain) > 0:
+				rec.Title = fmt.Sprintf("Listener rows reference port %d, but their ownership is uncertain", g.Port)
+				rec.Detected = fmt.Sprintf(
+					"%d %s development server processes are associated with port %d (PIDs %s). Listener rows exist, but none could be tied to a verified process identity.",
+					len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs))
+				rec.WhyUnnecessary = "The TCP table reported listeners on this port, but the owning process could not be verified. " +
+					"StackBroom cannot say which development server is serving traffic, or whether either is redundant."
+			case len(reliable) == 0 && len(g.Listeners) > 0:
+				rec.Title = fmt.Sprintf("Two %s development servers request port %d; the port is held by another process", g.Runtime, g.Port)
+				rec.Detected = fmt.Sprintf(
+					"%d %s development server processes request port %d (PIDs %s); no listener owned by these PIDs was observed, but the port is bound by another process.",
+					len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs))
+				rec.WhyUnnecessary = "The port is bound, but not by either recognised development server in this group. " +
+					"They may be configured for another port, may not have started, or may be unable to bind; StackBroom cannot distinguish those cases."
+			case len(reliable) == 0:
+				rec.Title = fmt.Sprintf("Two %s development servers request port %d; no listener was observed", g.Runtime, g.Port)
+				rec.Detected = fmt.Sprintf(
+					"%d %s development server processes request port %d (PIDs %s); no listener owned by these PIDs was observed.",
+					len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs))
+				rec.WhyUnnecessary = "A port on a command line is a request, not proof that the socket was bound. The effective port may come " +
+					"from a config file or environment variable, and startup may be incomplete. StackBroom cannot tell which process, if any, will serve traffic."
+			case len(reliable) == 1:
+				rec.Title = fmt.Sprintf("Two %s development servers target port %d; only PID %d is observed listening",
+					g.Runtime, g.Port, reliable[0])
+				rec.Detected = fmt.Sprintf(
+					"%d %s development server processes are associated with port %d (PIDs %s); only PID %d has an observed listener.",
+					len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs), reliable[0])
+				rec.WhyUnnecessary = "One process was observed bound to the port. The other requested it but no listener owned by its PID was observed. " +
+					"It may not have started, may use another port, or may be unable to bind; StackBroom cannot distinguish those cases."
+			default:
+				rec.Title = fmt.Sprintf("Two %s development servers are observed listening on port %d", g.Runtime, g.Port)
+				rec.Detected = fmt.Sprintf(
+					"%d %s development server processes are associated with port %d (PIDs %s); %d participants have observed listeners.",
+					len(g.PIDs), g.Runtime, g.Port, pidList(g.PIDs), len(reliable))
+				rec.WhyUnnecessary = "Both sockets were bound at scan time. That can be intentional when the addresses or address families differ, " +
+					"or it can be a leftover session. A binding proves the socket, not that either process is redundant."
+			}
 		} else {
 			rec.Title = fmt.Sprintf("Two %s development servers appear to run for the same project", g.Runtime)
 			rec.Detected = fmt.Sprintf("%d %s development server processes reference the project at %s (PIDs %s).",
 				len(g.PIDs), g.Runtime, g.ProjectRoot, pidList(g.PIDs))
 			rec.WhyUnnecessary = "Two servers for one project usually means an earlier session was not closed. " +
-				"One of them may be doing nothing useful."
+				"Listener evidence can show which sockets are bound, but it does not prove either server is redundant."
 		}
 
 		rec.Evidence = append(rec.Evidence, g.Evidence...)
 		if g.Kind == model.DuplicateByPort {
+			if len(g.Listeners) == 0 {
+				rec.Evidence = append(rec.Evidence,
+					fmt.Sprintf("No listener owned by these PIDs was observed on port %d.", g.Port))
+			}
+			if hasUnknownOwnership(g.Listeners) {
+				rec.Evidence = append(rec.Evidence,
+					"At least one listener's ownership could not be verified, so its PID association is uncertain.")
+			}
 			rec.Evidence = append(rec.Evidence,
-				"Evidence is the requested port in each command line; StackBroom did not check which process owns the listening socket.",
-				"Ports can also come from environment variables or config files, which are not visible to StackBroom.")
+				"Requested ports and observed listeners are separate evidence. A request can be overridden by environment variables or config files.",
+				"Listener observations are a point-in-time TCP table sample; they prove a socket was bound, not that a process is safe to stop.")
+		} else {
+			rec.Evidence = append(rec.Evidence,
+				"Project association and listener observation are independent evidence; neither proves redundancy.")
 		}
 
 		rec.Resource = memoryText(g.MemoryBytes, g.MemoryKnown, len(g.PIDs))
@@ -140,19 +185,81 @@ func duplicateRecommendations(dups []model.DuplicateGroup) []model.Recommendatio
 			"Confirm which process is serving the project you are actively using.",
 		}
 		if g.Port > 0 {
-			rec.Review = append(rec.Review, fmt.Sprintf(
-				"Check the listening process yourself, for example with `Get-NetTCPConnection -LocalPort %d` in PowerShell; StackBroom does not run it.", g.Port))
+			rec.Review = append(rec.Review,
+				fmt.Sprintf("Check the listening process yourself, for example with `Get-NetTCPConnection -LocalPort %d` in PowerShell; StackBroom does not run it.", g.Port))
+			rec.Review = append(rec.Review,
+				"Compare the observed addresses; different local addresses or IPv4/IPv6 bindings may be intentional.")
 		}
-		rec.Review = append(rec.Review, "Close only the session you recognise as finished.")
+		rec.Review = append(rec.Review,
+			"Close only the session you recognise as finished; do not stop a process solely because a socket is bound.")
 		rec.RiskDetail = "Stopping the wrong process ends an active development session and may lose unsaved in-memory state. " +
 			"Restarting the server is usually quick, but any state held only in that process is lost."
 
 		for _, pid := range g.PIDs {
 			rec.Subjects = append(rec.Subjects, model.Subject{Kind: "process", ID: fmt.Sprintf("%d", pid)})
 		}
+		for _, listener := range g.Listeners {
+			rec.Subjects = append(rec.Subjects, model.Subject{
+				Kind:   "listener",
+				ID:     listenerRefText(listener),
+				Detail: fmt.Sprintf("pid=%d family=%s ownership=%s", listener.PID, listener.Family, listener.Ownership),
+			})
+		}
 		recs = append(recs, rec)
 	}
 	return recs
+}
+
+// participantListeningPIDs splits group participants into those with at least
+// one associated listener row (confirmed or inferred) and those whose only rows
+// have unknown ownership. Rows owned by non-participants never count as one of
+// the development servers.
+func participantListeningPIDs(g model.DuplicateGroup) (reliable, uncertain []int32) {
+	participants := make(map[int32]bool, len(g.PIDs))
+	for _, pid := range g.PIDs {
+		participants[pid] = true
+	}
+	reliableSet := map[int32]bool{}
+	uncertainSet := map[int32]bool{}
+	for _, listener := range g.Listeners {
+		if !participants[listener.PID] {
+			continue
+		}
+		if listener.Ownership == model.Unknown || listener.Ownership == "" {
+			uncertainSet[listener.PID] = true
+		} else {
+			reliableSet[listener.PID] = true
+		}
+	}
+	for pid := range reliableSet {
+		reliable = append(reliable, pid)
+	}
+	for pid := range uncertainSet {
+		if reliableSet[pid] {
+			continue
+		}
+		uncertain = append(uncertain, pid)
+	}
+	sort.Slice(reliable, func(i, j int) bool { return reliable[i] < reliable[j] })
+	sort.Slice(uncertain, func(i, j int) bool { return uncertain[i] < uncertain[j] })
+	return reliable, uncertain
+}
+
+func hasUnknownOwnership(listeners []model.ListenerRef) bool {
+	for _, listener := range listeners {
+		if listener.Ownership == model.Unknown || listener.Ownership == "" {
+			return true
+		}
+	}
+	return false
+}
+
+func listenerRefText(listener model.ListenerRef) string {
+	address := listener.Address
+	if strings.Contains(address, ":") && !strings.HasPrefix(address, "[") {
+		address = "[" + address + "]"
+	}
+	return fmt.Sprintf("%s:%d", address, listener.Port)
 }
 
 func memoryText(bytes uint64, known, total int) string {

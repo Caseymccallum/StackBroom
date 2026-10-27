@@ -32,10 +32,15 @@ type Options struct {
 // Result is the outcome of process collection. An empty process list with a
 // warning is a valid result on non-Windows platforms.
 type Result struct {
-	Processes   []model.Process
-	Source      string
-	SourceError string
-	Warnings    []string
+	Processes []model.Process
+	// CreationTimes holds the native creation time captured for each PID during
+	// this snapshot. It is the identity anchor used later to detect PID reuse;
+	// it is deliberately not serialised because the timestamp already appears
+	// on Process.
+	CreationTimes map[int32]time.Time
+	Source        string
+	SourceError   string
+	Warnings      []string
 }
 
 // Collect enumerates processes and classifies the ones it recognises.

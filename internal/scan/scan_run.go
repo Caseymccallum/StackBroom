@@ -24,6 +24,7 @@ func (s *Scanner) Run(ctx context.Context) model.Snapshot {
 		Tool:            model.Tool{Name: version.Name, Version: version.Version},
 		GeneratedAt:     started,
 		Processes:       []model.Process{},
+		Network:         model.NetworkInfo{Listeners: []model.TCPListener{}},
 		Duplicates:      []model.DuplicateGroup{},
 		Recommendations: []model.Recommendation{},
 		Warnings:        []string{},
@@ -45,6 +46,23 @@ func (s *Scanner) Run(ctx context.Context) model.Snapshot {
 	s.fillParentNames(snapshot.Processes)
 	s.associateProjects(snapshot.Processes)
 	timings.ProcessesMS = s.opts.Now().Sub(stageStart).Milliseconds()
+
+	// Listeners are sampled after the process snapshot so PID ownership can be
+	// checked against a creation time captured before the socket read.
+	stageStart = s.opts.Now()
+	snapshot.Network = s.opts.Network.Collect(ctx)
+	if snapshot.Network.Listeners == nil {
+		snapshot.Network.Listeners = []model.TCPListener{}
+	}
+	if !snapshot.Network.Available && snapshot.Network.Reason != "" {
+		snapshot.Warnings = append(snapshot.Warnings,
+			"Network: "+strings.TrimSuffix(strings.TrimSpace(snapshot.Network.Reason), ".")+".")
+	}
+	for _, warning := range snapshot.Network.Warnings {
+		snapshot.Warnings = append(snapshot.Warnings, "Network: "+warning)
+	}
+	s.attachNetwork(&snapshot, processResult.CreationTimes)
+	timings.NetworkMS = s.opts.Now().Sub(stageStart).Milliseconds()
 
 	stageStart = s.opts.Now()
 	if s.opts.SkipDocker {
@@ -82,7 +100,8 @@ func (s *Scanner) Run(ctx context.Context) model.Snapshot {
 
 	stageStart = s.opts.Now()
 	snapshot.Summary = analysis.Summarize(snapshot.Processes, snapshot.Docker, snapshot.WSL, s.opts.TopN)
-	snapshot.Duplicates = analysis.FindDuplicates(snapshot.Processes)
+	snapshot.Summary.TCPListenerCount = len(snapshot.Network.Listeners)
+	snapshot.Duplicates = analysis.FindDuplicates(snapshot.Processes, snapshot.Network)
 	snapshot.Recommendations = analysis.Recommend(
 		snapshot.Processes, snapshot.Docker, snapshot.WSL, snapshot.Duplicates, started, s.opts.Recommendation)
 	timings.AnalysisMS = s.opts.Now().Sub(stageStart).Milliseconds()

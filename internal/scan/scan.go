@@ -11,6 +11,7 @@ import (
 	"github.com/Caseymccallum/StackBroom/internal/analysis"
 	"github.com/Caseymccallum/StackBroom/internal/docker"
 	"github.com/Caseymccallum/StackBroom/internal/model"
+	"github.com/Caseymccallum/StackBroom/internal/netstat"
 	"github.com/Caseymccallum/StackBroom/internal/project"
 	"github.com/Caseymccallum/StackBroom/internal/run"
 	"github.com/Caseymccallum/StackBroom/internal/winproc"
@@ -31,6 +32,16 @@ type DockerSource interface {
 type WSLSource interface {
 	Collect(ctx context.Context) model.WSLInfo
 }
+
+// NetworkSource collects listening TCP sockets.
+type NetworkSource interface {
+	Collect(ctx context.Context) model.NetworkInfo
+}
+
+// IdentityVerifier re-reads a process's immutable creation time. It is used to
+// distinguish the process observed in the snapshot from a later process that
+// reused the same PID.
+type IdentityVerifier func(pid int32) (time.Time, bool)
 
 // ProjectResolver associates a process with a project.
 type ProjectResolver interface {
@@ -55,7 +66,11 @@ type Options struct {
 	Processes ProcessSource
 	Docker    DockerSource
 	WSL       WSLSource
+	Network   NetworkSource
 	Projects  ProjectResolver
+	// Identity is the post-sample process identity check. Nil uses
+	// winproc.CreationTime.
+	Identity IdentityVerifier
 }
 
 // Scanner runs one scan.
@@ -101,6 +116,12 @@ func New(opts Options) *Scanner {
 	}
 	if opts.WSL == nil {
 		opts.WSL = wsl.Inspector{Runner: opts.Runner, Timeout: opts.Timeout}
+	}
+	if opts.Network == nil {
+		opts.Network = netstat.Collector{Now: opts.Now}
+	}
+	if opts.Identity == nil {
+		opts.Identity = winproc.CreationTime
 	}
 	return &Scanner{opts: opts}
 }

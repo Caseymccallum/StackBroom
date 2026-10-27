@@ -4,12 +4,12 @@ Read-only: StackBroom inspected the system and will not act on anything below.
 
 Context: 2 development processes (1 servers), 150 MB reported; Docker uses 15.89 GB with 12.12 GB Docker-estimated reclaimable.
 
-1. Two node development servers appear to request port 5173
+1. Two node development servers target port 5173; only PID 100 is observed listening
    Risk: medium | Confidence: inferred
-   Detected: 2 node development server processes each request port 5173 (PIDs 100, 200).
-   Why it may be unnecessary: Only one process can listen on a TCP port.
+   Detected: 2 node development server processes are associated with port 5173 (PIDs 100, 200); only PID 100 has an observed listener.
+   Why it may be unnecessary: One process was observed bound; the other requested the port but no listener owned by its PID was observed.
    Evidence:
-     - PID 100 (node, vite) requests port 5173
+     - PID 100 (node, vite) requests port 5173; observed listening on 127.0.0.1:5173 (ipv4)
    Resource use: 150 MB working set.
    Review before acting:
      - Check the listening process with Get-NetTCPConnection.

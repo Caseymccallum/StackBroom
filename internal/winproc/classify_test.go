@@ -224,8 +224,8 @@ func runClassifyCases(t *testing.T, tests []classifyCase) {
 			if tc.wantKind == "" && got.DevServerKind != "" {
 				t.Errorf("devServerKind = %q, want empty", got.DevServerKind)
 			}
-			if !reflect.DeepEqual(got.Ports, tc.wantPorts) {
-				t.Errorf("ports = %v, want %v", got.Ports, tc.wantPorts)
+			if !reflect.DeepEqual(got.RequestedPorts, tc.wantPorts) {
+				t.Errorf("ports = %v, want %v", got.RequestedPorts, tc.wantPorts)
 			}
 		})
 	}

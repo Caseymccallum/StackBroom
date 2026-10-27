@@ -20,6 +20,7 @@ func cloneSnapshot(s model.Snapshot) model.Snapshot {
 		out.Processes[i] = cloneProcess(process)
 	}
 
+	out.Network = cloneNetwork(s.Network)
 	out.Docker = cloneDocker(s.Docker)
 	out.WSL = cloneWSL(s.WSL)
 	out.Summary = cloneSummary(s.Summary)
@@ -29,6 +30,7 @@ func cloneSnapshot(s model.Snapshot) model.Snapshot {
 		clone := group
 		clone.PIDs = append([]int32(nil), group.PIDs...)
 		clone.Evidence = append([]string(nil), group.Evidence...)
+		clone.Listeners = append([]model.ListenerRef(nil), group.Listeners...)
 		out.Duplicates[i] = clone
 	}
 
@@ -47,8 +49,11 @@ func cloneSnapshot(s model.Snapshot) model.Snapshot {
 
 func cloneProcess(p model.Process) model.Process {
 	out := p
-	if p.Ports != nil {
-		out.Ports = append([]int(nil), p.Ports...)
+	if p.RequestedPorts != nil {
+		out.RequestedPorts = append([]int(nil), p.RequestedPorts...)
+	}
+	if p.ListeningPorts != nil {
+		out.ListeningPorts = append([]int(nil), p.ListeningPorts...)
 	}
 	if p.StartedAt != nil {
 		started := *p.StartedAt
@@ -59,6 +64,13 @@ func cloneProcess(p model.Process) model.Process {
 		ref.Evidence = append([]string(nil), p.Project.Evidence...)
 		out.Project = &ref
 	}
+	return out
+}
+
+func cloneNetwork(n model.NetworkInfo) model.NetworkInfo {
+	out := n
+	out.Listeners = append([]model.TCPListener(nil), n.Listeners...)
+	out.Warnings = append([]string(nil), n.Warnings...)
 	return out
 }
 

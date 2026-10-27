@@ -77,7 +77,8 @@ var runtimeByExe = map[string]model.Runtime{
 	"rustc": model.RuntimeRust,
 }
 
-// Classify fills Runtime, Category, DevServerKind and Ports for a process.
+// Classify fills Runtime, Category, DevServerKind and RequestedPorts for a
+// process. Requested ports come from the command line, not the TCP table.
 //
 // The classifier only uses two facts: the executable name and, when available,
 // the command line. It never infers a role from memory use or age.
@@ -88,7 +89,7 @@ func Classify(p *model.Process) {
 		p.Runtime = model.RuntimeUnknown
 		p.Category = model.CategoryOther
 		p.DevServerKind = ""
-		p.Ports = nil
+		p.RequestedPorts = nil
 		return
 	}
 	p.Runtime = rt
@@ -102,7 +103,7 @@ func Classify(p *model.Process) {
 	if kind := detectDevServer(names, p.CommandLine); kind != "" {
 		p.Category = model.CategoryDevServer
 		p.DevServerKind = kind
-		p.Ports = extractPorts(args)
+		p.RequestedPorts = extractPorts(args)
 		return
 	}
 	if isDevTool(exe, names) {
