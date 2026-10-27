@@ -1,0 +1,612 @@
+{
+  "scale200": [
+    {
+      "screen": 1,
+      "viewport": [
+        640,
+        360
+      ],
+      "range": 2383,
+      "top": 2383.199951171875,
+      "overflow": 0,
+      "focus": "main-content"
+    },
+    {
+      "screen": 2,
+      "viewport": [
+        640,
+        360
+      ],
+      "range": 306,
+      "top": 306.3999938964844,
+      "overflow": 0,
+      "focus": "main-content"
+    },
+    {
+      "screen": 3,
+      "viewport": [
+        640,
+        360
+      ],
+      "range": 820,
+      "top": 819.2000122070312,
+      "overflow": 0,
+      "focus": "main-content"
+    },
+    {
+      "screen": 4,
+      "viewport": [
+        640,
+        360
+      ],
+      "range": 2607,
+      "top": 2606.39990234375,
+      "overflow": 0,
+      "focus": "main-content"
+    },
+    {
+      "screen": 5,
+      "viewport": [
+        640,
+        360
+      ],
+      "range": 1643,
+      "top": 1642.4000244140625,
+      "overflow": 0,
+      "focus": "main-content"
+    }
+  ],
+  "keyboard": [
+    {
+      "screen": 1,
+      "steps": [
+        {
+          "tag": "SUMMARY",
+          "name": "Partial observation · 1 source note",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Browse processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Details",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "See all evidence in Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Refresh",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Switch to light theme",
+          "visible": true
+        },
+        {
+          "tag": "MAIN",
+          "name": "This PCDESKTOP-KDCMDNSWindows 10 (build 19045) · 16 logical ",
+          "visible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "Partial observation · 1 source note",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Browse processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Details",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "See all evidence in Developer Tools",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "screen": 2,
+      "steps": [
+        {
+          "tag": "BUTTON",
+          "name": "Refresh full scan",
+          "visible": true
+        },
+        {
+          "tag": "INPUT",
+          "name": "",
+          "visible": true
+        },
+        {
+          "tag": "SELECT",
+          "name": "All categoriesDev serversDev toolsRuntimesOther",
+          "visible": true
+        },
+        {
+          "tag": "SELECT",
+          "name": "Memory, high to lowNamePIDStart timeCategory",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Reverse sort order",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Process",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "PID",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Category",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Memory ↓",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Started",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Next page",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Refresh",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "screen": 3,
+      "steps": [
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Refresh",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Switch to light theme",
+          "visible": true
+        },
+        {
+          "tag": "MAIN",
+          "name": "Total capacity1.36 TB2 fixed volumesFree space156 GB11% of t",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Refresh",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "screen": 4,
+      "steps": [
+        {
+          "tag": "SUMMARY",
+          "name": "Partial observation · 1 source note",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Docker & WSL",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "TCP listeners",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Process evidence",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Review opportunities",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "INPUT",
+          "name": "",
+          "visible": true
+        },
+        {
+          "tag": "SELECT",
+          "name": "All ownershipConfirmedInferredUncertain",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "DIV",
+          "name": "Scrollable table",
+          "visible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "Evidence and review steps",
+          "visible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "name": "Evidence and review steps",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "screen": 5,
+      "steps": [
+        {
+          "tag": "BUTTON",
+          "name": "Dark",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Light",
+          "visible": true
+        },
+        {
+          "tag": "SELECT",
+          "name": "Automatic quick refresh interval",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Show Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Overview",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Processes",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Storage",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Settings",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Refresh",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Switch to light theme",
+          "visible": true
+        },
+        {
+          "tag": "MAIN",
+          "name": "AppearanceDark-first, with a full light theme.ThemeSaved in ",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Dark",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Light",
+          "visible": true
+        },
+        {
+          "tag": "SELECT",
+          "name": "Automatic quick refresh interval",
+          "visible": true
+        },
+        {
+          "tag": "BUTTON",
+          "name": "Show Developer Tools",
+          "visible": true
+        },
+        {
+          "tag": "BODY",
+          "name": "Skip to main contentStackBroomYour PC, understoodWorkspaceOv",
+          "visible": true
+        },
+        {
+          "tag": "A",
+          "name": "Skip to main content",
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "searchEmpty": true,
+  "tableKeyboard": {
+    "top": 1750.4000244140625,
+    "range": 1750
+  },
+  "tableWheel": {
+    "top": 1749.5999755859375,
+    "range": 1750
+  },
+  "pagination": 1,
+  "sectionLink": "Developer Tools",
+  "warningExpanded": true,
+  "reducedMotion": {
+    "matches": true,
+    "transition": "1e-06s"
+  },
+  "restored": {
+    "viewport": [
+      1536,
+      802
+    ],
+    "range": 1794,
+    "top": 0,
+    "overflow": 0,
+    "focus": ""
+  }
+}

@@ -13,6 +13,7 @@ Delivery branch: `feat/desktop-ux-polish`.
 | P1 | Storage chooses quick data even when a full observation is newer. | Select by observation timestamp, matching Overview. |
 | P1 | Small light-theme subtitle text fails contrast at 4.34:1. | Darker muted text token, verified again with axe. Light primary actions use white text on dark teal. |
 | P1 | Many source notes are reduced to one warning, with a misleading suggestion that extra notes appear in Settings. | One expandable, deduplicated source-note summary with all notes available on Overview and Developer Tools. |
+| P1 | Long recommendation badges widen implicit grid cards and clip evidence below the fold. | Shrinkable review cards, wrapping metadata and explicit card-overflow assertions in native validation. |
 | P2 | Large hero and stacked header push essential resource readings down. | Compact host card and header, four resource cards at 1000+ CSS pixels, reduced empty-state height. |
 | P2 | Icon-only compact navigation is hard for beginners to learn. | Retain visible destination names on the compact rail and explicit accessible names. |
 | P2 | Table scrollers lack keyboard entry, names are truncated and sorting arrows imply the wrong direction. | Focusable named table regions, wrapped process names, bounded table height, truthful arrows/ARIA sort and reversible sorting with unknown observations last. |

@@ -1,0 +1,129 @@
+{
+  "phase": "final native diagnostic, before matrix",
+  "processCount": 7,
+  "workingSetBytes": 530096128.0,
+  "privateBytes": 333422592.0,
+  "members": [
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 3248,
+      "WorkingSet64": 23605248,
+      "PrivateMemorySize64": 8855552
+    },
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 11360,
+      "WorkingSet64": 153247744,
+      "PrivateMemorySize64": 124039168
+    },
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 12052,
+      "WorkingSet64": 41558016,
+      "PrivateMemorySize64": 11894784
+    },
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 20116,
+      "WorkingSet64": 115789824,
+      "PrivateMemorySize64": 37150720
+    },
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 29444,
+      "WorkingSet64": 140300288,
+      "PrivateMemorySize64": 90656768
+    },
+    {
+      "ProcessName": "msedgewebview2",
+      "Id": 38288,
+      "WorkingSet64": 12382208,
+      "PrivateMemorySize64": 2334720
+    },
+    {
+      "ProcessName": "StackBroom-UXValidation",
+      "Id": 22472,
+      "WorkingSet64": 43212800,
+      "PrivateMemorySize64": 58490880
+    }
+  ],
+  "afterMatrix": {
+    "processCount": 7,
+    "workingSetBytes": 684519424.0,
+    "privateBytes": 392290304.0
+  },
+  "baselineShipping": {
+    "workingSetBytes": 504971264,
+    "processCount": 7,
+    "appWorkingSetBytes": 72863744,
+    "note": "Initial baseline native app and six WebView2 descendants, before diagnostic instrumentation. Single observation under heavy unrelated system load."
+  },
+  "finalShipping": {
+    "processCount": 1,
+    "workingSetBytes": 40398848.0,
+    "privateBytes": 58384384.0,
+    "appWorkingSetBytes": 40398848,
+    "listeningSockets": 0,
+    "members": [
+      {
+        "ProcessName": "StackBroom",
+        "Id": 33876,
+        "WorkingSet64": 40398848,
+        "PrivateMemorySize64": 58384384
+      }
+    ],
+    "note": "Go process only; WebView2 runtime was shared with earlier hidden launch instances. Do not compare this partial sum to the baseline total."
+  },
+  "finalIsolatedNoDebug": {
+    "profileOnlyChange": true,
+    "debugPort": false,
+    "processCount": 7,
+    "workingSetBytes": 506257408.0,
+    "privateBytes": 237309952.0,
+    "appWorkingSetBytes": 111955968,
+    "members": [
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 21632,
+        "WorkingSet64": 42266624,
+        "PrivateMemorySize64": 12148736
+      },
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 21716,
+        "WorkingSet64": 19496960,
+        "PrivateMemorySize64": 3198976
+      },
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 26540,
+        "WorkingSet64": 24567808,
+        "PrivateMemorySize64": 8261632
+      },
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 28980,
+        "WorkingSet64": 105148416,
+        "PrivateMemorySize64": 76021760
+      },
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 36760,
+        "WorkingSet64": 115859456,
+        "PrivateMemorySize64": 39211008
+      },
+      {
+        "ProcessName": "msedgewebview2",
+        "Id": 38564,
+        "WorkingSet64": 86962176,
+        "PrivateMemorySize64": 38998016
+      },
+      {
+        "ProcessName": "StackBroom-UXMemory",
+        "Id": 37884,
+        "WorkingSet64": 111955968,
+        "PrivateMemorySize64": 59469824
+      }
+    ]
+  }
+}

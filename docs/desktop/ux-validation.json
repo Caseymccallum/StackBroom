@@ -1,0 +1,2988 @@
+{
+  "native": true,
+  "hostDpiRatio": 1.25,
+  "rows": [
+    {
+      "screen": "overview",
+      "theme": "dark",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1623,
+        "top": 0,
+        "range": 1108,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1623,
+        "top": 1108,
+        "range": 1108,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1623,
+        "top": 422.3999938964844,
+        "range": 1108,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1623,
+        "top": 1108,
+        "range": 1108,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "dark",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 0,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true,
+      "recheckReason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available."
+    },
+    {
+      "screen": "storage",
+      "theme": "dark",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 0,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "dark",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 0,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 2245.60009765625,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 422.3999938964844,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 2245.60009765625,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true,
+      "recheckReason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available."
+    },
+    {
+      "screen": "settings",
+      "theme": "dark",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 0,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 1208.800048828125,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 422.3999938964844,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 1208.800048828125,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "light",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1840,
+        "top": 0,
+        "range": 1325,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1840,
+        "top": 1324.800048828125,
+        "range": 1325,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1840,
+        "top": 422.3999938964844,
+        "range": 1325,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1840,
+        "top": 1324.800048828125,
+        "range": 1325,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "light",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 0,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 573,
+        "top": 57.599998474121094,
+        "range": 58,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "light",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 0,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 614,
+        "top": 99.19999694824219,
+        "range": 99,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "light",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 0,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 2245.60009765625,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 422.3999938964844,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 2760,
+        "top": 2245.60009765625,
+        "range": 2245,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "light",
+      "physicalTarget": [
+        1280,
+        720
+      ],
+      "before": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 0,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 1208.800048828125,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 422.3999938964844,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1024,
+          576
+        ],
+        "dpr": 1.25,
+        "height": 515,
+        "scrollHeight": 1724,
+        "top": 1208.800048828125,
+        "range": 1209,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 576,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "dark",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 1830,
+        "top": 0,
+        "range": 1276,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 1830,
+        "top": 1276,
+        "range": 1276,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 1830,
+        "top": 456,
+        "range": 1276,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 1830,
+        "top": 1276,
+        "range": 1276,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "dark",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 594,
+        "top": 0,
+        "range": 40,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 594,
+        "top": 40.79999923706055,
+        "range": 40,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 594,
+        "top": 40.79999923706055,
+        "range": 40,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 594,
+        "top": 40.79999923706055,
+        "range": 40,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "dark",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 597,
+        "top": 0,
+        "range": 43,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 597,
+        "top": 43.20000076293945,
+        "range": 43,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 597,
+        "top": 43.20000076293945,
+        "range": 43,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1094,
+          614
+        ],
+        "dpr": 1.25,
+        "height": 554,
+        "scrollHeight": 597,
+        "top": 43.20000076293945,
+        "range": 43,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 614,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "dark",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 0,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 1741.5999755859375,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 556,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 1741.5999755859375,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "dark",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 0,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "light",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 1387,
+        "top": 0,
+        "range": 719,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 1387,
+        "top": 719.2000122070312,
+        "range": 719,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 1387,
+        "top": 556,
+        "range": 719,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 1387,
+        "top": 719.2000122070312,
+        "range": 719,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "light",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 703,
+        "top": 0,
+        "range": 35,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 703,
+        "top": 35.20000076293945,
+        "range": 35,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 703,
+        "top": 35.20000076293945,
+        "range": 35,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 703,
+        "top": 35.20000076293945,
+        "range": 35,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "light",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 668,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 668,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 668,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 668,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "light",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 0,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 1741.5999755859375,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 556,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 668,
+        "scrollHeight": 2409,
+        "top": 1741.5999755859375,
+        "range": 1741,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "light",
+      "physicalTarget": [
+        1366,
+        768
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 0,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          802
+        ],
+        "dpr": 1.25,
+        "height": 686,
+        "scrollHeight": 1102,
+        "top": 416,
+        "range": 416,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 802,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "dark",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 0,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 826.4000244140625,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 488.79998779296875,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 826.4000244140625,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "dark",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 0,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "dark",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "dark",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 0,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 1739.199951171875,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 488.79998779296875,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 1740,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "dark",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 0,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "light",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 0,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 826.4000244140625,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 488.79998779296875,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 1418,
+        "top": 826.4000244140625,
+        "range": 827,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "light",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 0,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 652,
+        "top": 60.79999923706055,
+        "range": 61,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "light",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 591,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "light",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 0,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 1739.199951171875,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 488.79998779296875,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 591,
+        "scrollHeight": 2331,
+        "top": 1740,
+        "range": 1740,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "light",
+      "physicalTarget": [
+        1600,
+        900
+      ],
+      "before": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 0,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1280,
+          720
+        ],
+        "dpr": 1.25,
+        "height": 609,
+        "scrollHeight": 1113,
+        "top": 503.20001220703125,
+        "range": 504,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 720,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "dark",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 0,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 656.7999877929688,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 610.4000244140625,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 656.7999877929688,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "dark",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 0,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "dark",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "dark",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 0,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 1747.199951171875,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 610.4000244140625,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 1747.199951171875,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "dark",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 0,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "overview",
+      "theme": "light",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 0,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 656.7999877929688,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 610.4000244140625,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 1387,
+        "top": 656.7999877929688,
+        "range": 657,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "processes",
+      "theme": "light",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 0,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 738,
+        "top": 7.199999809265137,
+        "range": 8,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "storage",
+      "theme": "light",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 730,
+        "top": 0,
+        "range": 0,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "developer",
+      "theme": "light",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 0,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 1747.199951171875,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 610.4000244140625,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 730,
+        "scrollHeight": 2478,
+        "top": 1747.199951171875,
+        "range": 1748,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    },
+    {
+      "screen": "settings",
+      "theme": "light",
+      "physicalTarget": [
+        1920,
+        1080
+      ],
+      "before": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 0,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "wheel": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "keyboard": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "bottom": {
+        "viewport": [
+          1536,
+          864
+        ],
+        "dpr": 1.25,
+        "height": 749,
+        "scrollHeight": 1102,
+        "top": 353.6000061035156,
+        "range": 353,
+        "pageOverflow": 0,
+        "cardOverflow": [],
+        "shellHeight": 864,
+        "focus": "main-content"
+      },
+      "pass": true
+    }
+  ],
+  "retests": [
+    {
+      "reason": "Window geometry changed during the original input sequence; rechecked at the requested target.",
+      "original": {
+        "screen": "storage",
+        "theme": "dark",
+        "physicalTarget": [
+          1366,
+          768
+        ],
+        "before": {
+          "viewport": [
+            1094,
+            614
+          ],
+          "dpr": 1.25,
+          "height": 554,
+          "scrollHeight": 597,
+          "top": 0,
+          "range": 43,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 614,
+          "focus": "main-content"
+        },
+        "wheel": {
+          "viewport": [
+            1094,
+            614
+          ],
+          "dpr": 1.25,
+          "height": 554,
+          "scrollHeight": 597,
+          "top": 43.20000076293945,
+          "range": 43,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 614,
+          "focus": "main-content"
+        },
+        "keyboard": {
+          "viewport": [
+            1536,
+            802
+          ],
+          "dpr": 1.25,
+          "height": 668,
+          "scrollHeight": 668,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 802,
+          "focus": "main-content"
+        },
+        "bottom": {
+          "viewport": [
+            1536,
+            802
+          ],
+          "dpr": 1.25,
+          "height": 668,
+          "scrollHeight": 668,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 802,
+          "focus": "main-content"
+        },
+        "pass": false
+      }
+    },
+    {
+      "reason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available.",
+      "original": {
+        "screen": "processes",
+        "theme": "dark",
+        "physicalTarget": [
+          1280,
+          720
+        ],
+        "before": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "wheel": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "keyboard": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "bottom": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "pass": false,
+        "recheckReason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available."
+      }
+    },
+    {
+      "reason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available.",
+      "original": {
+        "screen": "developer",
+        "theme": "dark",
+        "physicalTarget": [
+          1280,
+          720
+        ],
+        "before": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "wheel": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "keyboard": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "bottom": {
+          "viewport": [
+            1024,
+            576
+          ],
+          "dpr": 1.25,
+          "height": 515,
+          "scrollHeight": 515,
+          "top": 0,
+          "range": 0,
+          "pageOverflow": 0,
+          "cardOverflow": [],
+          "shellHeight": 576,
+          "focus": "main-content"
+        },
+        "pass": false,
+        "recheckReason": "Original initial-launch screenshot caught full-scan loading. Rechecked after measured process and developer evidence was available."
+      }
+    }
+  ]
+}
