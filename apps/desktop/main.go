@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Caseymccallum/StackBroom/internal/processcontrol"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -15,12 +16,13 @@ import (
 var assets embed.FS
 
 func main() {
+	tokens, _ := processcontrol.NewTokenIssuer()
 	app := application.New(application.Options{
 		Name:        "StackBroom",
-		Description: "Read-only PC health, resource and developer dashboard",
+		Description: "PC understanding, maintenance and verified process control",
 		Services: []application.Service{
-			application.NewService(NewDesktopService()),
-			application.NewService(NewProcessControlService()),
+			application.NewService(NewDesktopServiceWithTokens(tokens)),
+			application.NewService(NewProcessControlServiceWithTokens(tokens)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

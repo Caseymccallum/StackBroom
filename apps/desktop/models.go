@@ -7,16 +7,18 @@ import "time"
 // arbitrary system APIs cross into the webview.
 
 type AppInfo struct {
-	Name          string   `json:"name"`
-	Version       string   `json:"version"`
-	SchemaVersion string   `json:"schemaVersion"`
-	Toolchain     string   `json:"toolchain"`
-	ReadOnly      bool     `json:"readOnly"`
-	Privacy       string   `json:"privacy"`
-	Limitations   []string `json:"limitations"`
-	Preview       bool     `json:"preview,omitempty"`
-	PreviewTheme  string   `json:"previewTheme,omitempty"`
-	PreviewScreen string   `json:"previewScreen,omitempty"`
+	Name           string   `json:"name"`
+	Version        string   `json:"version"`
+	SchemaVersion  string   `json:"schemaVersion"`
+	Toolchain      string   `json:"toolchain"`
+	ReadOnly       bool     `json:"readOnly"`
+	Privacy        string   `json:"privacy"`
+	Limitations    []string `json:"limitations"`
+	Preview        bool     `json:"preview,omitempty"`
+	PreviewTheme   string   `json:"previewTheme,omitempty"`
+	PreviewScreen  string   `json:"previewScreen,omitempty"`
+	PreviewDetail  bool     `json:"previewDetail,omitempty"`
+	PreviewConfirm bool     `json:"previewConfirm,omitempty"`
 }
 
 type QuickResult struct {
@@ -92,6 +94,7 @@ type ProcessRow struct {
 	RequestedPorts    []int  `json:"requestedPorts,omitempty"`
 	ListeningPorts    []int  `json:"listeningPorts,omitempty"`
 	PortOwnership     string `json:"portOwnership,omitempty"`
+	TargetToken       string `json:"targetToken,omitempty"`
 }
 
 type Developer struct {

@@ -1,4 +1,12 @@
-# M1: Process Control — Implementation Summary
+# M1: Process Control
+
+> **Current-state note:** the original implementation accepted a creation-time
+> string from the webview. That was replaced by backend-issued HMAC target
+> tokens, same-handle verification, native action seams for deterministic tests,
+> removal of `exePath` from the bridge and an in-app accessible confirmation.
+> See `M1-SECURITY-AUDIT.md` for the authoritative security status.
+
+## Implementation Summary
 
 ## Completed Deliverables
 

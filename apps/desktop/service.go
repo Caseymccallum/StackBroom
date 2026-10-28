@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Caseymccallum/StackBroom/internal/model"
+	"github.com/Caseymccallum/StackBroom/internal/processcontrol"
 	"github.com/Caseymccallum/StackBroom/internal/sysinfo"
 	"github.com/Caseymccallum/StackBroom/internal/version"
 )
@@ -35,14 +36,40 @@ type DesktopService struct {
 	scanFn    func(context.Context, string) model.Snapshot
 	metricsFn func(context.Context) sysinfo.Metrics
 	now       func() time.Time
+	tokens    *processcontrol.TokenIssuer
 }
 
 func NewDesktopService() *DesktopService {
+	tokens, _ := processcontrol.NewTokenIssuer()
+	return NewDesktopServiceWithTokens(tokens)
+}
+
+// NewDesktopServiceWithTokens uses an application-wide token issuer so scan
+// rows and the process-control service share exactly the same signing key.
+func NewDesktopServiceWithTokens(tokens *processcontrol.TokenIssuer) *DesktopService {
 	return &DesktopService{
 		scanFn:    runEngine,
 		metricsFn: sysinfo.Collect,
 		now:       time.Now,
+		tokens:    tokens,
 	}
+}
+
+// issueTargetToken binds a scanned process identity to an opaque token. The
+// webview never sends a timestamp back as identity evidence.
+func (s *DesktopService) issueTargetToken(process model.Process) string {
+	if s.tokens == nil || process.StartedAt == nil || process.PID <= 0 {
+		return ""
+	}
+	token, err := s.tokens.Issue(processcontrol.ProcessIdentity{
+		PID:        process.PID,
+		Name:       process.Name,
+		CreateTime: *process.StartedAt,
+	})
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func (s *DesktopService) GetAppInfo() AppInfo {
@@ -64,10 +91,11 @@ func (s *DesktopService) GetAppInfo() AppInfo {
 		Version:       version.Version,
 		SchemaVersion: model.SchemaVersion,
 		Toolchain:     runtime.Version(),
-		ReadOnly:      true,
+		ReadOnly:      false,
 		Privacy:       "Command lines, executable paths, project roots and user profile paths are withheld or tokenised before data reaches the interface.",
 		Limitations: []string{
-			"StackBroom is read-only. It cannot stop processes, remove containers or images, prune Docker, modify files or change Windows settings.",
+			"Process control is limited to explicit, verified actions: graceful close, forced termination and non-real-time priority changes. Protected and critical processes are refused.",
+			"Container removal, Docker prune, file deletion, startup changes and Windows settings mutation do not exist in this build.",
 			"Docker endpoints that are not local IPC channels are refused. The desktop shell has no remote-Docker override.",
 			"CPU usage is a short interval sample from Windows system counters, not a continuous monitor.",
 			"Listener ownership is confirmed only when the PID and its native creation time match before and after sampling; otherwise it is inferred or unknown.",
@@ -75,9 +103,11 @@ func (s *DesktopService) GetAppInfo() AppInfo {
 			"Storage shows volume capacity only. It does not claim that used space is safely reclaimable.",
 			"No AI provider is contacted in this milestone.",
 		},
-		Preview:       preview,
-		PreviewTheme:  previewTheme,
-		PreviewScreen: previewScreen,
+		Preview:        preview,
+		PreviewTheme:   previewTheme,
+		PreviewDetail:  preview && os.Getenv("STACKBROOM_PREVIEW_DETAIL") == "1",
+		PreviewConfirm: preview && os.Getenv("STACKBROOM_PREVIEW_CONFIRM") == "1",
+		PreviewScreen:  previewScreen,
 	}
 }
 
@@ -133,7 +163,7 @@ func (s *DesktopService) FullScan() (FullResult, error) {
 		DurationMS:    completed.Sub(started).Milliseconds(),
 		Partial:       status != "ok" || len(warnings) > 0,
 		Overview:      mapOverview(snapshot, metrics, "full", completed),
-		Processes:     mapProcesses(snapshot.Processes),
+		Processes:     mapProcesses(snapshot.Processes, s.issueTargetToken),
 		Developer:     mapDeveloper(snapshot),
 		Opportunities: mapOpportunities(snapshot.Recommendations),
 		Warnings:      warnings,

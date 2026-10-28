@@ -15,8 +15,8 @@ const (
 
 // OperationStore manages pending operation previews
 type OperationStore struct {
-	mu          sync.RWMutex
-	operations  map[string]*OperationPreview
+	mu         sync.RWMutex
+	operations map[string]*OperationPreview
 }
 
 // NewOperationStore creates a new operation store
@@ -49,9 +49,15 @@ func (s *OperationStore) CreatePreview(pid int32, action ProcessAction, priority
 		return nil, fmt.Errorf("too many pending operations")
 	}
 
-	// Validate target identity is provided
+	// Validate target identity is provided and belongs to the requested PID.
 	if targetIdentity.PID == 0 {
 		return nil, fmt.Errorf("target identity required")
+	}
+	if targetIdentity.PID != pid {
+		return nil, fmt.Errorf("target identity does not match PID")
+	}
+	if targetIdentity.CreateTime.IsZero() {
+		return nil, fmt.Errorf("target creation time required")
 	}
 
 	// Check if process is protected or critical

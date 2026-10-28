@@ -7,7 +7,7 @@ describe("Sidebar", () => {
     render(<Sidebar active="overview" showDeveloperTools version="0.2.0" onNavigate={() => undefined} />);
     expect(screen.getByRole("button", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: /Developer Tools/ })).toBeInTheDocument();
-    expect(screen.getByText("Read-only")).toBeInTheDocument();
+    expect(screen.getByText("Verified control")).toBeInTheDocument();
   });
 
   it("can hide developer tools without breaking navigation", () => {

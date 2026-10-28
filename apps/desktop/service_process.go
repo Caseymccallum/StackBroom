@@ -9,43 +9,60 @@ import (
 
 // ProcessControlService handles process management operations
 type ProcessControlService struct {
-	store *processcontrol.OperationStore
+	store    *processcontrol.OperationStore
+	tokens   *processcontrol.TokenIssuer
+	actions  processcontrol.NativeActions
+	verifyFn func(int32, time.Time) (processcontrol.ProcessIdentity, error)
 }
 
-// NewProcessControlService creates a new process control service
+// NewProcessControlService creates a process control service with its own
+// token issuer. Production wires the shared issuer through
+// NewProcessControlServiceWithTokens.
 func NewProcessControlService() *ProcessControlService {
+	tokens, _ := processcontrol.NewTokenIssuer()
+	return NewProcessControlServiceWithTokens(tokens)
+}
+
+// NewProcessControlServiceWithTokens verifies scan-issued target tokens with
+// the application-wide key.
+func NewProcessControlServiceWithTokens(tokens *processcontrol.TokenIssuer) *ProcessControlService {
 	return &ProcessControlService{
-		store: processcontrol.NewOperationStore(),
+		store:    processcontrol.NewOperationStore(),
+		tokens:   tokens,
+		actions:  processcontrol.DefaultNativeActions(),
+		verifyFn: processcontrol.VerifyProcessIdentity,
 	}
 }
 
-// GetProcessDetails returns detailed information about a specific process
-func (s *ProcessControlService) GetProcessDetails(pid int32, createTime string) (map[string]interface{}, error) {
-	// Parse creation time
-	creationTime, err := time.Parse(time.RFC3339, createTime)
+// verifyTargetToken checks the opaque backend token and re-verifies the live
+// process identity. The frontend never supplies an authoritative timestamp.
+func (s *ProcessControlService) verifyTargetToken(pid int32, targetToken string) (processcontrol.ProcessIdentity, error) {
+	if s.tokens == nil {
+		return processcontrol.ProcessIdentity{}, fmt.Errorf("target verification unavailable")
+	}
+	created, err := s.tokens.Verify(targetToken, pid)
+	if err != nil {
+		return processcontrol.ProcessIdentity{}, err
+	}
+	return s.verifyFn(pid, created)
+}
+
+// GetProcessDetails returns safe, non-sensitive details for a verified target.
+func (s *ProcessControlService) GetProcessDetails(pid int32, targetToken string) (map[string]interface{}, error) {
+	identity, err := s.verifyTargetToken(pid, targetToken)
 	if err != nil {
 		return nil, err
 	}
-
-	// Verify identity
-	identity, err := processcontrol.VerifyProcessIdentity(pid, creationTime)
-	if err != nil {
-		return nil, err
-	}
-
 	return map[string]interface{}{
 		"pid":         identity.PID,
 		"name":        identity.Name,
-		"exePath":     identity.ExePath,
-		"createTime":  identity.CreateTime.Format(time.RFC3339),
 		"isProtected": identity.IsProtected,
 		"isCritical":  identity.IsCritical,
 	}, nil
 }
 
 // PreviewProcessAction creates a preview for a process action after verifying identity
-func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, priority int, createTime string) (map[string]interface{}, error) {
-	// Validate action
+func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, priority int, targetToken string) (map[string]interface{}, error) {
 	var processAction processcontrol.ProcessAction
 	switch action {
 	case "graceful_close":
@@ -58,7 +75,6 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 		return nil, fmt.Errorf("invalid action type")
 	}
 
-	// Validate priority class only for set_priority action
 	priorityClass := processcontrol.PriorityClass(priority)
 	if processAction == processcontrol.ActionSetPriority {
 		if priorityClass != processcontrol.PriorityIdle &&
@@ -70,19 +86,11 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 		}
 	}
 
-	// Parse and verify creation time
-	creationTime, err := time.Parse(time.RFC3339Nano, createTime)
-	if err != nil {
-		return nil, fmt.Errorf("invalid creation time format")
-	}
-
-	// Verify process identity before creating preview
-	identity, err := processcontrol.VerifyProcessIdentity(pid, creationTime)
+	identity, err := s.verifyTargetToken(pid, targetToken)
 	if err != nil {
 		return nil, fmt.Errorf("identity verification failed: %v", err)
 	}
 
-	// Create preview with verified identity
 	preview, err := s.store.CreatePreview(pid, processAction, priorityClass, identity)
 	if err != nil {
 		return nil, err
@@ -111,21 +119,22 @@ func (s *ProcessControlService) ConfirmProcessAction(operationID string) (map[st
 
 	switch preview.Action {
 	case processcontrol.ActionGracefulClose:
-		result = processcontrol.ExecuteGracefulClose(preview)
+		result = processcontrol.ExecuteGracefulClose(preview, s.actions)
 	case processcontrol.ActionTerminate:
-		result = processcontrol.ExecuteTerminate(preview)
+		result = processcontrol.ExecuteTerminate(preview, s.actions)
 	case processcontrol.ActionSetPriority:
-		result = processcontrol.ExecuteSetPriority(preview)
+		result = processcontrol.ExecuteSetPriority(preview, s.actions)
 	default:
 		return nil, fmt.Errorf("invalid action type")
 	}
 
 	return map[string]interface{}{
-		"operationId": result.OperationID,
-		"success":     result.Success,
-		"outcome":     result.Outcome,
-		"details":     result.Details,
-		"verifiedAt":  result.VerifiedAt.Format(time.RFC3339),
+		"operationId":   result.OperationID,
+		"success":       result.Success,
+		"outcome":       result.Outcome,
+		"details":       result.Details,
+		"previousValue": result.PreviousValue,
+		"newValue":      result.NewValue,
+		"verifiedAt":    result.VerifiedAt.Format(time.RFC3339),
 	}, nil
 }
-

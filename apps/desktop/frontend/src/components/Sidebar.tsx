@@ -70,7 +70,7 @@ export function Sidebar({
       <div className="sidebar-footer">
         <div className="readonly-chip">
           <ShieldCheck size={15} aria-hidden="true" />
-          <span>Read-only</span>
+          <span>Verified control</span>
         </div>
         <div className="sidebar-version">
           <span>v{version}</span>

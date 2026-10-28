@@ -1,104 +1,165 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Caseymccallum/StackBroom/internal/model"
 	"github.com/Caseymccallum/StackBroom/internal/processcontrol"
 )
 
-func TestProcessControlService_PreviewProcessAction(t *testing.T) {
+func newTestProcessService(t *testing.T, identity processcontrol.ProcessIdentity) (*ProcessControlService, string) {
+	t.Helper()
 	service := NewProcessControlService()
-
-	// Test creating a preview for graceful close
-	// Note: This will fail because PID 1234 doesn't exist, which is expected
-	preview, err := service.PreviewProcessAction(1234, "graceful_close", 0, time.Now().Format(time.RFC3339Nano))
-	if err != nil {
-		// Expected to fail since PID 1234 doesn't exist
-		t.Logf("PreviewProcessAction failed as expected: %v", err)
-	} else {
-		if preview["operationId"] == nil || preview["operationId"] == "" {
-			t.Error("expected non-empty operation ID")
+	service.verifyFn = func(pid int32, created time.Time) (processcontrol.ProcessIdentity, error) {
+		if pid != identity.PID || !created.Equal(identity.CreateTime) {
+			return processcontrol.ProcessIdentity{}, errTestIdentity
 		}
-
-		if preview["pid"] != int32(1234) {
-			t.Errorf("expected PID 1234, got %v", preview["pid"])
-		}
-
-		if preview["action"] != "graceful_close" {
-			t.Errorf("expected action graceful_close, got %v", preview["action"])
-		}
+		return identity, nil
 	}
+	token, err := service.tokens.Issue(identity)
+	if err != nil {
+		t.Fatalf("issue token: %v", err)
+	}
+	return service, token
+}
 
-	// Test invalid action
-	_, err = service.PreviewProcessAction(1234, "invalid_action", 0, time.Now().Format(time.RFC3339Nano))
-	if err == nil {
-		t.Error("expected error for invalid action")
+var errTestIdentity = &identityError{}
+
+type identityError struct{}
+
+func (*identityError) Error() string { return "identity changed" }
+
+func fakeActions(terminateSucceeds bool) (processcontrol.NativeActions, *int) {
+	opened := 0
+	priority := processcontrol.PriorityNormal
+	actions := processcontrol.NativeActions{
+		OpenVerified: func(pid int32, access uint32, expected time.Time) (processcontrol.Handle, processcontrol.ProcessIdentity, error) {
+			opened++
+			return 1, processcontrol.ProcessIdentity{PID: pid, CreateTime: expected}, nil
+		},
+		Close:             func(processcontrol.Handle) error { return nil },
+		Terminate:         func(processcontrol.Handle, uint32) error { return nil },
+		Wait:              func(processcontrol.Handle, time.Duration) (bool, error) { return terminateSucceeds, nil },
+		SendGracefulClose: func(int32, time.Time) (int, error) { return 1, nil },
+		GetPriority:       func(processcontrol.Handle) (processcontrol.PriorityClass, error) { return priority, nil },
+		SetPriority:       func(_ processcontrol.Handle, value processcontrol.PriorityClass) error { priority = value; return nil },
+	}
+	return actions, &opened
+}
+
+func TestScanAndProcessControlShareTokenIssuer(t *testing.T) {
+	desktop := NewDesktopService()
+	control := NewProcessControlServiceWithTokens(desktop.tokens)
+	started := time.Now()
+	token := desktop.issueTargetToken(model.Process{PID: 42, Name: "test.exe", StartedAt: &started})
+	if token == "" {
+		t.Fatal("scan did not issue a target token")
+	}
+	created, err := control.tokens.Verify(token, 42)
+	if err != nil {
+		t.Fatalf("process control rejected a scan-issued token: %v", err)
+	}
+	if !created.Equal(started) {
+		t.Errorf("creation time mismatch: %v vs %v", created, started)
 	}
 }
 
-func TestProcessControlService_ConfirmProcessAction(t *testing.T) {
-	service := NewProcessControlService()
+func TestPreviewConfirmExecuteOnce(t *testing.T) {
+	identity := processcontrol.ProcessIdentity{PID: 4321, Name: "disposable.exe", CreateTime: time.Now()}
+	service, token := newTestProcessService(t, identity)
+	actions, opened := fakeActions(true)
+	service.actions = actions
 
-	// Create a preview (will fail since PID doesn't exist)
-	preview, err := service.PreviewProcessAction(1234, "graceful_close", 0, time.Now().Format(time.RFC3339Nano))
+	preview, err := service.PreviewProcessAction(4321, "terminate", 0, token)
 	if err != nil {
-		t.Logf("PreviewProcessAction failed as expected: %v", err)
-		return
+		t.Fatalf("preview: %v", err)
+	}
+	operationID, _ := preview["operationId"].(string)
+	if operationID == "" {
+		t.Fatal("empty operation id")
 	}
 
-	operationID := preview["operationId"].(string)
-
-	// Note: This test will fail because PID 1234 doesn't exist
-	// In a real test, we'd use a mock or a real disposable process
 	result, err := service.ConfirmProcessAction(operationID)
 	if err != nil {
-		// Expected to fail since PID 1234 doesn't exist
-		t.Logf("ConfirmProcessAction failed as expected: %v", err)
-		return
+		t.Fatalf("confirm: %v", err)
+	}
+	if result["success"] != true || result["outcome"] != "success" {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+	if *opened != 1 {
+		t.Errorf("expected one verified handle open, got %d", *opened)
 	}
 
-	// If it somehow succeeded, check the result structure
-	if result["operationId"] == nil {
-		t.Error("expected operation ID in result")
-	}
-}
-
-func TestProcessControlService_GetProcessDetails(t *testing.T) {
-	service := NewProcessControlService()
-
-	// Test with a non-existent process
-	_, err := service.GetProcessDetails(999999, time.Now().Format(time.RFC3339))
-	if err == nil {
-		t.Error("expected error for non-existent process")
+	if _, err := service.ConfirmProcessAction(operationID); err == nil {
+		t.Error("duplicate confirmation should be refused")
 	}
 }
 
-func TestProcessControlService_PriorityValidation(t *testing.T) {
-	service := NewProcessControlService()
-
-	// Test valid priority values
-	validPriorities := []int{
-		int(processcontrol.PriorityIdle),
-		int(processcontrol.PriorityBelowNormal),
-		int(processcontrol.PriorityNormal),
-		int(processcontrol.PriorityAboveNormal),
-		int(processcontrol.PriorityHigh),
+func TestPreviewRejectsProtectedAndStaleTargets(t *testing.T) {
+	identity := processcontrol.ProcessIdentity{PID: 4321, Name: "lsass.exe", CreateTime: time.Now(), IsProtected: true}
+	service, token := newTestProcessService(t, identity)
+	if _, err := service.PreviewProcessAction(4321, "terminate", 0, token); err == nil {
+		t.Error("protected target should be refused")
 	}
 
-	for _, priority := range validPriorities {
-		preview, err := service.PreviewProcessAction(1234, "set_priority", priority, time.Now().Format(time.RFC3339Nano))
-		if err != nil {
-			// Expected to fail since PID doesn't exist, but check error message
-			t.Logf("PreviewProcessAction failed for priority %d (expected): %v", priority, err)
-		} else if preview["priority"] == nil {
-			t.Errorf("expected priority in preview for priority %d", priority)
-		}
+	clean := processcontrol.ProcessIdentity{PID: 4321, Name: "disposable.exe", CreateTime: time.Now()}
+	service, token = newTestProcessService(t, clean)
+	service.verifyFn = func(int32, time.Time) (processcontrol.ProcessIdentity, error) {
+		return processcontrol.ProcessIdentity{}, errTestIdentity
 	}
+	if _, err := service.PreviewProcessAction(4321, "terminate", 0, token); err == nil {
+		t.Error("stale target should be refused")
+	}
+}
 
-	// Test invalid priority (Real-time, which should be rejected)
-	_, err := service.PreviewProcessAction(1234, "set_priority", int(processcontrol.PriorityRealTime), time.Now().Format(time.RFC3339Nano))
-	if err == nil {
-		t.Error("expected error for Real-time priority")
+func TestPreviewRejectsInvalidTokenAndPriority(t *testing.T) {
+	identity := processcontrol.ProcessIdentity{PID: 4321, Name: "disposable.exe", CreateTime: time.Now()}
+	service, _ := newTestProcessService(t, identity)
+
+	if _, err := service.PreviewProcessAction(4321, "terminate", 0, "not-a-token"); err == nil {
+		t.Error("invalid token should be refused")
+	}
+	if _, err := service.PreviewProcessAction(4321, "invalid_action", 0, "x"); err == nil {
+		t.Error("invalid action should be refused")
+	}
+	if _, err := service.PreviewProcessAction(4321, "set_priority", int(processcontrol.PriorityRealTime), "x"); err == nil {
+		t.Error("Real-time priority should be refused")
+	}
+}
+
+func TestGetProcessDetailsDoesNotExposeExePath(t *testing.T) {
+	identity := processcontrol.ProcessIdentity{PID: 4321, Name: "disposable.exe", ExePath: `C:\Users\TestUser\private\disposable.exe`, CreateTime: time.Now()}
+	service, token := newTestProcessService(t, identity)
+	details, err := service.GetProcessDetails(4321, token)
+	if err != nil {
+		t.Fatalf("details: %v", err)
+	}
+	if _, exists := details["exePath"]; exists {
+		t.Error("exePath must not cross the desktop bridge")
+	}
+	encoded := strings.ToLower(strings.Join([]string{details["name"].(string)}, " "))
+	if strings.Contains(encoded, "private") || strings.Contains(encoded, `c:\`) {
+		t.Errorf("sensitive path leaked: %q", encoded)
+	}
+}
+
+func TestPriorityConfirmationReportsReadback(t *testing.T) {
+	identity := processcontrol.ProcessIdentity{PID: 4321, Name: "disposable.exe", CreateTime: time.Now()}
+	service, token := newTestProcessService(t, identity)
+	actions, _ := fakeActions(true)
+	service.actions = actions
+
+	preview, err := service.PreviewProcessAction(4321, "set_priority", int(processcontrol.PriorityHigh), token)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	result, err := service.ConfirmProcessAction(preview["operationId"].(string))
+	if err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+	if result["previousValue"] != "Normal" || result["newValue"] != "High" {
+		t.Errorf("readback evidence missing: %+v", result)
 	}
 }

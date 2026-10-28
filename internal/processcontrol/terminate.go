@@ -5,24 +5,22 @@ import (
 	"time"
 )
 
-// ExecuteTerminate forcefully terminates a process
-// Receives already-consumed preview to prevent double consumption
-func ExecuteTerminate(preview *OperationPreview) OperationResult {
+// ExecuteTerminate forcefully terminates the verified target.
+func ExecuteTerminate(preview *OperationPreview, actions NativeActions) OperationResult {
 	operationID := preview.OperationID
 
-	// Re-verify process identity against stored target
-	identity, err := VerifyProcessIdentity(preview.PID, preview.Target.CreateTime)
+	handle, identity, err := actions.OpenVerified(preview.PID, PROCESS_TERMINATE|SYNCHRONIZE, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "refused",
-			Details:     fmt.Sprintf("identity verification failed: %v", err),
+			Details:     fmt.Sprintf("target could not be verified or opened: %v", err),
 			VerifiedAt:  time.Now(),
 		}
 	}
+	defer actions.Close(handle)
 
-	// Check eligibility
 	if identity.IsProtected || identity.IsCritical {
 		return OperationResult{
 			OperationID: operationID,
@@ -32,7 +30,6 @@ func ExecuteTerminate(preview *OperationPreview) OperationResult {
 			VerifiedAt:  time.Now(),
 		}
 	}
-
 	if IsStackBroomProcess(identity.Name) {
 		return OperationResult{
 			OperationID: operationID,
@@ -43,21 +40,7 @@ func ExecuteTerminate(preview *OperationPreview) OperationResult {
 		}
 	}
 
-	// Open process with terminate and synchronize access
-	handle, err := openProcess(preview.PID, PROCESS_TERMINATE|SYNCHRONIZE)
-	if err != nil {
-		return OperationResult{
-			OperationID: operationID,
-			Success:     false,
-			Outcome:     "refused",
-			Details:     fmt.Sprintf("insufficient privileges: %v", err),
-			VerifiedAt:  time.Now(),
-		}
-	}
-	defer closeHandle(handle)
-
-	// Terminate process
-	if err := terminateProcess(handle, 1); err != nil {
+	if err := actions.Terminate(handle, 1); err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
@@ -67,24 +50,22 @@ func ExecuteTerminate(preview *OperationPreview) OperationResult {
 		}
 	}
 
-	// Wait up to 5 seconds for process to actually exit
-	exited, err := waitForProcessExit(handle, 5000)
+	exited, err := actions.Wait(handle, 5*time.Second)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "partial",
-			Details:     fmt.Sprintf("termination initiated but exit verification failed: %v", err),
+			Details:     fmt.Sprintf("termination initiated but exit could not be verified: %v", err),
 			VerifiedAt:  time.Now(),
 		}
 	}
-
 	if !exited {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "partial",
-			Details:     "termination initiated but process did not exit within timeout",
+			Details:     "termination initiated but process did not exit within 5s",
 			VerifiedAt:  time.Now(),
 		}
 	}
@@ -93,7 +74,7 @@ func ExecuteTerminate(preview *OperationPreview) OperationResult {
 		OperationID: operationID,
 		Success:     true,
 		Outcome:     "success",
-		Details:     "process terminated and verified exited",
+		Details:     "process exit verified after termination",
 		VerifiedAt:  time.Now(),
 	}
 }

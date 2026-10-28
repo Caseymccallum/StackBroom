@@ -28,15 +28,14 @@ func VerifyProcessIdentity(pid int32, expectedCreateTime time.Time) (ProcessIden
 
 	exePath, err := getProcessExePath(handle)
 	if err != nil {
-		// Some processes may not expose their path; continue with empty
-		exePath = ""
+		// Fail closed: without a resolved executable name we cannot apply the
+		// protected-name policy or prove what we are acting on.
+		return ProcessIdentity{}, fmt.Errorf("cannot resolve executable path: %w", err)
 	}
 
 	isCritical, err := isProcessCritical(handle)
 	if err != nil {
-		// Fail closed: if we can't determine critical status, treat as critical
-		// This prevents accidentally terminating critical system processes
-		isCritical = true
+		return ProcessIdentity{}, fmt.Errorf("cannot determine critical status: %w", err)
 	}
 
 	name := filepath.Base(exePath)
@@ -64,7 +63,7 @@ func isProtectedProcess(name string) bool {
 		"svchost.exe",
 		"services.exe",
 		"spoolsv.exe",
-		"MsMpEng.exe",      // Windows Defender
+		"MsMpEng.exe", // Windows Defender
 		"SecurityHealthService.exe",
 	}
 

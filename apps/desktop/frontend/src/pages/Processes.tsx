@@ -10,9 +10,11 @@ interface Props {
   full: FullResult | null;
   busy: "quick" | "full" | null;
   onScan: () => void;
+  previewDetail?: boolean;
+  previewConfirm?: boolean;
 }
 
-export function ProcessesPage({ full, busy, onScan }: Props) {
+export function ProcessesPage({ full, busy, onScan, previewDetail, previewConfirm }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<ProcessSort>("memory");
@@ -25,6 +27,14 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
     () => (full ? filterAndSortProcesses(full.processes ?? [], { query: deferredQuery, category, sort, reverse }) : []),
     [full, deferredQuery, category, sort, reverse],
   );
+
+  useEffect(() => {
+    if (!previewDetail || selectedProcess || rows.length === 0) return;
+    const preferred = rows.find((process) => process.category === "dev-server")
+      ?? rows.find((process) => process.category === "dev-tool")
+      ?? rows[0];
+    setSelectedProcess(preferred);
+  }, [previewDetail, selectedProcess, rows]);
   useEffect(() => setPage(0), [deferredQuery, category, sort, reverse]);
   function chooseSort(next: ProcessSort) {
     setSort(next);
@@ -47,7 +57,7 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
             }
           >
             The quick overview reads local metrics only. A full scan adds command-line classification, project
-            association and listener evidence. It remains read-only.
+            association and listener evidence. Process actions are explicit, verified and refused for protected processes.
           </EmptyState>
         )}
       </Card>
@@ -131,6 +141,8 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
         <ProcessDetails
           process={selectedProcess}
           onClose={() => setSelectedProcess(null)}
+          onCompleted={onScan}
+          initialConfirm={previewConfirm}
         />
       )}
     </Card>

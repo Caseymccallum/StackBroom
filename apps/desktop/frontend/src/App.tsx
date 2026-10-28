@@ -46,7 +46,7 @@ const PAGE_META: Record<NavKey, { eyebrow: string; title: string; subtitle: stri
   processes: {
     eyebrow: "Process inventory",
     title: "Processes",
-    subtitle: "Search, sort and filter observed processes. Unknown values stay unknown, and there is no kill control.",
+    subtitle: "Search, sort and filter observed processes, then open verified controls. Unknown values stay unknown.",
   },
   storage: {
     eyebrow: "Storage",
@@ -181,7 +181,13 @@ export default function App() {
   const page = (() => {
     switch (active) {
       case "processes":
-        return <ProcessesPage full={desktop.full} busy={desktop.busy} onScan={() => void desktop.refresh("full")} />;
+        return <ProcessesPage
+          full={desktop.full}
+          busy={desktop.busy}
+          onScan={() => void desktop.refresh("full")}
+          previewDetail={desktop.appInfo?.previewDetail}
+          previewConfirm={desktop.appInfo?.previewConfirm}
+        />;
       case "storage":
         return <StoragePage quick={desktop.quick} full={desktop.full} />;
       case "developer":

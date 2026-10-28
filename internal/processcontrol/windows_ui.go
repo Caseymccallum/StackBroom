@@ -5,13 +5,14 @@ package processcontrol
 import (
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
 const WM_CLOSE = 0x0010
 
 // enumWindowsCallback is called for each window during enumeration
-type enumWindowsCallback func(hwnd syscall.Handle, lParam uintptr) uintptr
+type enumWindowsCallback func(hwnd Handle, lParam uintptr) uintptr
 
 // enumWindows enumerates all top-level windows
 func enumWindows(callback enumWindowsCallback) error {
@@ -26,7 +27,7 @@ func enumWindows(callback enumWindowsCallback) error {
 }
 
 // getWindowThreadProcessId retrieves the PID that owns a window
-func getWindowThreadProcessId(hwnd syscall.Handle) (int32, error) {
+func getWindowThreadProcessId(hwnd Handle) (int32, error) {
 	var pid int32
 	ret, _, err := procGetWindowThreadProcessId.Call(
 		uintptr(hwnd),
@@ -39,7 +40,7 @@ func getWindowThreadProcessId(hwnd syscall.Handle) (int32, error) {
 }
 
 // postMessage sends a message to a window (used for WM_CLOSE)
-func postMessage(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) error {
+func postMessage(hwnd Handle, msg uint32, wParam, lParam uintptr) error {
 	ret, _, err := procPostMessage.Call(
 		uintptr(hwnd),
 		uintptr(msg),
@@ -52,29 +53,51 @@ func postMessage(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) error 
 	return nil
 }
 
-// sendGracefulClose sends WM_CLOSE to all windows owned by the specified PID
-func sendGracefulClose(pid int32) (int, error) {
-	windowCount := 0
-	var lastErr error
+// sendGracefulClose collects windows owned by the PID, re-verifies the process
+// identity, then delivers WM_CLOSE. It never posts to a window belonging to a
+// process that reused the PID.
+func sendGracefulClose(pid int32, expected time.Time) (int, error) {
+	var windows []Handle
 
-	callback := func(hwnd syscall.Handle, lParam uintptr) uintptr {
+	callback := func(hwnd Handle, lParam uintptr) uintptr {
 		ownerPID, err := getWindowThreadProcessId(hwnd)
 		if err != nil {
-			lastErr = err
-			return 0
+			return 1
 		}
 		if ownerPID == pid {
-			if err := postMessage(hwnd, WM_CLOSE, 0, 0); err != nil {
-				lastErr = err
-			} else {
-				windowCount++
-			}
+			windows = append(windows, hwnd)
 		}
 		return 1 // continue enumeration
 	}
 
 	if err := enumWindows(callback); err != nil {
 		return 0, err
+	}
+	if len(windows) == 0 {
+		return 0, nil
+	}
+
+	handle, err := openProcess(pid, PROCESS_QUERY_LIMITED_INFORMATION)
+	if err != nil {
+		return 0, fmt.Errorf("cannot verify window owner: %w", err)
+	}
+	created, err := getProcessTimes(handle)
+	_ = closeHandle(handle)
+	if err != nil {
+		return 0, fmt.Errorf("cannot verify window owner: %w", err)
+	}
+	if !created.Equal(expected) {
+		return 0, fmt.Errorf("window owner identity changed (PID reuse)")
+	}
+
+	windowCount := 0
+	var lastErr error
+	for _, hwnd := range windows {
+		if err := postMessage(hwnd, WM_CLOSE, 0, 0); err != nil {
+			lastErr = err
+		} else {
+			windowCount++
+		}
 	}
 	return windowCount, lastErr
 }

@@ -72,11 +72,11 @@ export function OverviewPage({ quick, full, history, busy, onRefresh, onNavigate
           <h2 className="hero-title">{overview.hostname || "Windows PC"}</h2>
           <p className="hero-subtitle">
             {overview.windowsVersion || "Windows version unavailable"} · {overview.logicalProcessors || "Unknown"} logical
-            processors. A read-only snapshot of what is running and what it uses.
+            processors. An evidence-based snapshot of what is running and what it uses.
           </p>
           <div className="hero-meta">
             <Badge tone="teal">
-              <ShieldCheck size={11} aria-hidden="true" /> Read-only
+              <ShieldCheck size={11} aria-hidden="true" /> Observe + verified control
             </Badge>
             <Badge>{overview.scanMode === "full" ? "Full scan" : "Quick local scan"}</Badge>
             <Badge>{overview.capturedAt ? formatWhen(overview.capturedAt) : "Not sampled"}</Badge>

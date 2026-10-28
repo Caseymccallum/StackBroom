@@ -4,6 +4,44 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M1 process-control hardening and product architecture
+
+Security and correctness work on the process-control capability. No install,
+merge, tag or release was performed.
+
+### Changed
+
+- Replaced client-supplied creation timestamps with backend-issued opaque
+  HMAC-SHA256 target tokens bound to PID and native creation time. Tokens expire
+  after 15 minutes; the webview never sends identity evidence.
+- Operations now verify identity and critical status on the same handle used for
+  mutation, with `SYNCHRONIZE` for exit verification.
+- `GetProcessDetails` no longer exposes executable paths across the bridge.
+- Confirmation is an accessible in-app dialog with focus trap, Escape handling,
+  focus restoration and explicit irreversible-action warnings.
+- Process rows expose keyboard-focusable detail buttons.
+- Action outcomes now report verified exit/readback, previous/new priority and
+  honest `refused`/`partial`/`timeout`/`failure` states.
+- Root CLI module remains dependency-free; `golang.org/x/sys` was removed from
+  processcontrol in favor of `syscall`.
+
+### Added
+
+- Deterministic native-action seam and tests for successful preview/execute,
+  duplicate confirmation, concurrent consumption, stale identity, protected
+  targets, invalid priority, close timeout, terminate verification and priority
+  readback.
+- Target-token tamper/binding/expiry tests.
+- Product architecture documentation under `docs/product/` and an M2 Storage
+  Intelligence brief.
+
+### Known limitations
+
+- No live destructive validation has run; `notepad.exe` testing awaits owner
+  authorisation.
+- Desktop screenshots predate the new confirmation UI.
+- Independent review is still required.
+
 ## [Unreleased] - Desktop foundation
 
 Read-only Windows desktop MVP. The CLI remains unchanged and independently

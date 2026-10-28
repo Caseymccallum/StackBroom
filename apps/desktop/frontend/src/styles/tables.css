@@ -64,6 +64,27 @@
   font-weight: 550;
 }
 
+.row-detail-link {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.row-detail-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
 .sort-btn {
   display: inline-flex;
   align-items: center;

@@ -11,7 +11,8 @@ Wails v3.0.0 is the current stable v3 release available from the Go module proxy
 ```text
 apps/desktop/
 ├── main.go                    Wails application and embedded frontend assets
-├── service.go                 read-only bridge: quick/full scans, app info, cancel
+├── service.go                 inspection bridge: quick/full scans, app info, cancel
+├── service_process.go         verified process actions: preview/confirm, token checks
 ├── service_runtime.go         scan lock, timeout, sanitisation, warnings
 ├── mapping.go                 summary/process DTO mapping
 ├── mapping_developer.go       Docker/WSL/listener/duplicate/opportunity mapping
@@ -36,16 +37,26 @@ This allows the desktop bridge to import `internal/scan`, `internal/privacy`, `i
 
 ## Bridge contract
 
-`DesktopService` is the only service registered with Wails. It exposes four methods:
+Two services are registered with Wails.
+
+`DesktopService` is the inspection bridge:
 
 | Method | Purpose |
 |---|---|
-| `GetAppInfo()` | version, schema, toolchain, read-only limitations |
+| `GetAppInfo()` | version, schema, toolchain, capability limitations |
 | `QuickScan()` | fast local metrics and processes, no command lines/Docker/WSL |
 | `FullScan()` | command-line classification, Docker, WSL, listener truth, recommendations |
 | `CancelScan()` | cancels the active scan |
 
-All methods are read-only. There is no kill, delete, prune, settings-write or shell method.
+`ProcessControlService` is the only mutation bridge:
+
+| Method | Purpose |
+|---|---|
+| `GetProcessDetails(pid, targetToken)` | safe name/PID/protection details; no executable path |
+| `PreviewProcessAction(pid, action, priority, targetToken)` | verify target and issue a 60-second operation preview |
+| `ConfirmProcessAction(operationID)` | atomically consume the preview and execute/verify |
+
+Process actions are limited to graceful close, forced termination and non-real-time priority. A backend-issued HMAC target token binds PID and native creation time; the webview never sends a timestamp. Protected, critical and StackBroom processes are refused. There is no delete, prune, startup-write, settings-write or shell method.
 
 The bridge returns purpose-built DTOs, not `model.Snapshot`. In particular, these never cross into the webview:
 

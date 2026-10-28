@@ -63,15 +63,15 @@ func mapVolumes(volumes []sysinfo.Volume) []VolumeRow {
 	return out
 }
 
-func mapProcesses(processes []model.Process) []ProcessRow {
+func mapProcesses(processes []model.Process, issueToken func(model.Process) string) []ProcessRow {
 	out := make([]ProcessRow, 0, len(processes))
 	for _, process := range processes {
-		out = append(out, mapProcess(process))
+		out = append(out, mapProcess(process, issueToken))
 	}
 	return out
 }
 
-func mapProcess(process model.Process) ProcessRow {
+func mapProcess(process model.Process, issueToken func(model.Process) string) ProcessRow {
 	row := ProcessRow{
 		PID:            process.PID,
 		ParentPID:      process.ParentPID,
@@ -85,6 +85,7 @@ func mapProcess(process model.Process) ProcessRow {
 		RequestedPorts: append([]int(nil), process.RequestedPorts...),
 		ListeningPorts: append([]int(nil), process.ListeningPorts...),
 		PortOwnership:  string(process.PortOwnership),
+		TargetToken:    issueToken(process),
 	}
 	if process.StartedAt != nil {
 		row.StartedAt = process.StartedAt.Local().Format(time.RFC3339)

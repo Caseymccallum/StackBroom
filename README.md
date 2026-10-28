@@ -95,10 +95,13 @@ anywhere on your `PATH`; it has no runtime files.
 
 ## Windows desktop application
 
-The separate desktop MVP lives in [`apps/desktop/`](apps/desktop/). It is a
-Wails v3 + React + TypeScript application built around the same read-only Go
-engine and privacy policy. The root CLI does not depend on Wails, Node or any
-desktop package.
+The separate desktop application lives in [`apps/desktop/`](apps/desktop/). It
+is a Wails v3 + React + TypeScript application built around the same Go engine
+and privacy policy. Its inspection is read-only; the only mutation capability is
+explicit, verified process control (graceful close, forced termination and five
+non-real-time priority classes). Protected and critical processes are refused,
+and the frontend never supplies identity evidence. The root CLI does not depend on
+Wails, Node or any desktop package, and the CLI itself remains read-only.
 
 ```powershell
 cd apps/desktop

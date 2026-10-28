@@ -19,15 +19,15 @@ export function ConfirmProcessAction(operationID: string): $CancellablePromise<{
 }
 
 /**
- * GetProcessDetails returns detailed information about a specific process
+ * GetProcessDetails returns safe, non-sensitive details for a verified target.
  */
-export function GetProcessDetails(pid: number, createTime: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(2083862900, pid, createTime);
+export function GetProcessDetails(pid: number, targetToken: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2083862900, pid, targetToken);
 }
 
 /**
  * PreviewProcessAction creates a preview for a process action after verifying identity
  */
-export function PreviewProcessAction(pid: number, action: string, priority: number, createTime: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(1758146948, pid, action, priority, createTime);
+export function PreviewProcessAction(pid: number, action: string, priority: number, targetToken: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(1758146948, pid, action, priority, targetToken);
 }

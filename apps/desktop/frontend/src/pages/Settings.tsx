@@ -79,7 +79,7 @@ export function SettingsPage({
           <CardHeader title="Privacy and boundaries" subtitle="The same policy as the CLI, applied before data reaches the interface." />
           <CardBody>
             <div style={{ display: "grid", gap: 12 }}>
-              <div className="banner"><ShieldCheck size={16} aria-hidden="true" /><div><strong style={{ color: "var(--text)" }}>Read-only.</strong> No process termination, container removal, prune, file deletion or settings mutation exists in this build.</div></div>
+              <div className="banner"><ShieldCheck size={16} aria-hidden="true" /><div><strong style={{ color: "var(--text)" }}>Controlled actions only.</strong> Process close, termination and priority changes are explicit, verified and refused for protected processes. Container removal, prune, file deletion, startup changes and Windows settings mutation do not exist.</div></div>
               <div className="banner"><LockKeyhole size={16} aria-hidden="true" /><div><strong style={{ color: "var(--text)" }}>Command lines stay out of the UI.</strong> Executable paths, project roots and profile paths are withheld or tokenised. Diagnostics mode is not exposed.</div></div>
               <div className="banner"><Monitor size={16} aria-hidden="true" /><div><strong style={{ color: "var(--text)" }}>No listening port.</strong> The packaged application serves embedded assets to its own WebView2 instance. It does not open a network server.</div></div>
               <div className="banner"><Sparkles size={16} aria-hidden="true" /><div><strong style={{ color: "var(--text)" }}>No AI provider.</strong> A future BYOK adviser is design-only; no credentials are requested or stored and no external request is made.</div></div>
@@ -90,7 +90,7 @@ export function SettingsPage({
 
       <div className="grid" style={{ gap: 16 }}>
         <Card>
-          <CardHeader title="About StackBroom" action={<Badge tone="teal">Read-only</Badge>} />
+          <CardHeader title="About StackBroom" action={<Badge tone="teal">Verified control</Badge>} />
           <CardBody>
             <div className="setting-row"><span className="muted">Version</span><span className="mono">{appInfo?.version || "Unknown"}</span></div>
             <div className="setting-row"><span className="muted">Engine schema</span><span className="mono">{appInfo?.schemaVersion || "Unknown"}</span></div>

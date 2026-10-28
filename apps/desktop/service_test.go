@@ -138,12 +138,13 @@ func TestQuickAndFullModes(t *testing.T) {
 	}
 }
 
-func TestAppInfoIsReadOnly(t *testing.T) {
+func TestAppInfoDescribesControlledBuild(t *testing.T) {
 	info := testService().GetAppInfo()
-	if !info.ReadOnly || info.SchemaVersion != "3" || info.Name != "stackbroom" {
+	if info.ReadOnly || info.SchemaVersion != "3" || info.Name != "stackbroom" {
 		t.Errorf("info = %+v", info)
 	}
-	if len(info.Limitations) == 0 || !strings.Contains(strings.Join(info.Limitations, " "), "read-only") {
+	joined := strings.Join(info.Limitations, " ")
+	if len(info.Limitations) == 0 || !strings.Contains(joined, "Process control is limited") || !strings.Contains(joined, "Container removal") {
 		t.Errorf("limitations = %v", info.Limitations)
 	}
 }

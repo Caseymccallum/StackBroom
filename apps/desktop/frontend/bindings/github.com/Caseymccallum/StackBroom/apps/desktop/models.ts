@@ -12,6 +12,8 @@ export interface AppInfo {
     "preview"?: boolean;
     "previewTheme"?: string;
     "previewScreen"?: string;
+    "previewDetail"?: boolean;
+    "previewConfirm"?: boolean;
 }
 
 export interface ContainerRow {
@@ -159,6 +161,7 @@ export interface ProcessRow {
     "requestedPorts"?: number[] | null;
     "listeningPorts"?: number[] | null;
     "portOwnership"?: string;
+    "targetToken"?: string;
 }
 
 export interface QuickResult {

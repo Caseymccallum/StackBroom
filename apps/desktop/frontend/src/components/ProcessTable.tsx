@@ -92,7 +92,18 @@ function ProcessTableRow({ process, onClick }: { process: ProcessRow; onClick?: 
   ].filter(Boolean);
   return (
     <tr onClick={onClick} style={{ cursor: onClick ? "pointer" : "default" }} className="process-row">
-      <td className="name" title={process.name}>{process.name}</td>
+      <td className="name" title={process.name}>
+        {onClick ? (
+          <button
+            type="button"
+            className="row-detail-link"
+            aria-label={`Open details for ${process.name}, PID ${process.pid}`}
+            onClick={(event) => { event.stopPropagation(); onClick(); }}
+          >
+            {process.name}
+          </button>
+        ) : process.name}
+      </td>
       <td className="num">{process.pid}</td>
       <td><Badge tone={categoryTone(process.category)}>{process.category}</Badge></td>
       <td className="num">{formatBytes(process.memoryBytes, process.memoryKnown)}</td>

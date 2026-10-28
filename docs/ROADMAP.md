@@ -1,5 +1,12 @@
 # StackBroom roadmap
 
+> **Product architecture note (current):** this file remains the historical
+> technical roadmap for the CLI engine and early milestones. The authoritative
+> product direction, long-term capability order (M1–M16), action-security model
+> and M2 specification now live in [`docs/product/`](product/README.md). Where
+> ordering differs, the product roadmap wins; CLI compatibility notes here remain
+> valid.
+
 The guiding rule: a dependable read-only tool is more valuable than a
 feature-rich one that is unsafe. Each milestone must be independently useful and
 must not weaken the safety contract.

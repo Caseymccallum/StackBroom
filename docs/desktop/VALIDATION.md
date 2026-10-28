@@ -3,8 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,183,616 bytes** (about 11.2 MB)
-- SHA-256: `45879BAF92DC8C476C7512169E989DA881B0EEE9AC20A2FED061EE27141BFDC0`
+- Size: **11,272,704 bytes** (about 11.3 MB)
+- SHA-256: `8B4E7CEFC67657847657B61B037C1DB0D9847026DF858159A6C923008002FC09`
+- Source branch: `feat/m1-hardening-product-roadmap`; version `0.2.0`.
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -28,26 +29,34 @@ The binary is intentionally not committed. The build script reproduces it from t
 - concurrent scan rejection and cancellation;
 - 5,000-process inventory mapping;
 - timeout/cancel status classification;
-- read-only app metadata.
+- controlled-build app metadata (no false read-only claim);
+- opaque target tokens emitted per process row;
+- preview/confirm execution once, duplicate refusal and protected/stale target refusal;
+- no `exePath` crossing the bridge;
+- priority readback evidence.
 
-The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045, a valid CPU interval sample and two fixed volumes.
+The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
+
+The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045, a valid CPU interval sample and two fixed volumes. No live process termination, priority change or graceful close has been performed.
 
 ### Frontend
 
-`npm test` passes **15 tests / 6 files**:
+`npm test` passes **23 tests / 9 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
 - review card showing evidence without any action button;
 - sidebar active state and Developer Tools visibility;
 - listener search, ownership filter and pagination;
-- App load, navigation, theme change and keyboard shortcut with a mocked bridge.
+- App load, navigation, theme change and keyboard shortcut with a mocked bridge;
+- process details confirmation, cancel, Escape, backend-error honesty, no `window.confirm`;
+- keyboard-focusable process detail buttons.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 
 ### Visual capture
 
-20 screenshots at exact 1366×768 and 1920×1080 client sizes, dark and light, in `docs/desktop/screenshots/`. Captures came from the real executable, not a static mock-up.
+28 current screenshots at exact 1366×768 and 1920×1080 client sizes, dark and light, in `docs/desktop/screenshots/`: the five screens, process details and the in-app action confirmation. Captures came from the real executable, not a static mock-up. `capture-process-modal.ps1` only opens preview state; it never confirms an action.
 
 ## Performance observations
 
@@ -64,7 +73,9 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 - The frontend receives only sanitized DTOs. A JSON serialisation test asserts that command lines, home paths, project roots and a recognised secret do not cross the boundary.
 - `privacy.Apply` runs at the service boundary for both quick and full scans.
-- No bridge method can kill a process, remove a Docker object, prune, delete a file or change Windows settings.
+- Process control is the only mutation capability. It is limited to graceful close, forced termination and five non-real-time priority classes, requires a backend target token and explicit in-app confirmation, and refuses protected, critical and StackBroom processes.
+- No Docker removal/prune, file deletion, startup change or Windows settings mutation is exposed.
+- `GetProcessDetails` no longer returns `exePath`; paths remain internal to identity checks.
 - No shell execution, arbitrary filesystem write API or unrestricted system API is exposed to the frontend.
 - Docker remote endpoints are refused by the existing engine; the desktop shell has no override.
 - Production assets are embedded and served to the app's own WebView2; a production launch check found **0 listening sockets** across the StackBroom process and its seven WebView2 children.
@@ -75,6 +86,8 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ## Known limitations and gaps
 
+- No live destructive process-control test has run. `notepad.exe` validation awaits explicit owner authorisation; protected/refusal behaviour is covered by deterministic fakes.
+- M1 has not received independent review. A prior self-authored "security audit" was retracted and replaced by `docs/product/M1-SECURITY-AUDIT.md`.
 - No live duplicate pair from two real already-running dev servers was validated in this milestone. A read-only CLI scan at 2026-10-27 20:13 found six development processes (one dev server), 38 listeners and zero development-related/associated listeners. No process was started or stopped. Fixture evidence remains, and the limitation is reported rather than hidden.
 - No explicitly approved remote `tcp`/`ssh` Docker endpoint was contacted.
 - TCP only; UDP is not inspected.

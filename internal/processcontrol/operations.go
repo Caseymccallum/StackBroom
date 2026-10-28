@@ -5,24 +5,23 @@ import (
 	"time"
 )
 
-// ExecuteGracefulClose attempts to gracefully close a process via WM_CLOSE
-// Receives already-consumed preview to prevent double consumption
-func ExecuteGracefulClose(preview *OperationPreview) OperationResult {
+// ExecuteGracefulClose requests a graceful close through WM_CLOSE and verifies
+// whether the process actually exited. A message delivery is not success.
+func ExecuteGracefulClose(preview *OperationPreview, actions NativeActions) OperationResult {
 	operationID := preview.OperationID
 
-	// Re-verify process identity against stored target
-	identity, err := VerifyProcessIdentity(preview.PID, preview.Target.CreateTime)
+	handle, identity, err := actions.OpenVerified(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "refused",
-			Details:     fmt.Sprintf("identity verification failed: %v", err),
+			Details:     fmt.Sprintf("target could not be verified: %v", err),
 			VerifiedAt:  time.Now(),
 		}
 	}
+	defer actions.Close(handle)
 
-	// Check eligibility
 	if identity.IsProtected || identity.IsCritical {
 		return OperationResult{
 			OperationID: operationID,
@@ -32,7 +31,6 @@ func ExecuteGracefulClose(preview *OperationPreview) OperationResult {
 			VerifiedAt:  time.Now(),
 		}
 	}
-
 	if IsStackBroomProcess(identity.Name) {
 		return OperationResult{
 			OperationID: operationID,
@@ -43,69 +41,51 @@ func ExecuteGracefulClose(preview *OperationPreview) OperationResult {
 		}
 	}
 
-	// Send WM_CLOSE to all windows owned by this process
-	windowCount, err := sendGracefulClose(preview.PID)
+	windowCount, err := actions.SendGracefulClose(preview.PID, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "failure",
-			Details:     fmt.Sprintf("failed to send close message: %v", err),
+			Details:     fmt.Sprintf("failed to deliver close message: %v", err),
 			VerifiedAt:  time.Now(),
 		}
 	}
-
 	if windowCount == 0 {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "partial",
-			Details:     "no windows found to close",
+			Details:     "no windows were found for this process; close request was not delivered",
 			VerifiedAt:  time.Now(),
 		}
 	}
 
-	// Open process to verify exit
-	handle, err := openProcess(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE)
-	if err != nil {
-		// Process may have already exited
-		return OperationResult{
-			OperationID: operationID,
-			Success:     true,
-			Outcome:     "success",
-			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s), process appears to have exited", windowCount),
-			VerifiedAt:  time.Now(),
-		}
-	}
-	defer closeHandle(handle)
-
-	// Wait up to 10 seconds for graceful exit
-	exited, err := waitForProcessExit(handle, 10000)
+	exited, err := actions.Wait(handle, 10*time.Second)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,
 			Success:     false,
 			Outcome:     "partial",
-			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s) but exit verification failed: %v", windowCount, err),
+			Details:     fmt.Sprintf("close request delivered to %d window(s), but exit could not be verified: %v", windowCount, err),
 			VerifiedAt:  time.Now(),
 		}
 	}
-
-	if exited {
+	if !exited {
 		return OperationResult{
 			OperationID: operationID,
-			Success:     true,
-			Outcome:     "success",
-			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s), process exited gracefully", windowCount),
+			Success:     false,
+			Outcome:     "timeout",
+			Details:     fmt.Sprintf("close request delivered to %d window(s), but the process ignored it within 10s", windowCount),
 			VerifiedAt:  time.Now(),
 		}
 	}
 
 	return OperationResult{
 		OperationID: operationID,
-		Success:     false,
-		Outcome:     "timeout",
-		Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s) but process did not exit within 10s", windowCount),
+		Success:     true,
+		Outcome:     "success",
+		Details:     fmt.Sprintf("close request delivered to %d window(s); process exit verified", windowCount),
 		VerifiedAt:  time.Now(),
 	}
 }

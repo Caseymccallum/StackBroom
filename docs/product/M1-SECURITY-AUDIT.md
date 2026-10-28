@@ -1,143 +1,79 @@
-# M1 Security Audit Report
+# M1 Security Review — Current Status
 
-## Executive Summary
+**Status:** implementation hardened in source and unit-tested; **independent review and live destructive validation are not complete.**
+**Branch:** `feat/m1-hardening-product-roadmap`
+**Previous reviewed SHA:** `653ab3a` (corrective work has since continued on `feat/m1-process-control`).
 
-**Audit Date:** 2026-10-28  
-**Auditor:** Independent security review  
-**Status:** ✅ PASSED with hardening applied  
-**Branch:** `feat/m1-process-control`  
-**SHA:** `15ccf55cd9c2dac3f8e3735dbbe6b10ffa362e8b`
+This document replaces an earlier self-authored report that incorrectly described itself as an "independent" audit and claimed M1 was ready for acceptance.
 
-## Critical Findings and Fixes
+## Findings addressed in source
 
-### Finding 1: Race Condition in Operation Consumption (CRITICAL)
-**Severity:** CRITICAL  
-**Status:** ✅ FIXED
+### 1. Duplicate execution
 
-**Issue:** `ConfirmProcessAction` used `GetPreview` (read-only) instead of atomic consume, allowing duplicate execution of the same operation.
+`ConfirmProcessAction` atomically consumes the preview before execution. A second confirmation receives an error. Concurrent consumers are tested (16 goroutines, exactly one succeeds).
 
-**Fix:** 
-- Added `TryConsumePreview()` method with atomic check-and-delete
-- Updated `ConfirmProcessAction` to use atomic consume
-- Operation IDs are now truly single-use
+### 2. Client-supplied identity
 
-**Verification:** Unit tests confirm duplicate execution is prevented.
+The previous API accepted a creation-time string from the webview. Mapping emitted seconds while native `FILETIME` has 100 ns precision, so valid actions could fail with a false PID-reuse error.
 
-### Finding 2: No Process Exit Verification (HIGH)
-**Severity:** HIGH  
-**Status:** ✅ FIXED
+Current design:
+- The inspection snapshot issues an opaque HMAC-SHA256 target token binding PID and native creation time.
+- Tokens expire after 15 minutes and are bound to the PID.
+- The frontend never sends a timestamp.
+- Preview re-verifies token signature, expiry, live creation time, protection, critical status and self-protection.
 
-**Issue:** 
-- Termination assumed success if `TerminateProcess` API returned success
-- No verification that process actually exited
-- Graceful close had no outcome verification
+### 3. Fail-open critical check
 
-**Fix:**
-- Added `waitForProcessExit()` with 5-second timeout for termination
-- Added `isProcessRunning()` for state verification
-- Graceful close now waits up to 10 seconds and verifies exit
-- Outcomes now distinguish: success, timeout, partial, failure
+`IsProcessCritical` errors now fail closed. `openVerifiedProcess` also fails closed when critical status cannot be determined.
 
-**Verification:** Tests confirm proper exit verification.
+### 4. Separate handles / identity race
 
-### Finding 3: Incomplete Identity Verification (MEDIUM)
-**Severity:** MEDIUM  
-**Status:** ✅ ADDRESSED
+`openVerifiedProcess` opens the operation handle with the required rights plus `PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE`, then reads creation time and critical status from that same handle. Mutations are performed on the verified handle.
 
-**Issue:** `SessionID` field in `ProcessIdentity` was never populated or checked.
+### 5. False success
 
-**Fix:** 
-- SessionID remains in struct for future use
-- Current implementation relies on PID + CreationTime which is sufficient
-- Documented that SessionID is reserved for advanced isolation scenarios
+- Graceful close distinguishes "not delivered", "delivered but ignored", "verified exit", and "exit could not be verified".
+- Opening a new handle is no longer treated as proof of exit.
+- Termination success requires `WaitForSingleObject` to report exit.
+- Priority changes require readback and report the observed value.
+- Failures are returned as `refused`, `partial`, `timeout` or `failure`; no fabricated success.
 
-**Rationale:** PID + CreationTime provides sufficient uniqueness for process identification on Windows.
+### 6. Executable path exposure
 
-### Finding 4: Potential Handle Leaks (MEDIUM)
-**Severity:** MEDIUM  
-**Status:** ✅ FIXED
+`GetProcessDetails` no longer returns `exePath`; the path stays internal to identity checks. Tokens contain PID and creation time only.
 
-**Issue:** Error paths in operations might not close handles properly.
+### 7. Confirmation and accessibility
 
-**Fix:**
-- All operations use `defer closeHandle(handle)` immediately after successful open
-- Verified all code paths properly close handles
-- Added explicit handle closure in verification functions
+- `window.confirm` removed.
+- In-app confirmation names the target, action and consequence.
+- Dialog has `role="dialog"`, `aria-modal`, labelled title/description, Escape, focus trap and focus restoration.
+- Duplicate submits are blocked while a request is in flight.
+- Server `outcome`/`details`/observed values are displayed verbatim.
+- Process table row details are keyboard-focusable buttons.
 
-**Verification:** Code review confirms no handle leaks.
+## Remaining limitations requiring independent review
 
-## Security Architecture Review
+- No live destructive test has been run. `notepad.exe` validation awaits owner authorisation.
+- Protected/critical behaviour has been verified through deterministic fakes, not through live system processes.
+- `IsProcessCritical` requires a supported Windows version; unsupported hosts fail closed.
+- Session ID is not part of the target token.
+- The desktop screenshots in `docs/desktop/screenshots` predate the new confirmation UI and must be recaptured for any release claim.
+- A prior self-review is not independent validation.
 
-### ✅ Identity Verification
-- PID + CreationTime verification at preview AND execution
-- Prevents PID reuse attacks
-- Creation time captured from `GetProcessTimes` API
-- Re-verified before every operation
+## Verification commands
 
-### ✅ Operation Security
-- Cryptographic operation IDs (128-bit random via `crypto/rand`)
-- 60-second expiry with automatic cleanup
-- Atomic single-use consumption
-- Maximum 100 concurrent operations
-- Frontend cannot modify PID or action type
+```powershell
+go test ./... -count=1
+cd apps/desktop
+go test ./... -count=1
+cd frontend
+npx tsc --noEmit
+npm test
+```
 
-### ✅ Protected Target Policy
-- Critical system processes refused (lsass.exe, csrss.exe, etc.)
-- Protected processes detected via `IsProcessCritical` API
-- StackBroom self-protection
-- Insufficient privileges handled gracefully
+## Next gate
 
-### ✅ Access Rights
-- Minimum necessary access rights for each operation:
-  - Identity verification: `PROCESS_QUERY_LIMITED_INFORMATION`
-  - Termination: `PROCESS_TERMINATE`
-  - Priority: `PROCESS_SET_INFORMATION | PROCESS_QUERY_INFORMATION`
-- No `PROCESS_ALL_ACCESS` usage
-
-### ✅ Handle Management
-- All handles closed via `defer closeHandle()`
-- Proper cleanup on all error paths
-- No handle leaks in any code path
-
-### ✅ Priority Control
-- Real-time priority explicitly blocked
-- Only 5 safe priority classes exposed
-- Readback verification after setting
-- Mismatch reported as "partial" outcome
-
-## Test Coverage
-
-### Unit Tests
-- ✅ OperationStore CRUD operations
-- ✅ Preview expiry handling
-- ✅ Priority class validation
-- ✅ Duplicate execution prevention
-- ✅ Identity verification
-- ✅ Protected process refusal
-
-### Integration Tests
-- ✅ TypeScript compilation
-- ✅ Vite production build
-- ✅ Go build (Windows)
-- ✅ All existing tests pass
-
-### Security Tests
-- ✅ Invalid operation ID refused
-- ✅ Expired operation refused
-- ✅ Duplicate execution prevented
-- ✅ Protected process refused
-- ✅ Invalid priority refused
-- ✅ Real-time priority blocked
-
-## Recommendation
-
-**M1 is ready for acceptance** after the security hardening applied in this audit.
-
-All critical and high severity findings have been resolved. The implementation follows defence-in-depth principles with multiple verification layers.
-
-## Next Steps
-
-1. **Live testing** with disposable processes (notepad.exe, calc.exe)
-2. **Accessibility audit** of ProcessDetails modal
-3. **Screenshot documentation** of security refusals
-4. **M2 storage analysis** design (per roadmap)
+1. Independent code review of `internal/processcontrol` and `service_process.go`.
+2. Owner-authorised live test with a disposable `notepad.exe`.
+3. Accessibility and screenshot recapture.
+4. Only then update the M1 acceptance statement.

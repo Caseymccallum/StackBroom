@@ -8,7 +8,7 @@
 - [Optional BYOK AI adviser — design only](BYOK-AI.md)
 - [Future storage analysis — design only](STORAGE-ANALYSIS.md)
 
-The desktop MVP is read-only. It does not clean up, modify system state, contact an AI provider or open a production network listener.
+Inspection remains read-only. The only mutation capability is explicit, verified process control (graceful close, termination and non-real-time priority). It does not clean up files, remove containers or images, change startup/Windows settings, contact an AI provider or open a production network listener.
 
 ## Desktop UX refinement
 

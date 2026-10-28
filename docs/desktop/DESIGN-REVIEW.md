@@ -25,7 +25,7 @@ A working, read-only Windows desktop MVP built on Wails v3.0.0. All five navigat
 - Category filter and sortable columns.
 - Unknown memory/start time stay "Unknown".
 - 50-row pagination and deferred search keep large inventories manageable.
-- No kill or action button.
+- Row details open a verified control panel with explicit confirmation; protected processes are refused.
 
 ### Storage
 

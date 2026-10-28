@@ -2,6 +2,20 @@ package processcontrol
 
 import "time"
 
+// Handle is a native process handle. It is platform-neutral at this layer so
+// the lifecycle can be tested with deterministic fakes.
+type Handle uintptr
+
+// Windows process access rights. They are defined here so the platform-neutral
+// lifecycle compiles everywhere; only the Windows backend uses them.
+const (
+	PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+	PROCESS_TERMINATE                 = 0x0001
+	PROCESS_SET_INFORMATION           = 0x0200
+	PROCESS_QUERY_INFORMATION         = 0x0400
+	SYNCHRONIZE                       = 0x00100000
+)
+
 // ProcessIdentity represents verified process identity for safe operations.
 type ProcessIdentity struct {
 	PID         int32
@@ -65,23 +79,25 @@ type OperationPreview struct {
 
 // OperationResult represents the outcome of an executed operation.
 type OperationResult struct {
-	OperationID string
-	Success     bool
-	Outcome     string // "success", "timeout", "refused", "partial", "failure"
-	Details     string
-	VerifiedAt  time.Time
+	OperationID   string
+	Success       bool
+	Outcome       string // "success", "timeout", "refused", "partial", "failure"
+	Details       string
+	PreviousValue string // priority before a change, when known
+	NewValue      string // observed value after a change, when known
+	VerifiedAt    time.Time
 }
 
 // RefusalReason explains why an operation was refused.
 type RefusalReason string
 
 const (
-	RefusalNotFound      RefusalReason = "process_not_found"
-	RefusalPIDReuse      RefusalReason = "pid_reuse_detected"
-	RefusalProtected     RefusalReason = "protected_process"
-	RefusalCritical      RefusalReason = "critical_system_process"
-	RefusalSelf          RefusalReason = "stackbroom_process"
-	RefusalInsufficient  RefusalReason = "insufficient_privileges"
-	RefusalExpired       RefusalReason = "operation_expired"
-	RefusalInvalid       RefusalReason = "invalid_operation_id"
+	RefusalNotFound     RefusalReason = "process_not_found"
+	RefusalPIDReuse     RefusalReason = "pid_reuse_detected"
+	RefusalProtected    RefusalReason = "protected_process"
+	RefusalCritical     RefusalReason = "critical_system_process"
+	RefusalSelf         RefusalReason = "stackbroom_process"
+	RefusalInsufficient RefusalReason = "insufficient_privileges"
+	RefusalExpired      RefusalReason = "operation_expired"
+	RefusalInvalid      RefusalReason = "invalid_operation_id"
 )
