@@ -1,6 +1,6 @@
 # M3B Execution Plan — Separately Reviewable Deletion
 
-**Status:** design only. M3A has no deletion, move, rename, quarantine or attribute mutation method.
+**Status:** M3B-1 architecture implemented; execution remains disabled in ordinary builds. See [`M3B-IMPLEMENTATION.md`](M3B-IMPLEMENTATION.md) and [`M3B-SECURITY-REVIEW.md`](M3B-SECURITY-REVIEW.md). No live destructive test is authorised.
 
 ## Authorisation gate
 

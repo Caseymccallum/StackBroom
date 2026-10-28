@@ -141,12 +141,18 @@ func (r Rule) ResolveRoot() (string, error) {
 	if base == "" || base == r.ScopeToken || strings.Contains(base, "%") {
 		return "", fmt.Errorf("rule scope environment is unavailable")
 	}
+	trusted, err := trustedRootForToken(r.ScopeToken)
+	if err != nil {
+		return "", fmt.Errorf("trusted cleanup scope is unavailable")
+	}
 	if r.ScopeSubdir != "" {
+		trusted = filepath.Join(trusted, r.ScopeSubdir)
 		base = filepath.Join(base, r.ScopeSubdir)
 	}
+	trusted = filepath.Clean(trusted)
 	absolute, err := filepath.Abs(filepath.Clean(base))
-	if err != nil {
-		return "", fmt.Errorf("rule scope is not a valid path")
+	if err != nil || !strings.EqualFold(absolute, trusted) || isDeniedScope(trusted) {
+		return "", fmt.Errorf("rule scope is not the trusted Windows location")
 	}
 	return absolute, nil
 }

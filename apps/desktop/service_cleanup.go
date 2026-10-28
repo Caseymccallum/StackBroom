@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/Caseymccallum/StackBroom/internal/cleanup"
+	"github.com/Caseymccallum/StackBroom/internal/cleanup/execution"
+	"github.com/Caseymccallum/StackBroom/internal/history"
 	"github.com/Caseymccallum/StackBroom/internal/storage"
 )
 
@@ -26,26 +30,40 @@ type cleanupDiscoveryState struct {
 type cleanupPreviewState struct {
 	View      CleanupPreviewView
 	ExpiresAt time.Time
+	Execution *execution.Context
 }
 
 // CleanupService is read-only: it discovers candidates and creates expiring
 // previews, but intentionally has no execution or deletion method.
 type CleanupService struct {
-	mu          sync.Mutex
-	discoveries map[string]*cleanupDiscoveryState
-	previews    map[string]*cleanupPreviewState
-	active      string
-	now         func() time.Time
-	discoverFn  func(context.Context, cleanup.Rule, int, func(cleanup.Progress), func() time.Time) (*cleanup.Discovery, error)
+	mu           sync.Mutex
+	discoveries  map[string]*cleanupDiscoveryState
+	previews     map[string]*cleanupPreviewState
+	active       string
+	now          func() time.Time
+	discoverFn   func(context.Context, cleanup.Rule, int, func(cleanup.Progress), func() time.Time) (*cleanup.Discovery, error)
+	executor     *execution.Engine
+	historyStore *history.Store
 }
 
 func NewCleanupService() *CleanupService {
-	return &CleanupService{
-		discoveries: make(map[string]*cleanupDiscoveryState),
-		previews:    make(map[string]*cleanupPreviewState),
-		now:         time.Now,
-		discoverFn:  cleanup.Discover,
+	historyPath := ""
+	if config, err := os.UserConfigDir(); err == nil {
+		historyPath = filepath.Join(config, "StackBroom", "cleanup-history.jsonl")
 	}
+	store := history.NewStore(historyPath, 30, 500)
+	return &CleanupService{
+		discoveries:  make(map[string]*cleanupDiscoveryState),
+		previews:     make(map[string]*cleanupPreviewState),
+		now:          time.Now,
+		discoverFn:   cleanup.Discover,
+		executor:     execution.NewEngine(execution.NewNativeExecutor(), execution.NewRecoveryVerifier(), store),
+		historyStore: store,
+	}
+}
+
+func cleanupExecutionEnabled() bool {
+	return execution.BuildEnabled() && os.Getenv("STACKBROOM_ENABLE_CLEANUP_EXECUTION") == "1"
 }
 
 // ListCleanupRules returns the curated catalogue. No path is accepted.
@@ -276,7 +294,8 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 		TotalLogical: preview.TotalLogical, TotalAllocated: preview.TotalAllocated,
 		RecoverableBytes: preview.RecoverableBytes, RecoverableKnown: preview.RecoverableKnown,
 		AllocatedUnknown: preview.AllocatedUnknown, DeletionMode: preview.DeletionMode,
-		RecoveryNote: preview.RecoveryNote, Risks: append([]string(nil), preview.Risks...),
+		ExecutionAvailable: cleanupExecutionEnabled(),
+		RecoveryNote:       preview.RecoveryNote, Risks: append([]string(nil), preview.Risks...),
 		SideEffects: append([]string(nil), preview.SideEffects...), ExpiresAt: preview.ExpiresAt,
 	}
 	for _, candidate := range preview.Selected {
@@ -285,9 +304,17 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 	for _, exclusion := range preview.Excluded {
 		view.Excluded = append(view.Excluded, CleanupExclusion{RelativePath: exclusion.RelativePath, Reason: exclusion.Reason})
 	}
+	targets := make([]execution.Target, 0, len(preview.Selected))
+	for _, candidate := range preview.Selected {
+		targets = append(targets, execution.Target{ID: candidate.ID, File: candidate.File})
+	}
+	executionContext, err := execution.NewContext(id, preview.Rule.ID, preview.Rule.Version, result.Root, targets, preview.ExpiresAt, execution.RecycleOnly)
+	if err != nil {
+		return CleanupPreviewView{}, fmt.Errorf("cleanup execution context was refused: %w", err)
+	}
 	s.mu.Lock()
 	s.prunePreviewsLocked()
-	s.previews[id] = &cleanupPreviewState{View: view, ExpiresAt: preview.ExpiresAt}
+	s.previews[id] = &cleanupPreviewState{View: view, ExpiresAt: preview.ExpiresAt, Execution: executionContext}
 	s.mu.Unlock()
 	return view, nil
 }
@@ -321,4 +348,83 @@ func (s *CleanupService) GetCleanupPreview(previewID string) (CleanupPreviewView
 		return CleanupPreviewView{}, fmt.Errorf("cleanup preview expired")
 	}
 	return preview.View, nil
+}
+
+// ConfirmCleanup is deliberately gated at the Go boundary. In an ordinary
+// build there is no compiled native executor; even a hostile webview cannot
+// enable deletion with an environment variable.
+func (s *CleanupService) ConfirmCleanup(previewID string) (CleanupExecutionView, error) {
+	if !execution.BuildEnabled() {
+		return CleanupExecutionView{}, fmt.Errorf("cleanup execution is disabled in this build")
+	}
+	if !cleanupExecutionEnabled() {
+		return CleanupExecutionView{}, fmt.Errorf("cleanup execution is disabled by the backend feature gate")
+	}
+	s.mu.Lock()
+	preview := s.previews[previewID]
+	if preview == nil || preview.Execution == nil {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup execution context not found")
+	}
+	executionContext := preview.Execution
+	if !s.now().Before(preview.ExpiresAt) {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup execution context expired")
+	}
+	s.mu.Unlock()
+	if s.executor == nil {
+		return CleanupExecutionView{}, fmt.Errorf("cleanup executor is unavailable")
+	}
+	result := s.executor.Execute(context.Background(), executionContext, nil)
+	view := CleanupExecutionView{
+		PreviewID: previewID, State: string(result.State), Aborted: result.Aborted,
+		States: func() []string {
+			states := make([]string, 0, len(result.States))
+			for _, state := range result.States {
+				states = append(states, string(state))
+			}
+			return states
+		}(),
+		ReasonCode: result.ReasonCode, Message: result.Message,
+		StartedAt: result.StartedAt, CompletedAt: result.CompletedAt,
+	}
+	for _, item := range result.Items {
+		view.Items = append(view.Items, CleanupExecutionItem{
+			TargetID: item.TargetID, Status: string(item.Status), ReasonCode: item.ReasonCode,
+			Message: item.Message, HRESULT: item.HRESULT,
+			RecoveryAvailable: item.Recovery.Available, RecoveryKind: item.Recovery.Kind,
+			LogicalBytes: item.LogicalBytes, AllocatedBytes: item.AllocatedBytes, AllocatedKnown: item.AllocatedKnown,
+		})
+	}
+	return view, nil
+}
+
+func (s *CleanupService) ListCleanupHistory() (CleanupHistoryView, error) {
+	if s.historyStore == nil {
+		return CleanupHistoryView{}, nil
+	}
+	entries, err := s.historyStore.List()
+	if err != nil {
+		return CleanupHistoryView{}, fmt.Errorf("cleanup history could not be read")
+	}
+	view := CleanupHistoryView{RetentionDays: 30, MaxRecords: 500}
+	for _, entry := range entries {
+		view.Records = append(view.Records, CleanupHistoryRecord{
+			At: entry.At, Type: entry.Type, RuleID: entry.RuleID, RuleVersion: entry.RuleVersion,
+			State: entry.State, TargetCount: entry.TargetCount, LogicalBytes: entry.LogicalBytes,
+			AllocatedBytes: entry.AllocatedBytes, DeletionMode: entry.DeletionMode,
+			ReasonCode: entry.ReasonCode, RecoveryAvailable: entry.RecoveryAvailable,
+		})
+	}
+	return view, nil
+}
+
+func (s *CleanupService) ClearCleanupHistory() error {
+	if s.historyStore == nil {
+		return nil
+	}
+	if err := s.historyStore.Clear(); err != nil {
+		return fmt.Errorf("cleanup history could not be cleared")
+	}
+	return nil
 }

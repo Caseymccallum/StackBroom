@@ -1,6 +1,6 @@
 # Cleanup Safety Specification
 
-Implementation design for M3: [`M3-CLEANUP-SPEC.md`](M3-CLEANUP-SPEC.md). This document remains the high-level safety policy; M3 is design-only and no deletion capability exists.
+Implementation design for M3: [`M3-CLEANUP-SPEC.md`](M3-CLEANUP-SPEC.md). This document remains the high-level safety policy; M3B-1 contains a compiled-out/gated native architecture, and ordinary builds have no deletion capability.
 
 ## Default rule
 

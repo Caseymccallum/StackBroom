@@ -16,6 +16,8 @@ Authoritative product and engineering direction for StackBroom.
 - [M3 cleanup specification](M3-CLEANUP-SPEC.md)
 - [M3A cleanup discovery status](M3A-CLEANUP-DISCOVERY.md)
 - [M3B execution plan](M3B-EXECUTION-PLAN.md)
+- [M3B-1 implementation notes](M3B-IMPLEMENTATION.md)
+- [M3B security review](M3B-SECURITY-REVIEW.md)
 - [Maintenance history contract](MAINTENANCE-HISTORY.md)
 
 Historical CLI roadmap: [`../ROADMAP.md`](../ROADMAP.md).

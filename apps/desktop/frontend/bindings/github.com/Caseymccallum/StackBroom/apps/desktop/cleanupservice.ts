@@ -19,6 +19,19 @@ export function CancelCleanupDiscovery(discoveryID: string): $CancellablePromise
     return $Call.ByID(831789605, discoveryID);
 }
 
+export function ClearCleanupHistory(): $CancellablePromise<void> {
+    return $Call.ByID(3762735986);
+}
+
+/**
+ * ConfirmCleanup is deliberately gated at the Go boundary. In an ordinary
+ * build there is no compiled native executor; even a hostile webview cannot
+ * enable deletion with an environment variable.
+ */
+export function ConfirmCleanup(previewID: string): $CancellablePromise<$models.CleanupExecutionView> {
+    return $Call.ByID(4111006337, previewID);
+}
+
 /**
  * CreateCleanupPreview builds an expiring preview from exact discovery IDs.
  * It never mutates a file and there is deliberately no execution method.
@@ -33,6 +46,10 @@ export function GetCleanupDiscovery(discoveryID: string): $CancellablePromise<$m
 
 export function GetCleanupPreview(previewID: string): $CancellablePromise<$models.CleanupPreviewView> {
     return $Call.ByID(901525555, previewID);
+}
+
+export function ListCleanupHistory(): $CancellablePromise<$models.CleanupHistoryView> {
+    return $Call.ByID(1833424545);
 }
 
 /**

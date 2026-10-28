@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,15 +13,19 @@ import (
 	"github.com/Caseymccallum/StackBroom/internal/storage"
 )
 
-func TestCleanupServiceHasOnlyDiscoveryAndPreviewMethods(t *testing.T) {
+func TestCleanupServiceMutationSurfaceIsGated(t *testing.T) {
 	service := NewCleanupService()
 	if len(service.ListCleanupRules()) < 2 {
 		t.Fatal("curated rule catalogue is empty")
 	}
-	for _, method := range []string{"ConfirmCleanup", "DeleteFiles", "MoveToRecycleBin", "CleanupFiles"} {
+	for _, method := range []string{"DeleteFiles", "MoveToRecycleBin", "CleanupFiles"} {
 		if reflect.ValueOf(service).MethodByName(method).IsValid() {
-			t.Errorf("mutation-capable method %s exists", method)
+			t.Errorf("unapproved mutation method %s exists", method)
 		}
+	}
+	t.Setenv("STACKBROOM_ENABLE_CLEANUP_EXECUTION", "1")
+	if _, err := service.ConfirmCleanup("anything"); err == nil {
+		t.Error("environment variable enabled cleanup execution in an ordinary build")
 	}
 }
 
@@ -55,28 +60,50 @@ func TestCleanupServiceCancellationIsReported(t *testing.T) {
 }
 
 func TestCleanupServicePreviewExpires(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "old.tmp")
-	if err := os.WriteFile(path, []byte("old"), 0o644); err != nil {
-		t.Fatal(err)
+	rule, _ := cleanup.RuleByID("user-temp-old")
+	trustedRoot, err := rule.ResolveRoot()
+	if err != nil {
+		t.Skipf("trusted temp scope unavailable: %v", err)
 	}
-	info, err := os.Lstat(path)
+	root := trustedRoot
+	fixtureDir, err := os.MkdirTemp(root, "stackbroom-m3b-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(fixtureDir)
+	path := filepath.Join(fixtureDir, fmt.Sprintf("old-%d.tmp", time.Now().UnixNano()))
+	if err := os.WriteFile(path, []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-30 * 24 * time.Hour)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+	request := storage.DefaultRequest(fixtureDir)
+	request.MinDuplicateSize = ^uint64(0)
+	scan, err := storage.NewScanner().Scan(context.Background(), request, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var record storage.FileRecord
+	for _, file := range scan.Files {
+		if file.Path == path {
+			record = *file
+			break
+		}
+	}
+	if record.FileID == "" {
+		t.Fatalf("fixture file was not indexed: %+v", scan.Files)
+	}
+	record.Root = root
 	now := time.Now()
-	rule, _ := cleanup.RuleByID("user-temp-old")
 	service := NewCleanupService()
 	service.now = func() time.Time { return now }
 	service.discoverFn = func(ctx context.Context, rule cleanup.Rule, max int, progress func(cleanup.Progress), clock func() time.Time) (*cleanup.Discovery, error) {
 		return &cleanup.Discovery{
 			Rule: rule, Root: root, ScannedFiles: 1, Eligible: 1,
-			Candidates: []cleanup.Candidate{{ID: "c1", RelativePath: "old.tmp", File: storage.FileRecord{
-				Root: root, Path: path, RelativePath: "old.tmp", Name: "old.tmp",
-				LogicalBytes: uint64(info.Size()), AllocatedBytes: uint64(info.Size()), AllocatedKnown: true,
-				ModTime: info.ModTime(),
-			}}},
-			TotalLogical: uint64(info.Size()), TotalAllocated: uint64(info.Size()),
+			Candidates:   []cleanup.Candidate{{ID: "c1", RelativePath: "old.tmp", File: record}},
+			TotalLogical: record.LogicalBytes, TotalAllocated: record.AllocatedBytes,
 		}, nil
 	}
 	discoveryID, err := service.StartCleanupDiscovery(rule.ID, 10)

@@ -1,6 +1,6 @@
 # M3A Cleanup Discovery — Implementation Status
 
-**Status:** read-only discovery and preview only. No deletion, movement, renaming, quarantine or attribute mutation exists.
+**Status:** read-only discovery and preview. No ordinary-build deletion, movement, renaming, quarantine or attribute mutation exists. M3B-1 adds a compile-time/runtime-gated `ConfirmCleanup` path that is absent from ordinary builds and refuses before any native operation.
 
 ## Curated rules
 
@@ -47,7 +47,7 @@ No user-defined patterns, registry rules, browser profiles, credentials, documen
 - Each selected candidate is revalidated with `storage.ValidateFileRecord`.
 - Stale, inaccessible, reparse, placeholder or hard-linked targets are excluded with reasons.
 - Preview includes file count, logical/allocated sizes, recoverable estimate or Unknown, future deletion mode, Recycle Bin limitations, side effects, risks and expiry.
-- **No `ConfirmCleanup`, `DeleteFiles`, `MoveToRecycleBin` or generic mutation method exists.**
+- **No `DeleteFiles`, `MoveToRecycleBin` or generic mutation method exists.** M3B-1 adds a gated `ConfirmCleanup`; ordinary builds compile out the native executor and the method refuses before any mutation.
 
 ## Cleaning UI
 

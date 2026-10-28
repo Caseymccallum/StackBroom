@@ -72,22 +72,68 @@ type CleanupDiscoveryView struct {
 	CompletedAt      time.Time          `json:"completedAt"`
 }
 
+type CleanupHistoryRecord struct {
+	At                time.Time `json:"at"`
+	Type              string    `json:"type"`
+	RuleID            string    `json:"ruleId"`
+	RuleVersion       string    `json:"ruleVersion"`
+	State             string    `json:"state"`
+	TargetCount       int       `json:"targetCount"`
+	LogicalBytes      uint64    `json:"logicalBytes"`
+	AllocatedBytes    uint64    `json:"allocatedBytes"`
+	DeletionMode      string    `json:"deletionMode"`
+	ReasonCode        string    `json:"reasonCode,omitempty"`
+	RecoveryAvailable bool      `json:"recoveryAvailable"`
+}
+
+type CleanupHistoryView struct {
+	RetentionDays int                    `json:"retentionDays"`
+	MaxRecords    int                    `json:"maxRecords"`
+	Records       []CleanupHistoryRecord `json:"records"`
+}
+
+type CleanupExecutionItem struct {
+	TargetID          string `json:"targetId"`
+	Status            string `json:"status"`
+	ReasonCode        string `json:"reasonCode,omitempty"`
+	Message           string `json:"message,omitempty"`
+	HRESULT           uint32 `json:"hresult,omitempty"`
+	RecoveryAvailable bool   `json:"recoveryAvailable"`
+	RecoveryKind      string `json:"recoveryKind,omitempty"`
+	LogicalBytes      uint64 `json:"logicalBytes"`
+	AllocatedBytes    uint64 `json:"allocatedBytes"`
+	AllocatedKnown    bool   `json:"allocatedKnown"`
+}
+
+type CleanupExecutionView struct {
+	PreviewID   string                 `json:"previewId"`
+	State       string                 `json:"state"`
+	States      []string               `json:"states"`
+	Aborted     bool                   `json:"aborted"`
+	ReasonCode  string                 `json:"reasonCode,omitempty"`
+	Message     string                 `json:"message,omitempty"`
+	Items       []CleanupExecutionItem `json:"items"`
+	StartedAt   time.Time              `json:"startedAt"`
+	CompletedAt time.Time              `json:"completedAt"`
+}
+
 type CleanupPreviewView struct {
-	PreviewID        string             `json:"previewId"`
-	RuleID           string             `json:"ruleId"`
-	RuleVersion      string             `json:"ruleVersion"`
-	RuleTitle        string             `json:"ruleTitle"`
-	Selected         []CleanupCandidate `json:"selected"`
-	Excluded         []CleanupExclusion `json:"excluded"`
-	FileCount        int                `json:"fileCount"`
-	TotalLogical     uint64             `json:"totalLogical"`
-	TotalAllocated   uint64             `json:"totalAllocated"`
-	RecoverableBytes uint64             `json:"recoverableBytes"`
-	RecoverableKnown bool               `json:"recoverableKnown"`
-	AllocatedUnknown int                `json:"allocatedUnknown"`
-	DeletionMode     string             `json:"deletionMode"`
-	RecoveryNote     string             `json:"recoveryNote"`
-	Risks            []string           `json:"risks"`
-	SideEffects      []string           `json:"sideEffects"`
-	ExpiresAt        time.Time          `json:"expiresAt"`
+	PreviewID          string             `json:"previewId"`
+	RuleID             string             `json:"ruleId"`
+	RuleVersion        string             `json:"ruleVersion"`
+	RuleTitle          string             `json:"ruleTitle"`
+	Selected           []CleanupCandidate `json:"selected"`
+	Excluded           []CleanupExclusion `json:"excluded"`
+	FileCount          int                `json:"fileCount"`
+	TotalLogical       uint64             `json:"totalLogical"`
+	TotalAllocated     uint64             `json:"totalAllocated"`
+	RecoverableBytes   uint64             `json:"recoverableBytes"`
+	RecoverableKnown   bool               `json:"recoverableKnown"`
+	AllocatedUnknown   int                `json:"allocatedUnknown"`
+	DeletionMode       string             `json:"deletionMode"`
+	ExecutionAvailable bool               `json:"executionAvailable"`
+	RecoveryNote       string             `json:"recoveryNote"`
+	Risks              []string           `json:"risks"`
+	SideEffects        []string           `json:"sideEffects"`
+	ExpiresAt          time.Time          `json:"expiresAt"`
 }

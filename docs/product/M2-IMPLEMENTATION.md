@@ -30,7 +30,7 @@
 5. Re-stat size, modification time, placeholder/reparse state and file ID after hashing.
 6. Collapse identical file IDs so hard-link names are not called independent copies.
 7. Return only groups with at least two independently allocated files, including hash, size, relative paths, link counts and a link-semantics note.
-8. No deletion or cleanup method exists.
+8. M2 contains no deletion or cleanup method; later M3B-1 adds a separately gated, ordinary-build-disabled execution architecture.
 
 ### Desktop bridge
 

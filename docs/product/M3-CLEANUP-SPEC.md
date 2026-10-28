@@ -1,6 +1,6 @@
 # M3 Cleanup Engine — Design and Security Specification
 
-**Status:** design only. No deletion API, cleanup action or destructive test exists in M2 or this milestone.
+**Status:** design and M3B-1 architecture only. No deletion API is enabled in ordinary builds, and no destructive test has run.
 
 ## 1. Scope and principles
 

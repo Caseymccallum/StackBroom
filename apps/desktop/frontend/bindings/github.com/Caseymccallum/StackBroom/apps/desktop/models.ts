@@ -59,6 +59,51 @@ export interface CleanupExclusion {
     "reason": string;
 }
 
+export interface CleanupExecutionItem {
+    "targetId": string;
+    "status": string;
+    "reasonCode"?: string;
+    "message"?: string;
+    "hresult"?: number;
+    "recoveryAvailable": boolean;
+    "recoveryKind"?: string;
+    "logicalBytes": number;
+    "allocatedBytes": number;
+    "allocatedKnown": boolean;
+}
+
+export interface CleanupExecutionView {
+    "previewId": string;
+    "state": string;
+    "states": string[] | null;
+    "aborted": boolean;
+    "reasonCode"?: string;
+    "message"?: string;
+    "items": CleanupExecutionItem[] | null;
+    "startedAt": string;
+    "completedAt": string;
+}
+
+export interface CleanupHistoryRecord {
+    "at": string;
+    "type": string;
+    "ruleId": string;
+    "ruleVersion": string;
+    "state": string;
+    "targetCount": number;
+    "logicalBytes": number;
+    "allocatedBytes": number;
+    "deletionMode": string;
+    "reasonCode"?: string;
+    "recoveryAvailable": boolean;
+}
+
+export interface CleanupHistoryView {
+    "retentionDays": number;
+    "maxRecords": number;
+    "records": CleanupHistoryRecord[] | null;
+}
+
 export interface CleanupPreviewView {
     "previewId": string;
     "ruleId": string;
@@ -73,6 +118,7 @@ export interface CleanupPreviewView {
     "recoverableKnown": boolean;
     "allocatedUnknown": number;
     "deletionMode": string;
+    "executionAvailable": boolean;
     "recoveryNote": string;
     "risks": string[] | null;
     "sideEffects": string[] | null;

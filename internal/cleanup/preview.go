@@ -2,6 +2,7 @@ package cleanup
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Caseymccallum/StackBroom/internal/storage"
@@ -33,6 +34,16 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 	if len(candidateIDs) == 0 {
 		return nil, fmt.Errorf("select at least one candidate")
 	}
+	if discovery.Rule.DeletionMode != "recycle" {
+		return nil, fmt.Errorf("only recoverable cleanup previews are supported")
+	}
+	trustedRoot, err := discovery.Rule.ResolveRoot()
+	if err != nil {
+		return nil, fmt.Errorf("cleanup scope is not trusted: %w", err)
+	}
+	if discovery.Root == "" || !strings.EqualFold(trustedRoot, discovery.Root) {
+		return nil, fmt.Errorf("discovery root is not the trusted rule scope")
+	}
 	byID := make(map[string]Candidate, len(discovery.Candidates))
 	for _, candidate := range discovery.Candidates {
 		byID[candidate.ID] = candidate
@@ -55,12 +66,20 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 		if !ok {
 			return nil, fmt.Errorf("candidate is not part of this discovery")
 		}
-		if err := storage.ValidateFileRecord(&candidate.File); err != nil {
+		if err := storage.ValidateCleanupTarget(&candidate.File); err != nil {
 			preview.Excluded = append(preview.Excluded, Exclusion{RelativePath: candidate.RelativePath, Reason: err.Error()})
 			continue
 		}
-		if candidate.File.LinkCount > 1 {
-			preview.Excluded = append(preview.Excluded, Exclusion{RelativePath: candidate.RelativePath, Reason: "hard-linked file"})
+		if !candidate.File.RootEqual(discovery.Root) {
+			preview.Excluded = append(preview.Excluded, Exclusion{RelativePath: candidate.RelativePath, Reason: "target belongs to a different approved root"})
+			continue
+		}
+		if !discovery.Rule.AllowsExtension(candidate.File.Name) {
+			preview.Excluded = append(preview.Excluded, Exclusion{RelativePath: candidate.RelativePath, Reason: "extension no longer matches rule"})
+			continue
+		}
+		if now.Sub(candidate.File.ModTime) < time.Duration(discovery.Rule.MinAgeDays)*24*time.Hour {
+			preview.Excluded = append(preview.Excluded, Exclusion{RelativePath: candidate.RelativePath, Reason: "target is no longer old enough"})
 			continue
 		}
 		preview.Selected = append(preview.Selected, candidate)

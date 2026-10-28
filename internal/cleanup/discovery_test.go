@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+func trustFixtureRoot(t *testing.T, root string) {
+	t.Helper()
+	previous := trustedRootForToken
+	trustedRootForToken = func(string) (string, error) { return root, nil }
+	t.Cleanup(func() { trustedRootForToken = previous })
+}
+
 func writeTempFile(t *testing.T, path string, age time.Duration, size int) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -24,6 +31,7 @@ func writeTempFile(t *testing.T, path string, age time.Duration, size int) {
 
 func TestDiscoverTempRuleAgeAndHardLinkExclusions(t *testing.T) {
 	root := t.TempDir()
+	trustFixtureRoot(t, root)
 	t.Setenv("TEMP", root)
 	t.Setenv("TMP", root)
 	oldPath := filepath.Join(root, "old.tmp")
@@ -49,8 +57,19 @@ func TestDiscoverTempRuleAgeAndHardLinkExclusions(t *testing.T) {
 	}
 }
 
+func TestEnvironmentOverrideOutsideTrustedScopeIsRefused(t *testing.T) {
+	root := t.TempDir()
+	trustFixtureRoot(t, root)
+	t.Setenv("TEMP", t.TempDir())
+	rule, _ := RuleByID("user-temp-old")
+	if _, err := rule.ResolveRoot(); err == nil {
+		t.Error("environment override outside the trusted known-folder scope was accepted")
+	}
+}
+
 func TestDiscoverTempRuleEligibleFileAndPreview(t *testing.T) {
 	root := t.TempDir()
+	trustFixtureRoot(t, root)
 	t.Setenv("TEMP", root)
 	t.Setenv("TMP", root)
 	path := filepath.Join(root, "old.tmp")
@@ -80,6 +99,7 @@ func TestDiscoverTempRuleEligibleFileAndPreview(t *testing.T) {
 
 func TestDiscoverCrashDumpRuleExtension(t *testing.T) {
 	root := t.TempDir()
+	trustFixtureRoot(t, root)
 	t.Setenv("LOCALAPPDATA", root)
 	writeTempFile(t, filepath.Join(root, "CrashDumps", "old.dmp"), 30*24*time.Hour, 100)
 	writeTempFile(t, filepath.Join(root, "CrashDumps", "old.txt"), 30*24*time.Hour, 100)
