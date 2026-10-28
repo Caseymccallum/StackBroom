@@ -26,6 +26,7 @@ func main() {
 			application.NewService(desktopService),
 			application.NewService(processService),
 			application.NewService(NewStorageService()),
+			application.NewService(NewCleanupService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

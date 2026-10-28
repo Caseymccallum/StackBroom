@@ -4,6 +4,26 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3A cleanup discovery and preview
+
+Read-only cleanup discovery. No file deletion, movement, renaming, quarantine or attribute mutation exists.
+
+### Added
+
+- Curated, versioned cleanup rules for old per-user temporary files and old crash dumps.
+- Native discovery service using the hardened storage scanner with rule eligibility, exclusions, coverage and cancellation.
+- Expiring cleanup previews with exact internally retained identities, measured sizes, uncertain recovery and Recycle Bin limitations.
+- Cleaning section with category evidence, analysis progress, candidate selection, exclusions and a preview-only workflow.
+- Maintenance-history contract and M3B execution plan.
+- Tests for rule eligibility, hard-link/age/extension exclusions, preview expiry, changed targets, discovery service and the absence of mutation methods.
+
+### Corrected
+
+- Treemap recursive regions now divide by their own totals; geometry tests cover proportionality, zero sizes, large Other regions, 60+ nodes and overlap/bounds.
+- Duplicate coverage now reports hash attempts and failures, and incomplete duplicate analysis is explicit.
+- Search uses the matched dataset's measured total for treemap percentages.
+- Residual filesystem race protections and remaining TOCTOU limits are documented.
+
 ## [Unreleased] - M2 storage hardening
 
 ### Changed

@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,412,992 bytes** (about 11.4 MB)
-- SHA-256: `779A7DECA3139DC0D99AD33F70ED934287A28A344CA53EDDB5935CDCDBB75500`
-- Source branch: `feat/m2-storage-intelligence`; version `0.2.0`.
+- Size: **11,485,184 bytes** (about 11.5 MB)
+- SHA-256: `B191047D708BFB7230DECE988883723D51F35CAAEAE19DC919F3E99EF4A4CACA`
+- Source branch: `feat/m3a-cleanup-discovery`; version `0.2.0`.
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -33,11 +33,15 @@ The binary is intentionally not committed. The build script reproduces it from t
 - opaque target tokens emitted per process row;
 - preview/confirm execution once, duplicate refusal and protected/stale target refusal;
 - no `exePath` crossing the bridge;
-- priority readback evidence.
+- priority readback evidence;
+- curated cleanup rules, no mutation method (including `ConfirmCleanup`, `DeleteFiles`, `MoveToRecycleBin`), discovery-to-preview flow and preview expiry;
+- cleanup rule age, extension, hard-link and changed-target exclusions.
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
-`internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, full-hash confirmation, duplicate candidate caps, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, files replaced by junctions before hashing, offline-placeholder refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded cursor pages, full-directory search, root-path privacy, sanitised error paths, concurrent-scan refusal and cancellation.
+`internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, hash-attempt/failure coverage, full-hash confirmation, duplicate candidate caps, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, files replaced by junctions before hashing, offline-placeholder refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded cursor pages, full-directory search and matched totals, root-path privacy, sanitised error paths, concurrent-scan refusal and cancellation.
+
+`internal/cleanup` passes curated-rule, age, extension, hard-link, preview revalidation and no-mutation tests.
 
 Measured on a disposable 20,000-file/200-folder NTFS fixture: scan **2.220 s**, post-scan heap delta **14,513 KB**, sampled peak heap delta **20,922 KB**, total allocation delta **43,678 KB**, cancellation latency **sub-millisecond**. This is one local observation, not a general performance guarantee.
 
@@ -45,7 +49,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ### Frontend
 
-`npm test` passes **34 tests / 12 files**:
+`npm test` passes **40 tests / 13 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -56,14 +60,15 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - process details confirmation, cancel, Escape, backend-error honesty, no `window.confirm`;
 - keyboard-focusable process detail buttons and drawer closure when a refreshed inventory no longer contains the PID;
 - Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence, coverage limits, cursor pagination and partial-result labelling;
-- area-proportional treemap budgets and Other-region accounting;
-- no cleanup/delete action in the Storage UI.
+- area-proportional treemap budgets, Other-region accounting, recursive region proportions, zero/disproportionate sizes and non-overlap/bounds;
+- no cleanup/delete action in the Storage UI;
+- Cleaning catalogue, preview-only language, individual candidate selection, preview request, unknown recovery and the absence of Clean Now/delete/confirm controls.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 
 ### Visual capture
 
-The existing 28 screenshots cover the M1 UI at exact 1366×768 and 1920×1080 client sizes, dark and light. **M2 Storage screenshots were not captured in this task** because the owner is using another fullscreen application and explicitly prohibited visual validation that would bring the StackBroom window to the front. The M2 UI is covered by component tests only; a visual recapture is an outstanding gate.
+The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 client sizes, dark and light. **M2 Storage and M3A Cleaning screenshots were not captured in this task** because the owner is using another fullscreen application and explicitly prohibited visual validation that would bring the StackBroom window to the front. Both UIs are covered by component tests only; a visual recapture at both sizes and themes is an outstanding gate.
 
 ## Performance observations
 
@@ -103,7 +108,7 @@ The existing 28 screenshots cover the M1 UI at exact 1366×768 and 1920×1080 cl
 - Go 1.27.3 was not installed and no system-wide tooling was changed. Release builds should use Go 1.27.3+ after owner validation.
 - The Go race detector was not runnable locally because the installed environment has no CGO compiler; overlap/cancellation is covered by a functional concurrency test instead.
 - Screen-reader/axe/Narrator validation is not yet performed.
-- The storage analyzer is read-only and requires a user-selected folder. It has no cleanup or deletion capability.
+- The storage analyzer is read-only and requires a user-selected folder. It has no cleanup or deletion capability. The Cleaning section is discovery/preview only and exposes no mutation method.
 - M2 visual screenshots and screen-reader/axe/Narrator validation remain outstanding because visual validation was prohibited during this task.
 - Storage traversal is sequential; only duplicate hashing uses bounded workers.
 - The BYOK AI adviser is design-only.

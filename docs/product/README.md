@@ -14,6 +14,9 @@ Authoritative product and engineering direction for StackBroom.
 - [M2 Storage Intelligence brief](M2-STORAGE-BRIEF.md)
 - [M2 implementation status](M2-IMPLEMENTATION.md)
 - [M3 cleanup specification](M3-CLEANUP-SPEC.md)
+- [M3A cleanup discovery status](M3A-CLEANUP-DISCOVERY.md)
+- [M3B execution plan](M3B-EXECUTION-PLAN.md)
+- [Maintenance history contract](MAINTENANCE-HISTORY.md)
 
 Historical CLI roadmap: [`../ROADMAP.md`](../ROADMAP.md).
 M1 implementation and audit evidence: [`M1-PROCESS-CONTROL.md`](M1-PROCESS-CONTROL.md), [`M1-IMPLEMENTATION.md`](M1-IMPLEMENTATION.md), [`M1-SECURITY-AUDIT.md`](M1-SECURITY-AUDIT.md).

@@ -9,11 +9,12 @@ import { Button, Notice } from "./components/ui";
 import { OverviewPage } from "./pages/Overview";
 import { ProcessesPage } from "./pages/Processes";
 import { StoragePage } from "./pages/Storage";
+import { CleaningPage } from "./pages/Cleaning";
 import { DeveloperPage } from "./pages/Developer";
 import { SettingsPage } from "./pages/Settings";
 
 const SETTINGS_KEY = "stackbroom.desktop.settings.v1";
-const VALID_NAV: NavKey[] = ["overview", "processes", "storage", "developer", "settings"];
+const VALID_NAV: NavKey[] = ["overview", "processes", "storage", "cleaning", "developer", "settings"];
 
 function loadSettings(): Settings {
   try {
@@ -52,6 +53,11 @@ const PAGE_META: Record<NavKey, { eyebrow: string; title: string; subtitle: stri
     eyebrow: "Storage",
     title: "Storage intelligence",
     subtitle: "Read-only folder analysis, treemap and verified duplicate candidates. Used space is never presented as safely reclaimable.",
+  },
+  cleaning: {
+    eyebrow: "Cleanup discovery",
+    title: "Cleaning preview",
+    subtitle: "Curated categories, exact candidate evidence and expiring previews. No file is changed in this milestone.",
   },
   developer: {
     eyebrow: "Developer evidence",
@@ -141,7 +147,7 @@ export default function App() {
         return;
       }
       const index = Number(event.key);
-      if (index >= 1 && index <= 5) {
+      if (index >= 1 && index <= 6) {
         const target = VALID_NAV[index - 1];
         if (target === "developer" && !settings.showDeveloperTools) return;
         event.preventDefault();
@@ -190,6 +196,8 @@ export default function App() {
         />;
       case "storage":
         return <StoragePage quick={desktop.quick} full={desktop.full} />;
+      case "cleaning":
+        return <CleaningPage />;
       case "developer":
         return <DeveloperPage full={desktop.full} busy={desktop.busy} onScan={() => void desktop.refresh("full")} />;
       case "settings":

@@ -98,7 +98,7 @@ describe("App", () => {
   it("keeps the current destination when skipping to the keyboard scroll region", async () => {
     render(<App />);
     await screen.findByText("TEST-PC");
-    fireEvent.keyDown(window, { key: "5", ctrlKey: true });
+    fireEvent.keyDown(window, { key: "6", ctrlKey: true });
     fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
     expect(window.location.hash).toBe("#settings");
     expect(screen.getByRole("main", { name: "Settings" })).toHaveFocus();

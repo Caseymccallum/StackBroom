@@ -1,4 +1,4 @@
-import { HardDrive, LayoutDashboard, List, Settings, ShieldCheck, Wrench } from "lucide-react";
+import { HardDrive, LayoutDashboard, List, Settings, ShieldCheck, Sparkles, Wrench } from "lucide-react";
 import type { NavKey } from "../types";
 
 const ITEMS: Array<{
@@ -11,8 +11,9 @@ const ITEMS: Array<{
   { key: "overview", label: "Overview", hint: "This PC", shortcut: "Ctrl 1", icon: LayoutDashboard },
   { key: "processes", label: "Processes", hint: "Memory & roles", shortcut: "Ctrl 2", icon: List },
   { key: "storage", label: "Storage", hint: "Volumes", shortcut: "Ctrl 3", icon: HardDrive },
-  { key: "developer", label: "Developer Tools", hint: "Docker · WSL · TCP", shortcut: "Ctrl 4", icon: Wrench },
-  { key: "settings", label: "Settings", hint: "Privacy & display", shortcut: "Ctrl 5", icon: Settings },
+  { key: "cleaning", label: "Cleaning", hint: "Preview only", shortcut: "Ctrl 4", icon: Sparkles },
+  { key: "developer", label: "Developer Tools", hint: "Docker · WSL · TCP", shortcut: "Ctrl 5", icon: Wrench },
+  { key: "settings", label: "Settings", hint: "Privacy & display", shortcut: "Ctrl 6", icon: Settings },
 ];
 
 export function Sidebar({

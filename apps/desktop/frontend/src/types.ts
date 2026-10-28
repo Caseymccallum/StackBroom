@@ -1,4 +1,4 @@
-export type NavKey = "overview" | "processes" | "storage" | "developer" | "settings";
+export type NavKey = "overview" | "processes" | "storage" | "cleaning" | "developer" | "settings";
 export type Theme = "dark" | "light";
 export type ScanMode = "quick" | "full";
 
