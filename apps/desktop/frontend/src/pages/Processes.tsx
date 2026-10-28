@@ -1,9 +1,10 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { List, RefreshCw, Search } from "lucide-react";
-import type { FullResult } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
+import type { FullResult, ProcessRow } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { filterAndSortProcesses, type ProcessSort } from "../lib/processes";
 import { Button, Card, CardBody, EmptyState, LoadingBlock } from "../components/ui";
 import { ProcessTable } from "../components/ProcessTable";
+import { ProcessDetails } from "../components/ProcessDetails";
 
 interface Props {
   full: FullResult | null;
@@ -17,7 +18,14 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
   const [sort, setSort] = useState<ProcessSort>("memory");
   const [reverse, setReverse] = useState(false);
   const [page, setPage] = useState(0);
+  const [selectedProcess, setSelectedProcess] = useState<ProcessRow | null>(null);
   const deferredQuery = useDeferredValue(query);
+
+  const handleProcessAction = async (action: string, priority?: number) => {
+    // In a real implementation, this would call the Wails bridge
+    // For now, we'll just log the action
+    console.log(`Process action: ${action} on PID ${selectedProcess?.pid}`, priority);
+  };
 
   const rows = useMemo(
     () => (full ? filterAndSortProcesses(full.processes ?? [], { query: deferredQuery, category, sort, reverse }) : []),
@@ -110,12 +118,28 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
             Try a different name, project, PID or category.
           </EmptyState>
         ) : (
-          <ProcessTable rows={rows} page={page} sort={sort} reverse={reverse} onSort={(next) => {
-            if (next === sort) setReverse(current => !current);
-            else chooseSort(next);
-          }} onPage={setPage} />
+          <ProcessTable
+            rows={rows}
+            page={page}
+            sort={sort}
+            reverse={reverse}
+            onSort={(next) => {
+              if (next === sort) setReverse(current => !current);
+              else chooseSort(next);
+            }}
+            onPage={setPage}
+            onProcessClick={setSelectedProcess}
+          />
         )}
       </CardBody>
+
+      {selectedProcess && (
+        <ProcessDetails
+          process={selectedProcess}
+          onClose={() => setSelectedProcess(null)}
+          onAction={handleProcessAction}
+        />
+      )}
     </Card>
   );
 }

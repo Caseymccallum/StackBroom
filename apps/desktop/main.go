@@ -20,6 +20,7 @@ func main() {
 		Description: "Read-only PC health, resource and developer dashboard",
 		Services: []application.Service{
 			application.NewService(NewDesktopService()),
+			application.NewService(NewProcessControlService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

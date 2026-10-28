@@ -28,6 +28,7 @@ export function ProcessTable({
   reverse = false,
   onSort,
   onPage,
+  onProcessClick,
 }: {
   rows: ProcessRow[];
   page: number;
@@ -35,6 +36,7 @@ export function ProcessTable({
   reverse?: boolean;
   onSort: (sort: ProcessSort) => void;
   onPage: (page: number) => void;
+  onProcessClick?: (process: ProcessRow) => void;
 }) {
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -58,7 +60,7 @@ export function ProcessTable({
           </thead>
           <tbody>
             {visible.map((process) => (
-              <ProcessTableRow key={process.pid} process={process} />
+              <ProcessTableRow key={process.pid} process={process} onClick={() => onProcessClick?.(process)} />
             ))}
           </tbody>
         </table>
@@ -83,13 +85,13 @@ export function ProcessTable({
   );
 }
 
-function ProcessTableRow({ process }: { process: ProcessRow }) {
+function ProcessTableRow({ process, onClick }: { process: ProcessRow; onClick?: () => void }) {
   const ports = [
     process.requestedPorts?.length ? `req ${formatPorts(process.requestedPorts)}` : "",
     process.listeningPorts?.length ? `listen ${formatPorts(process.listeningPorts)}` : "",
   ].filter(Boolean);
   return (
-    <tr>
+    <tr onClick={onClick} style={{ cursor: onClick ? "pointer" : "default" }} className="process-row">
       <td className="name" title={process.name}>{process.name}</td>
       <td className="num">{process.pid}</td>
       <td><Badge tone={categoryTone(process.category)}>{process.category}</Badge></td>
