@@ -43,7 +43,7 @@ The root `internal/processcontrol` package also passes deterministic tests for g
 
 `internal/cleanup` passes curated-rule, age, extension, hard-link, preview revalidation and no-mutation tests.
 
-Measured on a disposable 20,000-file/200-folder NTFS fixture: scan **2.220 s**, post-scan heap delta **14,513 KB**, sampled peak heap delta **20,922 KB**, total allocation delta **43,678 KB**, cancellation latency **sub-millisecond**. This is one local observation, not a general performance guarantee.
+Measured on a disposable 20,000-file/200-folder NTFS fixture: scan **2.259 s**, post-scan heap delta **14,199 KB**, sampled peak heap delta **21,254 KB**, total allocation delta **44,346 KB**, cancellation latency **sub-millisecond**. This is one local observation, not a general performance guarantee.
 
 The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045, a valid CPU interval sample and two fixed volumes. No live process termination, priority change or graceful close has been performed.
 
