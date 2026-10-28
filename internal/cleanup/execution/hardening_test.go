@@ -64,11 +64,12 @@ func TestIncompleteEvidenceCannotVerifyRecovery(t *testing.T) {
 }
 
 type restoreInspector struct {
-	err   error
-	calls int
+	err          error
+	availableErr error
+	calls        int
 }
 
-func (r *restoreInspector) Available() error { return nil }
+func (r *restoreInspector) Available() error { return r.availableErr }
 func (r *restoreInspector) Inspect(context.Context, RecycleReceipt, Target) error {
 	r.calls++
 	return r.err
@@ -98,5 +99,60 @@ func TestRestorePlanningFailsClosed(t *testing.T) {
 	inspector.err = nil
 	if _, err := PrepareRestore(context.Background(), inspector, receipt, target, now); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPrepareRestoreRejectsUnboundAndUnavailableEvidence(t *testing.T) {
+	c, _, cleanup := fixtureExecution(t, 1)
+	defer cleanup()
+	target := c.Targets()[0]
+	now := time.Now()
+	valid := RecycleReceipt{
+		TargetID: target.ID, OriginalFileID: target.File.FileID, Provider: "fake",
+		OpaqueToken: "opaque", ObservedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute),
+	}
+	cases := []struct {
+		name      string
+		inspector *restoreInspector
+		receipt   RecycleReceipt
+	}{
+		{name: "provider unavailable", inspector: &restoreInspector{availableErr: errors.New("unavailable")}, receipt: valid},
+		{name: "missing token", inspector: &restoreInspector{}, receipt: func() RecycleReceipt {
+			receipt := valid
+			receipt.OpaqueToken = ""
+			return receipt
+		}()},
+		{name: "future observation", inspector: &restoreInspector{}, receipt: func() RecycleReceipt {
+			receipt := valid
+			receipt.ObservedAt = now.Add(time.Minute)
+			return receipt
+		}()},
+		{name: "target mismatch", inspector: &restoreInspector{}, receipt: func() RecycleReceipt {
+			receipt := valid
+			receipt.TargetID = "other"
+			return receipt
+		}()},
+		{name: "identity mismatch", inspector: &restoreInspector{}, receipt: func() RecycleReceipt {
+			receipt := valid
+			receipt.OriginalFileID = "other"
+			return receipt
+		}()},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := PrepareRestore(context.Background(), test.inspector, test.receipt, target, now); err == nil {
+				t.Fatal("invalid recovery evidence was accepted")
+			}
+			if test.inspector.calls != 0 {
+				t.Fatal("invalid evidence reached the inspector")
+			}
+		})
+	}
+	inspector := &restoreInspector{}
+	if _, err := PrepareRestore(context.Background(), inspector, valid, target, now); err != nil {
+		t.Fatalf("valid evidence refused: %v", err)
+	}
+	if inspector.calls != 1 {
+		t.Fatalf("inspector calls = %d", inspector.calls)
 	}
 }

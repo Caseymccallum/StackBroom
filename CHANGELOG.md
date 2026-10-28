@@ -4,6 +4,39 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3B-4 recovery feasibility decision
+
+Execution remains disabled. No file deletion, recycle, move, rename, purge or
+restoration was performed.
+
+### Decided
+
+- Windows Recycle Bin execution is **NO-GO** under the current recovery-first
+  policy: `IFileOperation` cannot prove before execution that permanent fallback
+  is impossible, and `PostDeleteItem` can report a fully deleted item after the
+  fact.
+- StackBroom-managed quarantine is **CONDITIONAL** for a separately gated
+  feasibility prototype only. It does not reclaim disk space by moving files.
+- The production posture remains **preview-only** (`Option C`).
+
+### Added
+
+- Feasibility and architecture decision record with official Windows references.
+- Receipt lifecycle: non-consuming `Lookup`, single-owner `Reserve`, `Release`
+  and final `Commit`, with expiry, replay and concurrency tests.
+- Tests for incomplete no-fallback evidence (unsupported filesystem, unknown
+  policy, unknown capacity, missing provider and expiry).
+- Tests for invalid, future-dated, mismatched and unavailable restoration
+  evidence.
+
+### Corrected
+
+- Receipt inspection no longer consumes the recovery authorisation.
+- Recovery evidence is exposed only after a successful receipt path; the desktop
+  mapping requires `ItemRecycled`.
+- Receipt-provider tests now exercise the provider refusal path rather than an
+  incomplete-evidence shortcut.
+
 ## [Unreleased] - M3B-3 recovery verification and no-fallback gates
 
 Execution remains disabled. No native Shell, Recycle Bin or restoration operation was run.

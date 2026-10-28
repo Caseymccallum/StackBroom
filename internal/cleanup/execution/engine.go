@@ -223,7 +223,6 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			continue
 		}
 		evidence, evidenceErr := e.verifier.Verify(ctx, target)
-		item.Recovery = evidence
 		switch {
 		case evidenceErr != nil:
 			item.Status = ItemUnknown
@@ -244,6 +243,7 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			} else {
 				item.Status = ItemRecycled
 				item.ReasonCode = "recycled"
+				item.Recovery = evidence
 				verified++
 			}
 		}

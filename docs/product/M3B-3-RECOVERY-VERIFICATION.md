@@ -47,7 +47,8 @@ action history:
 - target ID and original file identity;
 - provider identifier;
 - observation and expiry times;
-- one-time `Take`;
+- a non-consuming `Lookup`, a single-owner `Reserve`, `Release` and final
+  `Commit` (M3B-4 replaced the original consuming `Take`);
 - no path, filename, content, command line or credential.
 
 The only implementation is `MemoryReceiptVault`; it is not durable across a
@@ -96,7 +97,8 @@ execution when any safety provider is unresolved.
 - engine refuses when final guard is unavailable;
 - engine closes guards after completion;
 - engine refuses a receipt provider failure and cannot report `completed`;
-- receipt vault token is opaque, single-use and expiring;
+- receipt token is opaque, reservable by one owner, expiring and non-consuming on
+  lookup;
 - engine availability fails closed by default.
 
 No test invokes COM, Shell deletion, Recycle Bin operations or restoration.

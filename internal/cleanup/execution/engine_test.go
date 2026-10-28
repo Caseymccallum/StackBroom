@@ -58,6 +58,13 @@ func (f fakePreflight) Check(context.Context, Target) (PreflightEvidence, error)
 		Provider: "fake", ObservedAt: time.Now().Add(-time.Minute), ExpiresAt: time.Now().Add(time.Minute)}, nil
 }
 
+type fixedPreflight struct{ evidence PreflightEvidence }
+
+func (fixedPreflight) Available() error { return nil }
+func (f fixedPreflight) Check(context.Context, Target) (PreflightEvidence, error) {
+	return f.evidence, nil
+}
+
 type fakeGuard struct{ closed int }
 
 func (fakeGuard) Available() error                                  { return nil }
@@ -274,6 +281,9 @@ func TestReceiptFailureCannotComplete(t *testing.T) {
 	if result.State == StateCompleted || result.Items[0].Status != ItemRemovedUnverified {
 		t.Fatalf("receipt failure result = %+v", result)
 	}
+	if result.Items[0].Recovery.Available {
+		t.Fatal("receipt failure still exposed recovery evidence")
+	}
 }
 
 func TestFinalGuardClosesOnCompletion(t *testing.T) {
@@ -297,5 +307,32 @@ func TestEngineRefusesUnverifiedRecovery(t *testing.T) {
 	result := engine.Execute(context.Background(), execution, nil)
 	if result.State != StateFailed || result.Items[0].Status != ItemRemovedUnverified {
 		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestEngineRequiresEveryNoFallbackDimension(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name     string
+		evidence PreflightEvidence
+	}{
+		{name: "unsupported filesystem", evidence: PreflightEvidence{Supported: false, PolicyKnown: true, CapacityKnown: true, Provider: "fake", ObservedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute)}},
+		{name: "unknown policy", evidence: PreflightEvidence{Supported: true, PolicyKnown: false, CapacityKnown: true, Provider: "fake", ObservedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute)}},
+		{name: "unknown capacity", evidence: PreflightEvidence{Supported: true, PolicyKnown: true, CapacityKnown: false, Provider: "fake", ObservedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute)}},
+		{name: "missing provider", evidence: PreflightEvidence{Supported: true, PolicyKnown: true, CapacityKnown: true, ObservedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute)}},
+		{name: "expired evidence", evidence: PreflightEvidence{Supported: true, PolicyKnown: true, CapacityKnown: true, Provider: "fake", ObservedAt: now.Add(-2 * time.Minute), ExpiresAt: now.Add(-time.Minute)}},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			execution, root, cleanupFixture := fixtureExecution(t, 1)
+			defer cleanupFixture()
+			executor := &fakeExecutor{remove: 1}
+			engine := newTestEngine(root, executor, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true, Kind: "test", Token: "token"}})
+			engine.preflight = fixedPreflight{evidence: test.evidence}
+			result := engine.Execute(context.Background(), execution, nil)
+			if result.ReasonCode != "permanent_fallback_unproven" || executor.calls != 0 {
+				t.Fatalf("result = %+v calls=%d", result, executor.calls)
+			}
+		})
 	}
 }

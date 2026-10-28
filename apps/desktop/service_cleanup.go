@@ -470,8 +470,9 @@ func (s *CleanupService) ConfirmCleanup(previewID string) (CleanupExecutionView,
 		view.Items = append(view.Items, CleanupExecutionItem{
 			TargetID: item.TargetID, Status: string(item.Status), ReasonCode: item.ReasonCode,
 			Message: item.Message, HRESULT: item.HRESULT,
-			RecoveryAvailable: item.Recovery.Available, RecoveryKind: item.Recovery.Kind,
-			LogicalBytes: item.LogicalBytes, AllocatedBytes: item.AllocatedBytes, AllocatedKnown: item.AllocatedKnown,
+			RecoveryAvailable: item.Status == execution.ItemRecycled && item.Recovery.Available,
+			RecoveryKind:      item.Recovery.Kind,
+			LogicalBytes:      item.LogicalBytes, AllocatedBytes: item.AllocatedBytes, AllocatedKnown: item.AllocatedKnown,
 		})
 	}
 	return view, nil

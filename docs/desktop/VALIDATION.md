@@ -4,8 +4,8 @@
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
 - Size: **11,600,896 bytes** (about 11.6 MB)
-- SHA-256: `E899601795637B786A79E7644A895DE117DD2911CF246BA04BD0F3B9BC2730A2`
-- Source branch: `feat/m3b-3-recovery-verification`; version `0.2.0`.
+- SHA-256: `EFB67684CE92B41BFD855F93A3E0B44823BBD7AC8F5F3126343D57C7B7B7D8DE`
+- Source branch: `feat/m3b-4-recovery-feasibility`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -39,11 +39,15 @@ The binary is intentionally not committed. The build script reproduces it from t
 - execution context single use, expiry, rule-version refusal, recovery gate, partial/aborted results, cancellation and access-denial outcomes;
 - local history retention, clearing and privacy filtering;
 - no-fallback preflight refusal, final-file guard refusal/cleanup and receipt-provider failure;
-- opaque single-use receipt vault expiry and privacy;
+- M3B-4 receipt lifecycle: non-consuming lookup, single-owner reservation, release, final commit, expiry and replay refusal;
+- M3B-4 incomplete no-fallback evidence and invalid restoration evidence refusal;
+- opaque receipt token, target binding and privacy;
 - aggregate engine availability fails closed by default;
 - backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build.
 
 The opt-in execution sources compile with `go test -tags cleanup_execution ./internal/cleanup/execution` and `go test -tags cleanup_execution ./... -run '^$'` from `apps/desktop`. This is a compile/review check only; no COM operation was called.
+
+M3B-4 root tests, root vet, tagged cleanup/storage/history tests and tagged vet all passed. The M3B-4 decision is recorded in `docs/product/M3B-4-RECOVERY-FEASIBILITY.md`: Recycle Bin execution is NO-GO, managed quarantine is CONDITIONAL for a separate feasibility prototype, and the production posture remains preview-only. The M3B-4 receipt lifecycle tests pass; `go test -race` was not run because the local toolchain requires cgo, which is disabled.
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
@@ -94,7 +98,7 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 - The frontend receives only sanitized DTOs. A JSON serialisation test asserts that command lines, home paths, project roots and a recognised secret do not cross the boundary.
 - `privacy.Apply` runs at the service boundary for both quick and full scans.
 - Process control is the only enabled mutation capability. It is limited to graceful close, forced termination and five non-real-time priority classes, requires a backend target token and explicit in-app confirmation, and refuses protected, critical and StackBroom processes.
-- Cleanup execution is compiled out of ordinary builds (`cleanup_execution` tag absent). The gated `ConfirmCleanup` method refuses before any native path, including when its environment variable is set. No file deletion has been tested or enabled.
+- Cleanup execution is compiled out of ordinary builds (`cleanup_execution` tag absent). The gated `ConfirmCleanup` method refuses before any native path, including when its environment variable is set. No file deletion, recycle, move, rename, purge or restoration has been tested or enabled. M3B-4 adds no native mutation path.
 - `GetProcessDetails` no longer returns `exePath`; paths remain internal to identity checks.
 - No shell execution, arbitrary filesystem write API or unrestricted system API is exposed to the frontend.
 - Docker remote endpoints are refused by the existing engine; the desktop shell has no override.

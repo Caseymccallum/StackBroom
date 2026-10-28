@@ -20,6 +20,7 @@ Authoritative product and engineering direction for StackBroom.
 - [M3B security review](M3B-SECURITY-REVIEW.md)
 - [M3B-2 safety hardening handoff](M3B-2-HANDOFF.md)
 - [M3B-3 recovery verification](M3B-3-RECOVERY-VERIFICATION.md)
+- [M3B-4 recovery feasibility decision](M3B-4-RECOVERY-FEASIBILITY.md)
 - [Maintenance history contract](MAINTENANCE-HISTORY.md)
 
 Historical CLI roadmap: [`../ROADMAP.md`](../ROADMAP.md).
