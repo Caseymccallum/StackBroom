@@ -33,17 +33,19 @@ type cleanupPreviewState struct {
 	Execution *execution.Context
 }
 
-// CleanupService is read-only: it discovers candidates and creates expiring
-// previews, but intentionally has no execution or deletion method.
+// CleanupService discovers candidates and keeps execution gated in Go.
 type CleanupService struct {
-	mu           sync.Mutex
-	discoveries  map[string]*cleanupDiscoveryState
-	previews     map[string]*cleanupPreviewState
-	active       string
-	now          func() time.Time
-	discoverFn   func(context.Context, cleanup.Rule, int, func(cleanup.Progress), func() time.Time) (*cleanup.Discovery, error)
-	executor     *execution.Engine
-	historyStore *history.Store
+	mu                sync.Mutex
+	discoveries       map[string]*cleanupDiscoveryState
+	previews          map[string]*cleanupPreviewState
+	active            string
+	now               func() time.Time
+	discoverFn        func(context.Context, cleanup.Rule, int, func(cleanup.Progress), func() time.Time) (*cleanup.Discovery, error)
+	executor          *execution.Engine
+	historyStore      *history.Store
+	running           map[string]context.CancelFunc
+	executionProgress map[string]execution.Progress
+	closed            bool
 }
 
 func NewCleanupService() *CleanupService {
@@ -53,12 +55,14 @@ func NewCleanupService() *CleanupService {
 	}
 	store := history.NewStore(historyPath, 30, 500)
 	return &CleanupService{
-		discoveries:  make(map[string]*cleanupDiscoveryState),
-		previews:     make(map[string]*cleanupPreviewState),
-		now:          time.Now,
-		discoverFn:   cleanup.Discover,
-		executor:     execution.NewEngine(execution.NewNativeExecutor(), execution.NewRecoveryVerifier(), store),
-		historyStore: store,
+		discoveries:       make(map[string]*cleanupDiscoveryState),
+		previews:          make(map[string]*cleanupPreviewState),
+		now:               time.Now,
+		discoverFn:        cleanup.Discover,
+		executor:          execution.NewEngine(execution.NewNativeExecutor(), execution.NewRecoveryVerifier(), store),
+		historyStore:      store,
+		running:           make(map[string]context.CancelFunc),
+		executionProgress: make(map[string]execution.Progress),
 	}
 }
 
@@ -106,6 +110,10 @@ func (s *CleanupService) StartCleanupDiscovery(ruleID string, maxCandidates int)
 		maxCandidates = rule.MaxCandidates
 	}
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return "", fmt.Errorf("cleanup service is shutting down")
+	}
 	if s.active != "" {
 		if active := s.discoveries[s.active]; active != nil && active.Status == "running" {
 			s.mu.Unlock()
@@ -294,7 +302,7 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 		TotalLogical: preview.TotalLogical, TotalAllocated: preview.TotalAllocated,
 		RecoverableBytes: preview.RecoverableBytes, RecoverableKnown: preview.RecoverableKnown,
 		AllocatedUnknown: preview.AllocatedUnknown, DeletionMode: preview.DeletionMode,
-		ExecutionAvailable: cleanupExecutionEnabled(),
+		ExecutionAvailable: cleanupExecutionEnabled() && execution.NewRecoveryVerifier().Available() == nil,
 		RecoveryNote:       preview.RecoveryNote, Risks: append([]string(nil), preview.Risks...),
 		SideEffects: append([]string(nil), preview.SideEffects...), ExpiresAt: preview.ExpiresAt,
 	}
@@ -314,7 +322,7 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 	}
 	s.mu.Lock()
 	s.prunePreviewsLocked()
-	s.previews[id] = &cleanupPreviewState{View: view, ExpiresAt: preview.ExpiresAt, Execution: executionContext}
+	s.previews[id] = &cleanupPreviewState{View: cloneCleanupPreview(view), ExpiresAt: preview.ExpiresAt, Execution: executionContext}
 	s.mu.Unlock()
 	return view, nil
 }
@@ -347,7 +355,53 @@ func (s *CleanupService) GetCleanupPreview(previewID string) (CleanupPreviewView
 		delete(s.previews, previewID)
 		return CleanupPreviewView{}, fmt.Errorf("cleanup preview expired")
 	}
-	return preview.View, nil
+	return cloneCleanupPreview(preview.View), nil
+}
+
+func cloneCleanupPreview(view CleanupPreviewView) CleanupPreviewView {
+	view.Selected = append([]CleanupCandidate(nil), view.Selected...)
+	view.Excluded = append([]CleanupExclusion(nil), view.Excluded...)
+	view.Risks = append([]string(nil), view.Risks...)
+	view.SideEffects = append([]string(nil), view.SideEffects...)
+	return view
+}
+
+// Cancellation is cooperative: an in-flight Shell call is never terminated.
+func (s *CleanupService) CancelCleanupExecution(previewID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cancel := s.running[previewID]
+	if cancel == nil {
+		return false
+	}
+	cancel()
+	return true
+}
+
+func (s *CleanupService) GetCleanupExecutionProgress(previewID string) (execution.Progress, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p, ok := s.executionProgress[previewID]
+	if !ok {
+		return p, fmt.Errorf("cleanup execution not found")
+	}
+	return p, nil
+}
+
+// ServiceShutdown is called by Wails without creating any UI.
+func (s *CleanupService) ServiceShutdown() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.closed = true
+	for _, cancel := range s.running {
+		cancel()
+	}
+	for _, state := range s.discoveries {
+		if state.Cancel != nil {
+			state.Cancel()
+		}
+	}
+	return nil
 }
 
 // ConfirmCleanup is deliberately gated at the Go boundary. In an ordinary
@@ -362,6 +416,10 @@ func (s *CleanupService) ConfirmCleanup(previewID string) (CleanupExecutionView,
 	}
 	s.mu.Lock()
 	preview := s.previews[previewID]
+	if s.closed || len(s.running) > 0 {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup service is busy or shutting down")
+	}
 	if preview == nil || preview.Execution == nil {
 		s.mu.Unlock()
 		return CleanupExecutionView{}, fmt.Errorf("cleanup execution context not found")
@@ -371,11 +429,31 @@ func (s *CleanupService) ConfirmCleanup(previewID string) (CleanupExecutionView,
 		s.mu.Unlock()
 		return CleanupExecutionView{}, fmt.Errorf("cleanup execution context expired")
 	}
-	s.mu.Unlock()
 	if s.executor == nil {
+		s.mu.Unlock()
 		return CleanupExecutionView{}, fmt.Errorf("cleanup executor is unavailable")
 	}
-	result := s.executor.Execute(context.Background(), executionContext, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	if len(s.executionProgress) >= 20 {
+		for id := range s.executionProgress {
+			if s.running[id] == nil {
+				delete(s.executionProgress, id)
+				break
+			}
+		}
+	}
+	s.running[previewID] = cancel
+	s.executionProgress[previewID] = execution.Progress{State: execution.StateValidating}
+	delete(s.previews, previewID)
+	s.mu.Unlock()
+	defer func() { cancel(); s.mu.Lock(); delete(s.running, previewID); s.mu.Unlock() }()
+	result := s.executor.Execute(ctx, executionContext, func(p execution.Progress) { s.mu.Lock(); s.executionProgress[previewID] = p; s.mu.Unlock() })
+	s.mu.Lock()
+	terminal := s.executionProgress[previewID]
+	terminal.State = result.State
+	terminal.Total = len(result.Items)
+	s.executionProgress[previewID] = terminal
+	s.mu.Unlock()
 	view := CleanupExecutionView{
 		PreviewID: previewID, State: string(result.State), Aborted: result.Aborted,
 		States: func() []string {

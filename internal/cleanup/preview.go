@@ -34,10 +34,17 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 	if len(candidateIDs) == 0 {
 		return nil, fmt.Errorf("select at least one candidate")
 	}
+	rule, ok := RuleByID(discovery.Rule.ID)
+	if !ok || rule.Version != discovery.Rule.Version {
+		return nil, fmt.Errorf("cleanup rule changed")
+	}
+	if len(candidateIDs) > rule.MaxCandidates {
+		return nil, fmt.Errorf("candidate limit")
+	}
 	if discovery.Rule.DeletionMode != "recycle" {
 		return nil, fmt.Errorf("only recoverable cleanup previews are supported")
 	}
-	trustedRoot, err := discovery.Rule.ResolveRoot()
+	trustedRoot, err := rule.ResolveRoot()
 	if err != nil {
 		return nil, fmt.Errorf("cleanup scope is not trusted: %w", err)
 	}
@@ -50,7 +57,7 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 	}
 	seen := make(map[string]bool)
 	preview := &Preview{
-		Rule:             discovery.Rule,
+		Rule:             rule,
 		DeletionMode:     discovery.Rule.DeletionMode,
 		RecoverableKnown: true,
 		ExpiresAt:        now.Add(ttl),
@@ -83,6 +90,9 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 			continue
 		}
 		preview.Selected = append(preview.Selected, candidate)
+		if rule.ValidateEligibility(candidate.File, len(candidateIDs), now) != nil {
+			return nil, fmt.Errorf("target no longer matches rule constraints")
+		}
 		preview.TotalLogical += candidate.File.LogicalBytes
 		if candidate.File.AllocatedKnown {
 			preview.TotalAllocated += candidate.File.AllocatedBytes

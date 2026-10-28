@@ -43,6 +43,9 @@ func ValidateCleanupTarget(file *FileRecord) error {
 	if file.FileID == "" {
 		return validationFailure("identity_missing", "target identity is unavailable")
 	}
+	if file.Name != filepath.Base(file.Path) {
+		return validationFailure("name_mismatch", "target name does not match its path")
+	}
 	if file.LinkCount != 1 {
 		return validationFailure("hard_link", "target has multiple hard links")
 	}

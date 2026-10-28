@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/Caseymccallum/StackBroom/internal/cleanup"
 	"os"
 	"path/filepath"
 	"sync"
@@ -59,7 +60,11 @@ func (s *Store) Record(event execution.Record) {
 		AllocatedBytes: event.AllocatedBytes, DeletionMode: event.DeletionMode,
 		ReasonCode: event.ReasonCode, RecoveryAvailable: event.RecoveryAvailable,
 	}
-	entries, _ := s.readLocked()
+	entry = privacyFilter(entry)
+	entries, readErr := s.readLocked()
+	if readErr != nil {
+		return
+	}
 	entries = append(entries, entry)
 	entries = s.pruneLocked(entries)
 	if err := s.writeLocked(entries); err != nil {
@@ -71,7 +76,8 @@ func (s *Store) Record(event execution.Record) {
 func (s *Store) List() ([]Record, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.readLocked()
+	entries, err := s.readLocked()
+	return s.pruneLocked(entries), err
 }
 
 func (s *Store) Clear() error {
@@ -102,9 +108,10 @@ func (s *Store) readLocked() ([]Record, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		var entry Record
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err == nil {
-			entries = append(entries, entry)
+		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+			return nil, fmt.Errorf("history contains an invalid record")
 		}
+		entries = append(entries, privacyFilter(entry))
 	}
 	return entries, scanner.Err()
 }
@@ -149,4 +156,38 @@ func (s *Store) pruneLocked(entries []Record) []Record {
 
 func (s *Store) String() string {
 	return fmt.Sprintf("history(%s, %d days, max %d)", s.path, s.retentionDays, s.maxRecords)
+}
+
+// Closed vocabularies filter caller data and journals from older builds.
+func privacyFilter(entry Record) Record {
+	if entry.Type != "preview" && entry.Type != "execution" {
+		entry.Type = "unknown"
+	}
+	rule, ok := cleanup.RuleByID(entry.RuleID)
+	if !ok {
+		entry.RuleID = "unknown"
+		entry.RuleVersion = "unknown"
+	} else if entry.RuleVersion != rule.Version {
+		entry.RuleVersion = "unknown"
+	}
+	switch execution.State(entry.State) {
+	case execution.StatePreviewed, execution.StateConfirmed, execution.StateValidating, execution.StateExecuting, execution.StateVerifying, execution.StateCompleted, execution.StatePartial, execution.StateFailed, execution.StateCancelled:
+	default:
+		entry.State = "unknown"
+	}
+	if entry.DeletionMode != "recycle" {
+		entry.DeletionMode = "unknown"
+	}
+	switch entry.ReasonCode {
+	case "", "recycled", "missing_execution", "context", "rule_changed", "deletion_mode", "prerequisite_unverified", "scope_changed", "execution_unavailable", "recovery_unavailable", "target_changed", "executor_failed", "cancelled", "aborted", "partial", "no_verified_recovery":
+	default:
+		entry.ReasonCode = "unknown"
+	}
+	if entry.State != "completed" {
+		entry.RecoveryAvailable = false
+	}
+	if entry.TargetCount < 0 {
+		entry.TargetCount = 0
+	}
+	return entry
 }

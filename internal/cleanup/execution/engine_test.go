@@ -140,7 +140,7 @@ func TestEngineRefusesChangedTargetAndConsumesOnce(t *testing.T) {
 func TestEngineReportsPartialAndAborted(t *testing.T) {
 	execution, root, cleanupFixture := fixtureExecution(t, 2)
 	defer cleanupFixture()
-	engine := newTestEngine(root, &fakeExecutor{remove: 1, aborted: true}, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true}})
+	engine := newTestEngine(root, &fakeExecutor{remove: 1, aborted: true}, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true, Kind: "test", Token: "test"}})
 	result := engine.Execute(context.Background(), execution, nil)
 	if result.State != StatePartial || !result.Aborted {
 		t.Fatalf("result = %+v", result)
@@ -172,6 +172,7 @@ func TestEngineRefusesChangedRuleVersionAndUnverifiedPrerequisite(t *testing.T) 
 	}
 
 	tempRule, _ := cleanup.RuleByID("user-temp-old")
+	tempRule.ID = "crash-dumps-old" // Isolate prerequisite validation from rule-ID validation.
 	engine.ruleResolver = func(string) (cleanup.Rule, bool) { return tempRule, true }
 	second, _, secondCleanup := fixtureExecution(t, 1)
 	defer secondCleanup()

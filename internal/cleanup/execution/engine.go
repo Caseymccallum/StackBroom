@@ -49,11 +49,15 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	if execution == nil {
 		return failed(result, "missing_execution", "execution context is missing")
 	}
+	if ctx.Err() != nil {
+		result.State, result.ReasonCode = StateCancelled, "cancelled"
+		return result
+	}
 	if err := execution.Consume(started); err != nil {
 		return failed(result, "context", err.Error())
 	}
 	rule, ok := e.ruleResolver(execution.RuleID())
-	if !ok || rule.Version != execution.RuleVersion() {
+	if !ok || rule.ID != execution.RuleID() || rule.Version != execution.RuleVersion() {
 		return failed(result, "rule_changed", "cleanup rule is no longer available at the previewed version")
 	}
 	if rule.DeletionMode != "recycle" {
@@ -78,6 +82,13 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	targets := execution.Targets()
 	result.Items = make([]ItemResult, 0, len(targets))
 	for _, target := range targets {
+		if ctx.Err() != nil {
+			result.State, result.ReasonCode = StateCancelled, "cancelled"
+			return result
+		}
+		if !target.File.RootEqual(root) || rule.ValidateEligibility(target.File, len(targets), e.now()) != nil {
+			return failed(result, "target_changed", "target is no longer eligible under the rule")
+		}
 		item := ItemResult{
 			TargetID: target.ID, Status: ItemValidated,
 			LogicalBytes: target.File.LogicalBytes, AllocatedBytes: target.File.AllocatedBytes,
@@ -111,6 +122,10 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	if progress != nil {
 		progress(Progress{State: StateExecuting, Completed: 0, Total: len(targets)})
 	}
+	if ctx.Err() != nil {
+		result.State, result.ReasonCode = StateCancelled, "cancelled"
+		return result
+	}
 	executionResult, executeErr := e.executor.Execute(ctx, execution, targets, progress)
 	result.Aborted = executionResult.Aborted
 	if executeErr != nil {
@@ -128,6 +143,7 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 		target := targets[index]
 		item := result.Items[index]
 		executorItem, present := byTarget[target.ID]
+		item.HRESULT = executorItem.HRESULT
 		if present && executorItem.Status == ItemDenied {
 			item.Status = ItemDenied
 			item.ReasonCode = executorItem.ReasonCode
@@ -139,6 +155,12 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			item.Status = ItemStillPresent
 			item.ReasonCode = "still_present"
 			item.Message = "target is still present"
+			if present && (executorItem.Status == ItemFailed || executorItem.Status == ItemCancelled || executorItem.Status == ItemUnknown) {
+				item.Status, item.ReasonCode, item.Message = executorItem.Status, executorItem.ReasonCode, executorItem.Message
+			} else if ctx.Err() != nil || result.Aborted {
+				item.Status = ItemCancelled
+				item.ReasonCode = "cancelled"
+			}
 			result.Items[index] = item
 			continue
 		} else if !os.IsNotExist(statErr) {
@@ -155,7 +177,7 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			item.Status = ItemUnknown
 			item.ReasonCode = "recovery_verification_failed"
 			item.Message = "target left its path but recovery could not be verified"
-		case !evidence.Available:
+		case !evidence.Available || evidence.Kind == "" || evidence.Token == "" || !present || executorItem.Status != ItemRecycled:
 			item.Status = ItemRemovedUnverified
 			item.ReasonCode = "recovery_unverified"
 			item.Message = "target left its path but Recycle Bin evidence is unavailable"
@@ -170,7 +192,7 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	case ctx.Err() != nil:
 		result.State = StateCancelled
 		result.ReasonCode = "cancelled"
-	case verified == len(result.Items):
+	case verified == len(result.Items) && executeErr == nil:
 		result.State = StateCompleted
 		if result.Aborted {
 			result.State = StatePartial
@@ -178,7 +200,9 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 		}
 	case verified > 0:
 		result.State = StatePartial
-		result.ReasonCode = "partial"
+		if result.ReasonCode == "" {
+			result.ReasonCode = "partial"
+		}
 	default:
 		result.State = StateFailed
 		if result.ReasonCode == "" {
