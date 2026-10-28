@@ -1,26 +1,66 @@
 import { useState } from "react";
 import { X, AlertTriangle, Shield, Power, Trash2, Gauge } from "lucide-react";
 import type { ProcessRow } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
+import * as ProcessControlService from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/processcontrolservice";
 import { Badge, Button } from "./ui";
 
 interface ProcessDetailsProps {
   process: ProcessRow;
   onClose: () => void;
-  onAction: (action: string, priority?: number) => Promise<void>;
 }
 
-export function ProcessDetails({ process, onClose, onAction }: ProcessDetailsProps) {
+export function ProcessDetails({ process, onClose }: ProcessDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; outcome: string; details: string } | null>(null);
 
   const handleAction = async (action: string, priority?: number) => {
     setLoading(true);
     setResult(null);
+
     try {
-      await onAction(action, priority);
-      setResult({ success: true, outcome: "success", details: `${action} completed` });
+      // Step 1: Get fresh process details with creation time
+      const details = await ProcessControlService.GetProcessDetails(process.pid, process.startedAt || new Date().toISOString());
+
+      // Step 2: Create preview
+      const previewResult = await ProcessControlService.PreviewProcessAction(
+        process.pid,
+        action,
+        priority || 0,
+        details?.createTime || new Date().toISOString()
+      );
+
+      if (!previewResult || !previewResult.operationId) {
+        throw new Error("Failed to create preview");
+      }
+
+      // Step 3: Confirm with user
+      const confirmed = window.confirm(
+        `Confirm ${action.replace('_', ' ')} for process ${process.name} (PID: ${process.pid})?\n\nThis action cannot be undone.`
+      );
+
+      if (!confirmed) {
+        setResult({ success: false, outcome: "cancelled", details: "Action cancelled by user" });
+        return;
+      }
+
+      // Step 4: Execute
+      const executionResult = await ProcessControlService.ConfirmProcessAction(previewResult.operationId);
+
+      if (executionResult) {
+        setResult({
+          success: executionResult.success || false,
+          outcome: executionResult.outcome || "unknown",
+          details: executionResult.details || "No details provided"
+        });
+      } else {
+        throw new Error("Execution returned no result");
+      }
     } catch (error) {
-      setResult({ success: false, outcome: "failure", details: error instanceof Error ? error.message : "Unknown error" });
+      setResult({
+        success: false,
+        outcome: "error",
+        details: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     } finally {
       setLoading(false);
     }

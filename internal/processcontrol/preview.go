@@ -35,8 +35,9 @@ func generateOperationID() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// CreatePreview creates a new operation preview and returns it
-func (s *OperationStore) CreatePreview(pid int32, action ProcessAction, priority PriorityClass) (*OperationPreview, error) {
+// CreatePreview creates a new operation preview after verifying process identity
+// Returns error if process cannot be verified or is protected
+func (s *OperationStore) CreatePreview(pid int32, action ProcessAction, priority PriorityClass, targetIdentity ProcessIdentity) (*OperationPreview, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -46,6 +47,20 @@ func (s *OperationStore) CreatePreview(pid int32, action ProcessAction, priority
 
 	if len(s.operations) >= MaxOperations {
 		return nil, fmt.Errorf("too many pending operations")
+	}
+
+	// Validate target identity is provided
+	if targetIdentity.PID == 0 {
+		return nil, fmt.Errorf("target identity required")
+	}
+
+	// Check if process is protected or critical
+	if targetIdentity.IsProtected || targetIdentity.IsCritical {
+		return nil, fmt.Errorf("protected or critical system process")
+	}
+
+	if IsStackBroomProcess(targetIdentity.Name) {
+		return nil, fmt.Errorf("StackBroom process")
 	}
 
 	id, err := generateOperationID()
@@ -58,6 +73,7 @@ func (s *OperationStore) CreatePreview(pid int32, action ProcessAction, priority
 		OperationID: id,
 		PID:         pid,
 		Action:      action,
+		Target:      targetIdentity,
 		Priority:    priority,
 		CreatedAt:   now,
 		ExpiresAt:   now.Add(OperationExpiry),

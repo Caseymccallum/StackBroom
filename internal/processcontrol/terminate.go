@@ -6,19 +6,11 @@ import (
 )
 
 // ExecuteTerminate forcefully terminates a process
-func ExecuteTerminate(operationID string, store *OperationStore) OperationResult {
-	preview, err := store.ConsumePreview(operationID)
-	if err != nil {
-		return OperationResult{
-			OperationID: operationID,
-			Success:     false,
-			Outcome:     "refused",
-			Details:     err.Error(),
-			VerifiedAt:  time.Now(),
-		}
-	}
+// Receives already-consumed preview to prevent double consumption
+func ExecuteTerminate(preview *OperationPreview) OperationResult {
+	operationID := preview.OperationID
 
-	// Re-verify process identity
+	// Re-verify process identity against stored target
 	identity, err := VerifyProcessIdentity(preview.PID, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
@@ -51,8 +43,8 @@ func ExecuteTerminate(operationID string, store *OperationStore) OperationResult
 		}
 	}
 
-	// Open process with terminate access
-	handle, err := openProcess(preview.PID, PROCESS_TERMINATE)
+	// Open process with terminate and synchronize access
+	handle, err := openProcess(preview.PID, PROCESS_TERMINATE|SYNCHRONIZE)
 	if err != nil {
 		return OperationResult{
 			OperationID: operationID,

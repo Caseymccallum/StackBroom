@@ -21,12 +21,6 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
   const [selectedProcess, setSelectedProcess] = useState<ProcessRow | null>(null);
   const deferredQuery = useDeferredValue(query);
 
-  const handleProcessAction = async (action: string, priority?: number) => {
-    // In a real implementation, this would call the Wails bridge
-    // For now, we'll just log the action
-    console.log(`Process action: ${action} on PID ${selectedProcess?.pid}`, priority);
-  };
-
   const rows = useMemo(
     () => (full ? filterAndSortProcesses(full.processes ?? [], { query: deferredQuery, category, sort, reverse }) : []),
     [full, deferredQuery, category, sort, reverse],
@@ -137,7 +131,6 @@ export function ProcessesPage({ full, busy, onScan }: Props) {
         <ProcessDetails
           process={selectedProcess}
           onClose={() => setSelectedProcess(null)}
-          onAction={handleProcessAction}
         />
       )}
     </Card>

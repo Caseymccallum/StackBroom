@@ -34,7 +34,9 @@ func VerifyProcessIdentity(pid int32, expectedCreateTime time.Time) (ProcessIden
 
 	isCritical, err := isProcessCritical(handle)
 	if err != nil {
-		isCritical = false // Assume not critical if we can't determine
+		// Fail closed: if we can't determine critical status, treat as critical
+		// This prevents accidentally terminating critical system processes
+		isCritical = true
 	}
 
 	name := filepath.Base(exePath)

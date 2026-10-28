@@ -36,6 +36,7 @@ const (
 	PROCESS_TERMINATE                 = 0x0001
 	PROCESS_SET_INFORMATION           = 0x0200
 	PROCESS_QUERY_INFORMATION         = 0x0400
+	SYNCHRONIZE                       = 0x00100000
 )
 
 // FILETIME represents Windows FILETIME structure

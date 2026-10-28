@@ -43,8 +43,8 @@ func (s *ProcessControlService) GetProcessDetails(pid int32, createTime string) 
 	}, nil
 }
 
-// PreviewProcessAction creates a preview for a process action
-func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, priority int) (map[string]interface{}, error) {
+// PreviewProcessAction creates a preview for a process action after verifying identity
+func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, priority int, createTime string) (map[string]interface{}, error) {
 	// Validate action
 	var processAction processcontrol.ProcessAction
 	switch action {
@@ -70,8 +70,20 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 		}
 	}
 
-	// Create preview
-	preview, err := s.store.CreatePreview(pid, processAction, priorityClass)
+	// Parse and verify creation time
+	creationTime, err := time.Parse(time.RFC3339Nano, createTime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid creation time format")
+	}
+
+	// Verify process identity before creating preview
+	identity, err := processcontrol.VerifyProcessIdentity(pid, creationTime)
+	if err != nil {
+		return nil, fmt.Errorf("identity verification failed: %v", err)
+	}
+
+	// Create preview with verified identity
+	preview, err := s.store.CreatePreview(pid, processAction, priorityClass, identity)
 	if err != nil {
 		return nil, err
 	}
@@ -81,6 +93,7 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 		"pid":         preview.PID,
 		"action":      string(preview.Action),
 		"priority":    preview.Priority.String(),
+		"targetName":  preview.Target.Name,
 		"expiresAt":   preview.ExpiresAt.Format(time.RFC3339),
 	}, nil
 }
@@ -98,11 +111,11 @@ func (s *ProcessControlService) ConfirmProcessAction(operationID string) (map[st
 
 	switch preview.Action {
 	case processcontrol.ActionGracefulClose:
-		result = processcontrol.ExecuteGracefulClose(operationID, s.store)
+		result = processcontrol.ExecuteGracefulClose(preview)
 	case processcontrol.ActionTerminate:
-		result = processcontrol.ExecuteTerminate(operationID, s.store)
+		result = processcontrol.ExecuteTerminate(preview)
 	case processcontrol.ActionSetPriority:
-		result = processcontrol.ExecuteSetPriority(operationID, s.store)
+		result = processcontrol.ExecuteSetPriority(preview)
 	default:
 		return nil, fmt.Errorf("invalid action type")
 	}

@@ -6,19 +6,11 @@ import (
 )
 
 // ExecuteGracefulClose attempts to gracefully close a process via WM_CLOSE
-func ExecuteGracefulClose(operationID string, store *OperationStore) OperationResult {
-	preview, err := store.ConsumePreview(operationID)
-	if err != nil {
-		return OperationResult{
-			OperationID: operationID,
-			Success:     false,
-			Outcome:     "refused",
-			Details:     err.Error(),
-			VerifiedAt:  time.Now(),
-		}
-	}
+// Receives already-consumed preview to prevent double consumption
+func ExecuteGracefulClose(preview *OperationPreview) OperationResult {
+	operationID := preview.OperationID
 
-	// Re-verify process identity
+	// Re-verify process identity against stored target
 	identity, err := VerifyProcessIdentity(preview.PID, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
@@ -74,7 +66,7 @@ func ExecuteGracefulClose(operationID string, store *OperationStore) OperationRe
 	}
 
 	// Open process to verify exit
-	handle, err := openProcess(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION)
+	handle, err := openProcess(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE)
 	if err != nil {
 		// Process may have already exited
 		return OperationResult{

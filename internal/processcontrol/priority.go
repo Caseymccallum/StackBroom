@@ -6,17 +6,9 @@ import (
 )
 
 // ExecuteSetPriority changes the priority class of a process
-func ExecuteSetPriority(operationID string, store *OperationStore) OperationResult {
-	preview, err := store.ConsumePreview(operationID)
-	if err != nil {
-		return OperationResult{
-			OperationID: operationID,
-			Success:     false,
-			Outcome:     "refused",
-			Details:     err.Error(),
-			VerifiedAt:  time.Now(),
-		}
-	}
+// Receives already-consumed preview to prevent double consumption
+func ExecuteSetPriority(preview *OperationPreview) OperationResult {
+	operationID := preview.OperationID
 
 	// Validate priority class (reject Real-time)
 	if preview.Priority != PriorityIdle &&
@@ -33,7 +25,7 @@ func ExecuteSetPriority(operationID string, store *OperationStore) OperationResu
 		}
 	}
 
-	// Re-verify process identity
+	// Re-verify process identity against stored target
 	identity, err := VerifyProcessIdentity(preview.PID, preview.Target.CreateTime)
 	if err != nil {
 		return OperationResult{
@@ -66,7 +58,7 @@ func ExecuteSetPriority(operationID string, store *OperationStore) OperationResu
 		}
 	}
 
-	// Open process with set information access
+	// Open process with set information and query access
 	handle, err := openProcess(preview.PID, PROCESS_SET_INFORMATION|PROCESS_QUERY_INFORMATION)
 	if err != nil {
 		return OperationResult{

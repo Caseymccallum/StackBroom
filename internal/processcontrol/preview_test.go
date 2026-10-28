@@ -8,8 +8,15 @@ import (
 func TestOperationStore(t *testing.T) {
 	store := NewOperationStore()
 
-	// Test creating a preview
-	preview, err := store.CreatePreview(1234, ActionGracefulClose, PriorityNormal)
+	// Create a test identity
+	testIdentity := ProcessIdentity{
+		PID:        1234,
+		Name:       "test.exe",
+		CreateTime: time.Now(),
+	}
+
+	// Test creating a preview with verified identity
+	preview, err := store.CreatePreview(1234, ActionGracefulClose, PriorityNormal, testIdentity)
 	if err != nil {
 		t.Fatalf("CreatePreview failed: %v", err)
 	}
@@ -24,6 +31,10 @@ func TestOperationStore(t *testing.T) {
 
 	if preview.Action != ActionGracefulClose {
 		t.Errorf("expected action %s, got %s", ActionGracefulClose, preview.Action)
+	}
+
+	if preview.Target.PID != 1234 {
+		t.Errorf("expected target PID 1234, got %d", preview.Target.PID)
 	}
 
 	// Test retrieving preview
@@ -56,8 +67,15 @@ func TestOperationStore(t *testing.T) {
 func TestOperationExpiry(t *testing.T) {
 	store := NewOperationStore()
 
+	// Create a test identity
+	testIdentity := ProcessIdentity{
+		PID:        1234,
+		Name:       "test.exe",
+		CreateTime: time.Now(),
+	}
+
 	// Create preview with very short expiry for testing
-	preview, err := store.CreatePreview(1234, ActionTerminate, PriorityNormal)
+	preview, err := store.CreatePreview(1234, ActionTerminate, PriorityNormal, testIdentity)
 	if err != nil {
 		t.Fatalf("CreatePreview failed: %v", err)
 	}
