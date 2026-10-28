@@ -90,11 +90,12 @@
 
 Synthetic disposable fixture: 200 folders × 100 files (20,000 files, 1,000 bytes each), local Windows NTFS temp directory.
 
-- Scan: **1.977 s**
-- Heap allocation delta after GC: **20,562 KB**
-- Total allocation delta: **42,941 KB**
+- Scan: **2.220 s**
+- Post-scan heap allocation delta: **14,513 KB**
+- Sampled peak heap delta: **20,922 KB**
+- Total allocation delta: **43,678 KB**
 - Cancellation latency measured from cancel request to scan return: **sub-millisecond (reported as 0s)**
-- Fixture creation and test overhead excluded from the scan timer; whole test observed 33.36 s (scan fixture) and 5.68 s (cancellation fixture).
+- Fixture creation and test overhead excluded from the scan timer; whole test observed 11.02 s (scan fixture) and 4.32 s (cancellation fixture).
 
 These are observations on this host, not a general performance guarantee. No hundreds-of-thousands-entry benchmark was run, and no real user profile or Windows system directory was scanned.
 

@@ -34,16 +34,39 @@ func TestScanSyntheticPerformance(t *testing.T) {
 	runtime.GC()
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
+	stopSampling := make(chan struct{})
+	peakHeap := before.HeapAlloc
+	samplingDone := make(chan struct{})
+	go func() {
+		defer close(samplingDone)
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopSampling:
+				return
+			case <-ticker.C:
+				var sample runtime.MemStats
+				runtime.ReadMemStats(&sample)
+				if sample.HeapAlloc > peakHeap {
+					peakHeap = sample.HeapAlloc
+				}
+			}
+		}
+	}()
 	start := time.Now()
 	result, err := NewScanner().Scan(context.Background(), DefaultRequest(root), nil)
 	elapsed := time.Since(start)
+	close(stopSampling)
+	<-samplingDone
 	runtime.ReadMemStats(&after)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("scan files=%d dirs=%d elapsed=%s heap_alloc_delta=%dKB total_alloc_delta=%dKB",
+	t.Logf("scan files=%d dirs=%d elapsed=%s heap_alloc_delta=%dKB peak_heap_delta=%dKB total_alloc_delta=%dKB",
 		result.TotalFiles, result.TotalDirectories, elapsed,
 		(after.HeapAlloc-before.HeapAlloc)/1024,
+		(peakHeap-before.HeapAlloc)/1024,
 		(after.TotalAlloc-before.TotalAlloc)/1024,
 	)
 	if result.TotalFiles != folders*filesPerFolder {
