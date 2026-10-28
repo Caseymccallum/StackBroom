@@ -75,11 +75,33 @@ func ExecuteTerminate(operationID string, store *OperationStore) OperationResult
 		}
 	}
 
+	// Wait up to 5 seconds for process to actually exit
+	exited, err := waitForProcessExit(handle, 5000)
+	if err != nil {
+		return OperationResult{
+			OperationID: operationID,
+			Success:     false,
+			Outcome:     "partial",
+			Details:     fmt.Sprintf("termination initiated but exit verification failed: %v", err),
+			VerifiedAt:  time.Now(),
+		}
+	}
+
+	if !exited {
+		return OperationResult{
+			OperationID: operationID,
+			Success:     false,
+			Outcome:     "partial",
+			Details:     "termination initiated but process did not exit within timeout",
+			VerifiedAt:  time.Now(),
+		}
+	}
+
 	return OperationResult{
 		OperationID: operationID,
 		Success:     true,
 		Outcome:     "success",
-		Details:     "process terminated",
+		Details:     "process terminated and verified exited",
 		VerifiedAt:  time.Now(),
 	}
 }

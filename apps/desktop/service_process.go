@@ -86,9 +86,10 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 }
 
 // ConfirmProcessAction executes a previously previewed action
+// Uses atomic consume to prevent duplicate execution
 func (s *ProcessControlService) ConfirmProcessAction(operationID string) (map[string]interface{}, error) {
-	// Get preview to determine action type
-	preview, err := s.store.GetPreview(operationID)
+	// Atomically consume the preview to prevent duplicate execution
+	preview, err := s.store.TryConsumePreview(operationID)
 	if err != nil {
 		return nil, err
 	}

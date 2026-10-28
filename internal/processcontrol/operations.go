@@ -73,14 +73,47 @@ func ExecuteGracefulClose(operationID string, store *OperationStore) OperationRe
 		}
 	}
 
-	// Wait briefly to observe outcome
-	time.Sleep(500 * time.Millisecond)
+	// Open process to verify exit
+	handle, err := openProcess(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION)
+	if err != nil {
+		// Process may have already exited
+		return OperationResult{
+			OperationID: operationID,
+			Success:     true,
+			Outcome:     "success",
+			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s), process appears to have exited", windowCount),
+			VerifiedAt:  time.Now(),
+		}
+	}
+	defer closeHandle(handle)
+
+	// Wait up to 10 seconds for graceful exit
+	exited, err := waitForProcessExit(handle, 10000)
+	if err != nil {
+		return OperationResult{
+			OperationID: operationID,
+			Success:     false,
+			Outcome:     "partial",
+			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s) but exit verification failed: %v", windowCount, err),
+			VerifiedAt:  time.Now(),
+		}
+	}
+
+	if exited {
+		return OperationResult{
+			OperationID: operationID,
+			Success:     true,
+			Outcome:     "success",
+			Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s), process exited gracefully", windowCount),
+			VerifiedAt:  time.Now(),
+		}
+	}
 
 	return OperationResult{
 		OperationID: operationID,
-		Success:     true,
-		Outcome:     "success",
-		Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s)", windowCount),
+		Success:     false,
+		Outcome:     "timeout",
+		Details:     fmt.Sprintf("sent WM_CLOSE to %d window(s) but process did not exit within 10s", windowCount),
 		VerifiedAt:  time.Now(),
 	}
 }

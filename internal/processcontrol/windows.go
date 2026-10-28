@@ -23,6 +23,8 @@ var (
 	procSetPriorityClass          = modKernel32.NewProc("SetPriorityClass")
 	procQueryFullProcessImageName = modKernel32.NewProc("QueryFullProcessImageNameW")
 	procIsProcessCritical         = modKernel32.NewProc("IsProcessCritical")
+	procGetExitCodeProcess        = modKernel32.NewProc("GetExitCodeProcess")
+	procWaitForSingleObject       = modKernel32.NewProc("WaitForSingleObject")
 	procPostMessage               = modUser32.NewProc("PostMessageW")
 	procEnumWindows               = modUser32.NewProc("EnumWindows")
 	procGetWindowThreadProcessId  = modUser32.NewProc("GetWindowThreadProcessId")
@@ -137,4 +139,25 @@ func setPriorityClass(handle syscall.Handle, priority PriorityClass) error {
 		return fmt.Errorf("SetPriorityClass failed: %w", err)
 	}
 	return nil
+}
+
+// isProcessRunning checks if a process is still running
+func isProcessRunning(handle syscall.Handle) (bool, error) {
+	var exitCode uint32
+	ret, _, err := procGetExitCodeProcess.Call(uintptr(handle), uintptr(unsafe.Pointer(&exitCode)))
+	if ret == 0 {
+		return false, fmt.Errorf("GetExitCodeProcess failed: %w", err)
+	}
+	// STILL_ACTIVE = 259
+	return exitCode == 259, nil
+}
+
+// waitForProcessExit waits for a process to exit with a timeout
+func waitForProcessExit(handle syscall.Handle, timeoutMs uint32) (bool, error) {
+	ret, _, err := procWaitForSingleObject.Call(uintptr(handle), uintptr(timeoutMs))
+	if ret == 0xFFFFFFFF { // WAIT_FAILED
+		return false, fmt.Errorf("WaitForSingleObject failed: %w", err)
+	}
+	// WAIT_OBJECT_0 = 0 (process exited), WAIT_TIMEOUT = 258
+	return ret == 0, nil
 }

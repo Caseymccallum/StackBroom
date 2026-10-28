@@ -84,7 +84,8 @@ func (s *OperationStore) GetPreview(operationID string) (*OperationPreview, erro
 	return preview, nil
 }
 
-// ConsumePreview retrieves and removes a preview (single-use)
+// ConsumePreview atomically retrieves and removes a preview (single-use)
+// This prevents duplicate execution through race conditions
 func (s *OperationStore) ConsumePreview(operationID string) (*OperationPreview, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -99,6 +100,28 @@ func (s *OperationStore) ConsumePreview(operationID string) (*OperationPreview, 
 		return nil, fmt.Errorf("operation expired")
 	}
 
+	// Atomically remove to prevent duplicate execution
+	delete(s.operations, operationID)
+	return preview, nil
+}
+
+// TryConsumePreview attempts to consume a preview with atomic check-and-delete
+// Returns the preview if successful, or an error if already consumed/expired
+func (s *OperationStore) TryConsumePreview(operationID string) (*OperationPreview, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	preview, exists := s.operations[operationID]
+	if !exists {
+		return nil, fmt.Errorf("operation already consumed or invalid ID")
+	}
+
+	if time.Now().After(preview.ExpiresAt) {
+		delete(s.operations, operationID)
+		return nil, fmt.Errorf("operation expired")
+	}
+
+	// Atomic remove - if this fails, the operation was already consumed
 	delete(s.operations, operationID)
 	return preview, nil
 }
