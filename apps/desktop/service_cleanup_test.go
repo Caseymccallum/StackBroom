@@ -24,6 +24,36 @@ func TestCleanupServiceHasOnlyDiscoveryAndPreviewMethods(t *testing.T) {
 	}
 }
 
+func TestCleanupServiceCancellationIsReported(t *testing.T) {
+	rule, _ := cleanup.RuleByID("user-temp-old")
+	service := NewCleanupService()
+	service.discoverFn = func(ctx context.Context, rule cleanup.Rule, max int, progress func(cleanup.Progress), clock func() time.Time) (*cleanup.Discovery, error) {
+		<-ctx.Done()
+		return &cleanup.Discovery{Rule: rule, Partial: true, PartialReason: "cancelled"}, nil
+	}
+	discoveryID, err := service.StartCleanupDiscovery(rule.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !service.CancelCleanupDiscovery(discoveryID) {
+		t.Fatal("running discovery was not cancellable")
+	}
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); {
+		view, err := service.GetCleanupDiscovery(discoveryID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if view.Status != "running" {
+			if view.Status != "cancelled" || !view.Partial {
+				t.Errorf("cancelled discovery = %+v", view)
+			}
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("cancelled discovery did not finish")
+}
+
 func TestCleanupServicePreviewExpires(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "old.tmp")
