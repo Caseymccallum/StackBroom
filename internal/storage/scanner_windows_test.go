@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 )
@@ -107,6 +108,34 @@ func TestReplacingFileWithJunctionPreventsVerifiedRead(t *testing.T) {
 	}
 	if _, ok := hashFile(context.Background(), record, 0); ok {
 		t.Error("replaced junction was read as file content")
+	}
+}
+
+func TestParentJunctionSubstitutionIsRejected(t *testing.T) {
+	root := t.TempDir()
+	original := filepath.Join(root, "original")
+	replacement := filepath.Join(root, "replacement")
+	if err := os.MkdirAll(original, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(replacement, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(original, "item.bin"), 4096, 'x')
+	writeFile(t, filepath.Join(replacement, "item.bin"), 4096, 'x')
+	result := scanFixture(t, root, nil)
+	if len(result.Files) != 2 {
+		t.Fatalf("fixture files = %d", len(result.Files))
+	}
+	moved := filepath.Join(root, "moved")
+	if err := os.Rename(original, moved); err != nil {
+		t.Fatal(err)
+	}
+	makeJunction(t, original, replacement)
+	for _, record := range result.Files {
+		if strings.Contains(record.Path, "original") && fileStillMatches(record) {
+			t.Error("a parent junction substitution passed the identity check")
+		}
 	}
 }
 
