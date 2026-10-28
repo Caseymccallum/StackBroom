@@ -61,6 +61,31 @@ func TestHiddenFilesAreExcludedByDefault(t *testing.T) {
 	}
 }
 
+func TestOfflinePlaceholderCannotBeHashed(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "cloud-placeholder.bin")
+	writeFile(t, path, 8192, 'c')
+	result := scanFixture(t, root, nil)
+	if len(result.Files) != 1 {
+		t.Fatal("fixture file was not indexed")
+	}
+	pointer, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attributes, err := syscall.GetFileAttributes(pointer)
+	if err != nil {
+		t.Skipf("attributes unavailable: %v", err)
+	}
+	if err := syscall.SetFileAttributes(pointer, attributes|0x00001000); err != nil {
+		t.Skipf("cannot mark offline placeholder: %v", err)
+	}
+	t.Cleanup(func() { _ = syscall.SetFileAttributes(pointer, attributes) })
+	if _, ok := hashFile(context.Background(), result.Files[0], 0); ok {
+		t.Error("offline placeholder was opened for hashing")
+	}
+}
+
 func TestReplacingFileWithJunctionPreventsVerifiedRead(t *testing.T) {
 	root := t.TempDir()
 	left := filepath.Join(root, "left.bin")
