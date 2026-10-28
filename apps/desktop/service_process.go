@@ -15,14 +15,6 @@ type ProcessControlService struct {
 	verifyFn func(int32, time.Time) (processcontrol.ProcessIdentity, error)
 }
 
-// NewProcessControlService creates a process control service with its own
-// token issuer. Production wires the shared issuer through
-// NewProcessControlServiceWithTokens.
-func NewProcessControlService() *ProcessControlService {
-	tokens, _ := processcontrol.NewTokenIssuer()
-	return NewProcessControlServiceWithTokens(tokens)
-}
-
 // NewProcessControlServiceWithTokens verifies scan-issued target tokens with
 // the application-wide key.
 func NewProcessControlServiceWithTokens(tokens *processcontrol.TokenIssuer) *ProcessControlService {

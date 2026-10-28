@@ -9,9 +9,18 @@ import (
 	"github.com/Caseymccallum/StackBroom/internal/processcontrol"
 )
 
+func mustTokenIssuer(t *testing.T) *processcontrol.TokenIssuer {
+	t.Helper()
+	tokens, err := processcontrol.NewTokenIssuer()
+	if err != nil {
+		t.Fatalf("token issuer: %v", err)
+	}
+	return tokens
+}
+
 func newTestProcessService(t *testing.T, identity processcontrol.ProcessIdentity) (*ProcessControlService, string) {
 	t.Helper()
-	service := NewProcessControlService()
+	service := NewProcessControlServiceWithTokens(mustTokenIssuer(t))
 	service.verifyFn = func(pid int32, created time.Time) (processcontrol.ProcessIdentity, error) {
 		if pid != identity.PID || !created.Equal(identity.CreateTime) {
 			return processcontrol.ProcessIdentity{}, errTestIdentity
@@ -49,8 +58,23 @@ func fakeActions(terminateSucceeds bool) (processcontrol.NativeActions, *int) {
 	return actions, &opened
 }
 
+func TestApplicationServicesRefuseInvalidSecurityStateAndShareTokens(t *testing.T) {
+	inspection, control, err := NewApplicationServices()
+	if err != nil {
+		t.Fatalf("application services: %v", err)
+	}
+	if inspection == nil || control == nil || control.tokens == nil {
+		t.Fatal("application services must be fully initialised")
+	}
+	started := time.Now()
+	token := inspection.issueTargetToken(model.Process{PID: 43, Name: "test.exe", StartedAt: &started})
+	if _, err := control.tokens.Verify(token, 43); err != nil {
+		t.Fatalf("services did not share a valid token key: %v", err)
+	}
+}
+
 func TestScanAndProcessControlShareTokenIssuer(t *testing.T) {
-	desktop := NewDesktopService()
+	desktop := NewDesktopServiceWithTokens(mustTokenIssuer(t))
 	control := NewProcessControlServiceWithTokens(desktop.tokens)
 	started := time.Now()
 	token := desktop.issueTargetToken(model.Process{PID: 42, Name: "test.exe", StartedAt: &started})

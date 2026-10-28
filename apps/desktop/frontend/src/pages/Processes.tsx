@@ -11,10 +11,10 @@ interface Props {
   busy: "quick" | "full" | null;
   onScan: () => void;
   previewDetail?: boolean;
-  previewConfirm?: boolean;
+  previewOnly?: boolean;
 }
 
-export function ProcessesPage({ full, busy, onScan, previewDetail, previewConfirm }: Props) {
+export function ProcessesPage({ full, busy, onScan, previewDetail, previewOnly }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<ProcessSort>("memory");
@@ -35,6 +35,19 @@ export function ProcessesPage({ full, busy, onScan, previewDetail, previewConfir
       ?? rows[0];
     setSelectedProcess(preferred);
   }, [previewDetail, selectedProcess, rows]);
+
+  useEffect(() => {
+    if (!selectedProcess || !full) return;
+    const refreshed = (full.processes ?? []).find((process) => process.pid === selectedProcess.pid);
+    if (!refreshed) {
+      setSelectedProcess(null);
+      return;
+    }
+    if (refreshed.targetToken !== selectedProcess.targetToken) {
+      setSelectedProcess(refreshed);
+    }
+  }, [full, selectedProcess]);
+
   useEffect(() => setPage(0), [deferredQuery, category, sort, reverse]);
   function chooseSort(next: ProcessSort) {
     setSort(next);
@@ -139,10 +152,11 @@ export function ProcessesPage({ full, busy, onScan, previewDetail, previewConfir
 
       {selectedProcess && (
         <ProcessDetails
+          key={selectedProcess.pid}
           process={selectedProcess}
           onClose={() => setSelectedProcess(null)}
           onCompleted={onScan}
-          initialConfirm={previewConfirm}
+          previewOnly={previewOnly}
         />
       )}
     </Card>

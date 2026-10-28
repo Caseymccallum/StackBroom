@@ -186,7 +186,7 @@ export default function App() {
           busy={desktop.busy}
           onScan={() => void desktop.refresh("full")}
           previewDetail={desktop.appInfo?.previewDetail}
-          previewConfirm={desktop.appInfo?.previewConfirm}
+          previewOnly={desktop.appInfo?.preview}
         />;
       case "storage":
         return <StoragePage quick={desktop.quick} full={desktop.full} />;

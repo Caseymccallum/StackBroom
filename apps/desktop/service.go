@@ -39,9 +39,16 @@ type DesktopService struct {
 	tokens    *processcontrol.TokenIssuer
 }
 
-func NewDesktopService() *DesktopService {
-	tokens, _ := processcontrol.NewTokenIssuer()
-	return NewDesktopServiceWithTokens(tokens)
+// NewApplicationServices creates the inspection and process-control services
+// with one application-wide token issuer. A cryptographic initialization
+// failure is returned to the caller so a mutation-capable service is never
+// launched with invalid security state.
+func NewApplicationServices() (*DesktopService, *ProcessControlService, error) {
+	tokens, err := processcontrol.NewTokenIssuer()
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewDesktopServiceWithTokens(tokens), NewProcessControlServiceWithTokens(tokens), nil
 }
 
 // NewDesktopServiceWithTokens uses an application-wide token issuer so scan

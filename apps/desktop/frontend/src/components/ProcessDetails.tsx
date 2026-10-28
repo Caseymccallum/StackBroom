@@ -8,22 +8,29 @@ interface ProcessDetailsProps {
   process: ProcessRow;
   onClose: () => void;
   onCompleted?: () => void;
-  initialConfirm?: boolean;
+  previewOnly?: boolean;
 }
 
-interface PendingAction {
+interface PendingPreview {
+  operationId: string;
+  pid: number;
   action: string;
-  priority?: number;
-  label: string;
+  actionLabel: string;
+  priority: string;
+  targetName: string;
+  expiresAt: string;
 }
 
-export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }: ProcessDetailsProps) {
+export function ProcessDetails({ process, onClose, onCompleted, previewOnly = false }: ProcessDetailsProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; outcome: string; details: string; previous?: string; next?: string } | null>(null);
-  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [pending, setPending] = useState<PendingPreview | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -31,7 +38,8 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        setPending(null);
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -54,13 +62,14 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
       document.removeEventListener("keydown", onKey);
       previous?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
-    if (initialConfirm) {
-      setPending({ action: "terminate", label: "End Process" });
-    }
-  }, [initialConfirm]);
+    if (!pending) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [pending]);
 
   useEffect(() => {
     if (pending) {
@@ -68,31 +77,57 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
     }
   }, [pending]);
 
-  const requestAction = (action: string, priority?: number, label?: string) => {
-    if (loading) return;
-    setResult(null);
-    setPending({ action, priority, label: label || action.replace("_", " ") });
-  };
+  const previewExpired = pending ? Date.parse(pending.expiresAt) <= now : false;
 
-  const executePending = async () => {
-    if (!pending || loading) return;
+  const startPreview = async (action: string, priority: number, label: string) => {
+    if (loading || previewOnly) {
+      if (previewOnly) {
+        setResult({ success: false, outcome: "refused", details: "Preview mode cannot request native action previews." });
+      }
+      return;
+    }
     if (!process.targetToken) {
       setResult({ success: false, outcome: "refused", details: "This process has no verified target token. Refresh the process list." });
-      setPending(null);
       return;
     }
     setLoading(true);
     setPending(null);
+    setResult(null);
     try {
-      await ProcessControlService.GetProcessDetails(process.pid, process.targetToken);
       const preview = await ProcessControlService.PreviewProcessAction(
         process.pid,
-        pending.action,
-        pending.priority || 0,
+        action,
+        priority,
         process.targetToken,
       );
-      if (!preview || !preview.operationId) throw new Error("The backend did not issue an operation preview.");
-      const execution = await ProcessControlService.ConfirmProcessAction(preview.operationId);
+      if (!preview || !preview.operationId || !preview.expiresAt) {
+        throw new Error("The backend did not issue a valid operation preview.");
+      }
+      setPending({
+        operationId: preview.operationId,
+        pid: Number(preview.pid ?? process.pid),
+        action: preview.action || action,
+        actionLabel: label,
+        priority: preview.priority || "Normal",
+        targetName: preview.targetName || process.name,
+        expiresAt: preview.expiresAt,
+      });
+    } catch (error) {
+      setResult({
+        success: false,
+        outcome: "error",
+        details: error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmPreview = async () => {
+    if (!pending || loading || previewExpired || previewOnly) return;
+    setLoading(true);
+    try {
+      const execution = await ProcessControlService.ConfirmProcessAction(pending.operationId);
       if (!execution) throw new Error("The backend returned no execution result.");
       setResult({
         success: execution.success === true,
@@ -103,12 +138,14 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
       });
       if (execution.success) onCompleted?.();
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
       setResult({
         success: false,
         outcome: "error",
-        details: error instanceof Error ? error.message : "Unknown error occurred",
+        details: /expired/i.test(message) ? "The preview expired before confirmation. Choose the action again to create a new preview." : message,
       });
     } finally {
+      setPending(null);
       setLoading(false);
     }
   };
@@ -158,13 +195,13 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
             <div>
               <h3 className="text-sm font-semibold mb-2">Available Actions</h3>
               <div className="space-y-2">
-                <Button onClick={() => requestAction("graceful_close", undefined, "Close Gracefully")} disabled={loading} className="w-full justify-start">
+                <Button onClick={() => void startPreview("graceful_close", 0, "Close Gracefully")} disabled={loading || previewOnly} className="w-full justify-start">
                   <Power size={16} className="mr-2" />
                   Close Gracefully
                   <span className="ml-auto text-xs text-muted">Sends WM_CLOSE</span>
                 </Button>
 
-                <Button onClick={() => requestAction("terminate", undefined, "End Process")} disabled={loading} className="w-full justify-start" style={{ backgroundColor: "var(--red)", color: "white" }}>
+                <Button onClick={() => void startPreview("terminate", 0, "End Process")} disabled={loading || previewOnly} className="w-full justify-start" style={{ backgroundColor: "var(--red)", color: "white" }}>
                   <Trash2 size={16} className="mr-2" />
                   End Process
                   <span className="ml-auto text-xs opacity-80">Force termination</span>
@@ -174,7 +211,7 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
                   <p className="text-xs text-muted mb-2">Priority Class:</p>
                   <div className="grid grid-cols-3 gap-2">
                     {["Idle", "Below Normal", "Normal", "Above Normal", "High"].map((p) => (
-                      <Button key={p} onClick={() => requestAction("set_priority", priorityValue(p), `Set priority to ${p}`)} disabled={loading} variant="ghost">
+                      <Button key={p} onClick={() => void startPreview("set_priority", priorityValue(p), `Set priority to ${p}`)} disabled={loading || previewOnly} variant="ghost">
                         <Gauge size={12} className="mr-1" />
                         {p}
                       </Button>
@@ -187,17 +224,30 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
 
             {pending && (
               <div ref={confirmRef} className="rounded-lg border border-[color:var(--amber)] bg-[color:var(--amber-soft)] p-3" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
-                <p id="confirm-title" className="font-semibold text-[color:var(--amber)]">Confirm {pending.label}</p>
+                <p id="confirm-title" className="font-semibold text-[color:var(--amber)]">Confirm {pending.actionLabel}</p>
                 <p id="confirm-description" className="mt-1 text-sm" style={{ color: "var(--text-soft)" }}>
-                  Target: {process.name} (PID {process.pid}). {pending.action === "terminate"
+                  Native preview: {pending.targetName} (PID {pending.pid}), action {pending.actionLabel}
+                  {pending.action === "set_priority" ? `, priority ${pending.priority}` : ""}.{" "}
+                  {pending.action === "terminate"
                     ? "Unsaved application data will be lost and this cannot be undone."
                     : pending.action === "graceful_close"
                       ? "The application may prompt to save work. If it ignores the request, StackBroom will not force it closed."
                       : "This changes only the scheduling priority, not a CPU limit."}
                 </p>
+                <p className="mt-1 text-xs" style={{ color: previewExpired ? "var(--red)" : "var(--muted)" }} role="status">
+                  {previewExpired
+                    ? "This preview has expired. Cancel and choose the action again."
+                    : `Preview expires at ${new Date(pending.expiresAt).toLocaleTimeString()}.`}
+                </p>
                 <div className="mt-3 flex gap-2">
-                  <Button autoFocus onClick={executePending} disabled={loading} style={{ backgroundColor: "var(--red)", color: "white" }}>
-                    Confirm {pending.label}
+                  <Button
+                    autoFocus
+                    onClick={() => void confirmPreview()}
+                    disabled={loading || previewExpired || previewOnly}
+                    aria-label={`Confirm ${pending.actionLabel} for ${pending.targetName}, PID ${pending.pid}`}
+                    style={{ backgroundColor: "var(--red)", color: "white" }}
+                  >
+                    Confirm {pending.actionLabel}
                   </Button>
                   <Button onClick={() => setPending(null)} disabled={loading} variant="ghost">Cancel</Button>
                 </div>
