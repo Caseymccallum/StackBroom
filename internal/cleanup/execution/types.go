@@ -87,6 +87,41 @@ type RecoveryVerifier interface {
 	Verify(ctx context.Context, target Target) (RecoveryEvidence, error)
 }
 
+// PreflightEvidence is read-only proof needed before a recoverable operation.
+// CapacityKnown and PolicyKnown are deliberately separate from Supported:
+// a Recycle flag or a successful API call is not a no-fallback guarantee.
+type PreflightEvidence struct {
+	Supported     bool
+	PolicyKnown   bool
+	CapacityKnown bool
+	Provider      string
+	ObservedAt    time.Time
+	ExpiresAt     time.Time
+	ReasonCode    string
+}
+
+type NoFallbackPreflight interface {
+	Available() error
+	Check(ctx context.Context, target Target) (PreflightEvidence, error)
+}
+
+type Guard interface {
+	Close() error
+}
+
+// FinalFileGuard would hold an identity-bound final-file guard through Shell
+// processing. Ordinary builds and the current native implementation refuse.
+type FinalFileGuard interface {
+	Available() error
+	Acquire(ctx context.Context, target Target) (Guard, error)
+}
+
+type ReceiptProvider interface {
+	Available() error
+	Capture(ctx context.Context, target Target, evidence RecoveryEvidence, now time.Time) (RecycleReceipt, error)
+	Rebind(ctx context.Context, receipt RecycleReceipt, target Target, now time.Time) (RecoveryEvidence, error)
+}
+
 type Recorder interface {
 	Record(record Record)
 }

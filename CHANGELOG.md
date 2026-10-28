@@ -4,6 +4,19 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3B-3 recovery verification and no-fallback gates
+
+Execution remains disabled. No native Shell, Recycle Bin or restoration operation was run.
+
+### Added
+
+- Read-only no-fallback preflight contract and fail-closed engine gate.
+- Final-file guard contract required through executor lifetime, with guaranteed close.
+- Backend-only opaque, single-use, expiring receipt vault separate from action history.
+- Durable receipt-provider gate that prevents a completed result without matching stored evidence.
+- Aggregate `Engine.Available()` check used by preview availability.
+- Deterministic tests for unavailable/unsupported preflight, unavailable guards, guard cleanup and receipt failure.
+
 ## [Unreleased] - M3B-1 recovery-first execution architecture
 
 Execution remains disabled in ordinary builds. No deletion has been tested.

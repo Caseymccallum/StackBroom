@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,564,032 bytes** (about 11.6 MB)
-- SHA-256: `91A44BABA2401C28217943793F9C29389012935DBF7E0EC8333423C06C6A802F`
-- Source branch: `feat/m3b-cleanup-engine`; version `0.2.0`.
+- Size: **11,600,896 bytes** (about 11.6 MB)
+- SHA-256: `E899601795637B786A79E7644A895DE117DD2911CF246BA04BD0F3B9BC2730A2`
+- Source branch: `feat/m3b-3-recovery-verification`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -38,6 +38,9 @@ The binary is intentionally not committed. The build script reproduces it from t
 - cleanup rule age, extension, hard-link, trusted-scope and changed-target exclusions;
 - execution context single use, expiry, rule-version refusal, recovery gate, partial/aborted results, cancellation and access-denial outcomes;
 - local history retention, clearing and privacy filtering;
+- no-fallback preflight refusal, final-file guard refusal/cleanup and receipt-provider failure;
+- opaque single-use receipt vault expiry and privacy;
+- aggregate engine availability fails closed by default;
 - backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build.
 
 The opt-in execution sources compile with `go test -tags cleanup_execution ./internal/cleanup/execution` and `go test -tags cleanup_execution ./... -run '^$'` from `apps/desktop`. This is a compile/review check only; no COM operation was called.
@@ -116,6 +119,7 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 - The storage analyzer is read-only and requires a user-selected folder. The Cleaning section is discovery/preview only in ordinary builds; its disabled confirmation control performs nothing.
 - The tagged Windows `IFileOperation` worker has never been executed. Their COM vtable indices, recycle flags and resource cleanup are source-reviewed only. The native recovery verifier is unavailable, so a tagged build refuses before calling the executor.
 - Recycle Bin evidence/restoration and permanent-fallback behaviour remain unverified. No live deletion is authorised.
+- M3B-3 no-fallback preflight, final-file guard and durable receipt provider are unavailable; the engine therefore refuses execution even in a tagged build.
 - Path-based `IFileOperation` has a residual ancestor-substitution window and is not described as race-safe.
 - M2/M3A visual screenshots and screen-reader/axe/Narrator validation remain outstanding because visual validation was prohibited during this task.
 - Storage traversal is sequential; only duplicate hashing uses bounded workers.

@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,15 +15,39 @@ import (
 type Engine struct {
 	executor     Executor
 	verifier     RecoveryVerifier
+	preflight    NoFallbackPreflight
+	finalGuard   FinalFileGuard
+	receipts     ReceiptProvider
 	recorder     Recorder
 	now          func() time.Time
 	ruleResolver func(string) (cleanup.Rule, bool)
 	rootResolver func(cleanup.Rule) (string, error)
 }
 
+func (e *Engine) Available() error {
+	if e == nil || e.executor == nil {
+		return fmt.Errorf("cleanup executor is unavailable")
+	}
+	if e.verifier == nil || e.verifier.Available() != nil {
+		return fmt.Errorf("recovery verifier is unavailable")
+	}
+	if e.preflight == nil || e.preflight.Available() != nil {
+		return fmt.Errorf("no-fallback preflight is unavailable")
+	}
+	if e.finalGuard == nil || e.finalGuard.Available() != nil {
+		return fmt.Errorf("final-file guard is unavailable")
+	}
+	if e.receipts == nil || e.receipts.Available() != nil {
+		return fmt.Errorf("recovery receipt provider is unavailable")
+	}
+	return nil
+}
+
 func NewEngine(executor Executor, verifier RecoveryVerifier, recorder Recorder) *Engine {
 	return &Engine{
 		executor: executor, verifier: verifier, recorder: recorder, now: time.Now,
+		preflight: NewUnavailablePreflight(), finalGuard: NewUnavailableFinalGuard(),
+		receipts:     NewUnavailableReceiptProvider(),
 		ruleResolver: cleanup.RuleByID,
 		rootResolver: func(rule cleanup.Rule) (string, error) { return rule.ResolveRoot() },
 	}
@@ -79,9 +104,23 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	if err := e.verifier.Available(); err != nil {
 		return failed(result, "recovery_unavailable", "recovery verification is unavailable")
 	}
+	if e.preflight == nil || e.preflight.Available() != nil {
+		return failed(result, "recycle_preflight_unavailable", "no-permanent-fallback preflight is unavailable")
+	}
+	if e.finalGuard == nil || e.finalGuard.Available() != nil {
+		return failed(result, "final_file_guard_unavailable", "final-file identity guard is unavailable")
+	}
+	if e.receipts == nil || e.receipts.Available() != nil {
+		return failed(result, "recovery_receipt_unavailable", "durable recovery receipt provider is unavailable")
+	}
 	targets := execution.Targets()
 	result.Items = make([]ItemResult, 0, len(targets))
 	for _, target := range targets {
+		evidence, preflightErr := e.preflight.Check(ctx, target)
+		if preflightErr != nil || !evidence.Supported || !evidence.PolicyKnown || !evidence.CapacityKnown ||
+			evidence.Provider == "" || evidence.ObservedAt.IsZero() || !e.now().Before(evidence.ExpiresAt) {
+			return failed(result, "permanent_fallback_unproven", "Recycle Bin capacity/policy cannot be proven without a permanent-delete fallback")
+		}
 		if ctx.Err() != nil {
 			result.State, result.ReasonCode = StateCancelled, "cancelled"
 			return result
@@ -116,6 +155,19 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			return failed(result, "target_changed", "one or more targets changed before execution; nothing was executed")
 		}
 		result.Items = append(result.Items, item)
+	}
+	guards := make([]Guard, 0, len(targets))
+	defer func() {
+		for _, guard := range guards {
+			_ = guard.Close()
+		}
+	}()
+	for _, target := range targets {
+		guard, guardErr := e.finalGuard.Acquire(ctx, target)
+		if guardErr != nil || guard == nil {
+			return failed(result, "final_file_guard_unavailable", "final-file identity could not be held through Shell processing")
+		}
+		guards = append(guards, guard)
 	}
 	result.State = StateExecuting
 	result.States = append(result.States, StateExecuting)
@@ -182,9 +234,18 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 			item.ReasonCode = "recovery_unverified"
 			item.Message = "target left its path but Recycle Bin evidence is unavailable"
 		default:
-			item.Status = ItemRecycled
-			item.ReasonCode = "recycled"
-			verified++
+			receipt, receiptErr := e.receipts.Capture(ctx, target, evidence, e.now())
+			if receiptErr != nil || receipt.TargetID != target.ID || receipt.OriginalFileID != target.File.FileID ||
+				receipt.Provider == "" || receipt.OpaqueToken == "" || receipt.ObservedAt.IsZero() ||
+				!e.now().Before(receipt.ExpiresAt) {
+				item.Status = ItemRemovedUnverified
+				item.ReasonCode = "recovery_receipt_unavailable"
+				item.Message = "target left its path but durable recovery evidence could not be stored"
+			} else {
+				item.Status = ItemRecycled
+				item.ReasonCode = "recycled"
+				verified++
+			}
 		}
 		result.Items[index] = item
 	}

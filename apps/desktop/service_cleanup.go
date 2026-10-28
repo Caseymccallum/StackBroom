@@ -302,7 +302,7 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 		TotalLogical: preview.TotalLogical, TotalAllocated: preview.TotalAllocated,
 		RecoverableBytes: preview.RecoverableBytes, RecoverableKnown: preview.RecoverableKnown,
 		AllocatedUnknown: preview.AllocatedUnknown, DeletionMode: preview.DeletionMode,
-		ExecutionAvailable: cleanupExecutionEnabled() && execution.NewRecoveryVerifier().Available() == nil,
+		ExecutionAvailable: cleanupExecutionEnabled() && s.executor != nil && s.executor.Available() == nil,
 		RecoveryNote:       preview.RecoveryNote, Risks: append([]string(nil), preview.Risks...),
 		SideEffects: append([]string(nil), preview.SideEffects...), ExpiresAt: preview.ExpiresAt,
 	}

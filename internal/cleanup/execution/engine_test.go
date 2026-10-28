@@ -50,6 +50,34 @@ func (f fakeVerifier) Verify(context.Context, Target) (RecoveryEvidence, error) 
 	return f.evidence, f.err
 }
 
+type fakePreflight struct{ unsupported bool }
+
+func (fakePreflight) Available() error { return nil }
+func (f fakePreflight) Check(context.Context, Target) (PreflightEvidence, error) {
+	return PreflightEvidence{Supported: !f.unsupported, PolicyKnown: true, CapacityKnown: !f.unsupported,
+		Provider: "fake", ObservedAt: time.Now().Add(-time.Minute), ExpiresAt: time.Now().Add(time.Minute)}, nil
+}
+
+type fakeGuard struct{ closed int }
+
+func (fakeGuard) Available() error                                  { return nil }
+func (f *fakeGuard) Acquire(context.Context, Target) (Guard, error) { return f, nil }
+func (f *fakeGuard) Close() error                                   { f.closed++; return nil }
+
+type fakeReceiptProvider struct{ fail bool }
+
+func (fakeReceiptProvider) Available() error { return nil }
+func (f fakeReceiptProvider) Capture(_ context.Context, target Target, _ RecoveryEvidence, now time.Time) (RecycleReceipt, error) {
+	if f.fail {
+		return RecycleReceipt{}, errors.New("receipt unavailable")
+	}
+	return RecycleReceipt{TargetID: target.ID, OriginalFileID: target.File.FileID, Provider: "fake",
+		OpaqueToken: "opaque", ObservedAt: now, ExpiresAt: now.Add(time.Minute)}, nil
+}
+func (f fakeReceiptProvider) Rebind(context.Context, RecycleReceipt, Target, time.Time) (RecoveryEvidence, error) {
+	return RecoveryEvidence{Available: true, Kind: "fake", Token: "opaque"}, nil
+}
+
 type fakeRecorder struct{ records []Record }
 
 func (f *fakeRecorder) Record(record Record) { f.records = append(f.records, record) }
@@ -86,6 +114,9 @@ func fixtureExecution(t *testing.T, count int) (*Context, string, func()) {
 
 func newTestEngine(root string, executor Executor, verifier RecoveryVerifier) *Engine {
 	engine := NewEngine(executor, verifier, nil)
+	engine.preflight = fakePreflight{}
+	engine.finalGuard = &fakeGuard{}
+	engine.receipts = fakeReceiptProvider{}
 	engine.rootResolver = func(cleanup.Rule) (string, error) { return root, nil }
 	return engine
 }
@@ -205,6 +236,58 @@ type deniedExecutor struct{}
 
 func (deniedExecutor) Execute(context.Context, *Context, []Target, func(Progress)) (Result, error) {
 	return Result{State: StateVerifying, Items: []ItemResult{{TargetID: "c1", Status: ItemDenied, ReasonCode: "access_denied"}}}, nil
+}
+
+func TestEngineAvailabilityDefaultsToFailClosed(t *testing.T) {
+	engine := NewEngine(&fakeExecutor{}, fakeVerifier{available: true}, nil)
+	if err := engine.Available(); err == nil {
+		t.Fatal("engine without native safety providers advertised availability")
+	}
+}
+
+func TestEngineRefusesUnprovenNoFallbackAndMissingFinalGuard(t *testing.T) {
+	execution, root, cleanupFixture := fixtureExecution(t, 1)
+	defer cleanupFixture()
+	executor := &fakeExecutor{remove: 1}
+	engine := newTestEngine(root, executor, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true}})
+	engine.preflight = fakePreflight{unsupported: true}
+	if result := engine.Execute(context.Background(), execution, nil); result.ReasonCode != "permanent_fallback_unproven" || executor.calls != 0 {
+		t.Fatalf("preflight result = %+v calls=%d", result, executor.calls)
+	}
+
+	second, secondRoot, secondCleanup := fixtureExecution(t, 1)
+	defer secondCleanup()
+	secondExecutor := &fakeExecutor{remove: 1}
+	secondEngine := newTestEngine(secondRoot, secondExecutor, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true}})
+	secondEngine.finalGuard = NewUnavailableFinalGuard()
+	if result := secondEngine.Execute(context.Background(), second, nil); result.ReasonCode != "final_file_guard_unavailable" || secondExecutor.calls != 0 {
+		t.Fatalf("guard result = %+v calls=%d", result, secondExecutor.calls)
+	}
+}
+
+func TestReceiptFailureCannotComplete(t *testing.T) {
+	execution, root, cleanupFixture := fixtureExecution(t, 1)
+	defer cleanupFixture()
+	engine := newTestEngine(root, &fakeExecutor{remove: 1}, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true, Kind: "test", Token: "token"}})
+	engine.receipts = fakeReceiptProvider{fail: true}
+	result := engine.Execute(context.Background(), execution, nil)
+	if result.State == StateCompleted || result.Items[0].Status != ItemRemovedUnverified {
+		t.Fatalf("receipt failure result = %+v", result)
+	}
+}
+
+func TestFinalGuardClosesOnCompletion(t *testing.T) {
+	execution, root, cleanupFixture := fixtureExecution(t, 1)
+	defer cleanupFixture()
+	guard := &fakeGuard{}
+	engine := newTestEngine(root, &fakeExecutor{remove: 1}, fakeVerifier{available: true, evidence: RecoveryEvidence{Available: true, Kind: "test", Token: "token"}})
+	engine.finalGuard = guard
+	if result := engine.Execute(context.Background(), execution, nil); result.State != StateCompleted {
+		t.Fatalf("result = %+v", result)
+	}
+	if guard.closed != 1 {
+		t.Errorf("guard closed %d times", guard.closed)
+	}
 }
 
 func TestEngineRefusesUnverifiedRecovery(t *testing.T) {
