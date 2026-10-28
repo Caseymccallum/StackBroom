@@ -1,7 +1,9 @@
 # M3B-4 Recovery Feasibility and Architectural Decision
 
 **Status:** feasibility and architecture decision only. Cleanup execution remains
-disabled. No file was deleted, recycled, moved, renamed, purged or restored.
+disabled. No user file, Recycle Bin item or native Shell/COM operation was
+deleted, recycled, moved, renamed, purged or restored. Go tests create and remove
+disposable temporary fixtures only.
 
 **Baseline:** `feat/m3b-3-recovery-verification` at
 `c6959fa4ff4b8f313a70fee4454555adf7084c16`.
@@ -455,6 +457,8 @@ The test additions cover:
 - receipt failure cannot expose recovery evidence.
 
 No test invoked COM, Shell deletion, Recycle Bin, file rename or restoration.
+The fake executor removes only disposable temporary fixtures created by tests;
+no user path is used.
 
 
 ## 10. Exact next implementation milestone

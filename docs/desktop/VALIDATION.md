@@ -98,7 +98,7 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 - The frontend receives only sanitized DTOs. A JSON serialisation test asserts that command lines, home paths, project roots and a recognised secret do not cross the boundary.
 - `privacy.Apply` runs at the service boundary for both quick and full scans.
 - Process control is the only enabled mutation capability. It is limited to graceful close, forced termination and five non-real-time priority classes, requires a backend target token and explicit in-app confirmation, and refuses protected, critical and StackBroom processes.
-- Cleanup execution is compiled out of ordinary builds (`cleanup_execution` tag absent). The gated `ConfirmCleanup` method refuses before any native path, including when its environment variable is set. No file deletion, recycle, move, rename, purge or restoration has been tested or enabled. M3B-4 adds no native mutation path.
+- Cleanup execution is compiled out of ordinary builds (`cleanup_execution` tag absent). The gated `ConfirmCleanup` method refuses before any native path, including when its environment variable is set. No user file, Recycle Bin item or native Shell/COM operation has been deleted, recycled, moved, renamed, purged or restored. M3B-4 adds no native mutation path; fake tests remove disposable temporary fixtures only.
 - `GetProcessDetails` no longer returns `exePath`; paths remain internal to identity checks.
 - No shell execution, arbitrary filesystem write API or unrestricted system API is exposed to the frontend.
 - Docker remote endpoints are refused by the existing engine; the desktop shell has no override.

@@ -6,8 +6,9 @@ semantic versioning once it reaches 1.0.
 
 ## [Unreleased] - M3B-4 recovery feasibility decision
 
-Execution remains disabled. No file deletion, recycle, move, rename, purge or
-restoration was performed.
+Execution remains disabled. No user file, Recycle Bin item or native Shell/COM
+operation was deleted, recycled, moved, renamed, purged or restored. Tests use
+disposable temporary fixtures only.
 
 ### Decided
 
