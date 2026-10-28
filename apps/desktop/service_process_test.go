@@ -104,6 +104,9 @@ func TestPreviewConfirmExecuteOnce(t *testing.T) {
 	if operationID == "" {
 		t.Fatal("empty operation id")
 	}
+	if preview["risk"] != "irreversible" || preview["permission"] == "" {
+		t.Errorf("preview risk/permission missing: %+v", preview)
+	}
 
 	result, err := service.ConfirmProcessAction(operationID)
 	if err != nil {

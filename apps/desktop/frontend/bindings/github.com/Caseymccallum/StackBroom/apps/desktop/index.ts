@@ -3,9 +3,11 @@
 
 import * as DesktopService from "./desktopservice.js";
 import * as ProcessControlService from "./processcontrolservice.js";
+import * as StorageService from "./storageservice.js";
 export {
     DesktopService,
-    ProcessControlService
+    ProcessControlService,
+    StorageService
 };
 
 export type {
@@ -22,6 +24,17 @@ export type {
     Overview,
     ProcessRow,
     QuickResult,
+    StorageChildren,
+    StorageDuplicateFile,
+    StorageDuplicateGroup,
+    StorageFile,
+    StorageNode,
+    StorageProgress,
+    StorageRoot,
+    StorageScanOptions,
+    StorageScanView,
+    StorageSkip,
+    StorageTypeStat,
     VolumeRow,
     WSLDistribution,
     WSLView

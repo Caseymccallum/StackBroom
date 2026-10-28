@@ -92,7 +92,7 @@ describe("App", () => {
     render(<App />);
     await screen.findByText("TEST-PC");
     fireEvent.keyDown(window, { key: "3", ctrlKey: true });
-    expect(await screen.findByRole("heading", { name: "Volume capacity" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Storage intelligence" })).toBeInTheDocument();
   });
 
   it("keeps the current destination when skipping to the keyboard scroll region", async () => {

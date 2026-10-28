@@ -88,12 +88,23 @@ func (s *ProcessControlService) PreviewProcessAction(pid int32, action string, p
 		return nil, err
 	}
 
+	risk := "reversible"
+	switch processAction {
+	case processcontrol.ActionTerminate:
+		risk = "irreversible"
+	case processcontrol.ActionGracefulClose:
+		risk = "may-be-ignored"
+	}
 	return map[string]interface{}{
 		"operationId": preview.OperationID,
 		"pid":         preview.PID,
 		"action":      string(preview.Action),
 		"priority":    preview.Priority.String(),
 		"targetName":  preview.Target.Name,
+		"risk":        risk,
+		"permission":  "explicit per-action confirmation; protected and critical processes are refused",
+		"isProtected": preview.Target.IsProtected,
+		"isCritical":  preview.Target.IsCritical,
 		"expiresAt":   preview.ExpiresAt.Format(time.RFC3339),
 	}, nil
 }

@@ -4,6 +4,33 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M2 storage intelligence
+
+Read-only storage analysis for an explicitly selected folder. No cleanup or
+deletion action exists.
+
+### Added
+
+- `internal/storage` read-only scanner with bounded depth/entries, cancellation,
+  reparse-point protection, hard-link-aware totals, long-path/Unicode support,
+  placeholder awareness, large-file and folder aggregation, extension totals
+  and skipped-path reporting.
+- Staged duplicate verification: size, bounded prefix comparison, complete
+  SHA-256, post-hash metadata recheck and hard-link separation.
+- `StorageService` bridge with opaque root/scan IDs, one active scan, bounded
+  results, cancellation and scan-context expiry.
+- Storage explorer UI with folder selection, progress, treemap, breadcrumb,
+  search, accessible child table, largest folders/files, type summary, partial
+  warnings and duplicate evidence.
+- Storage scanner, bridge and UI tests.
+
+### Limits
+
+- M2 visual screenshots were not captured because the owner prohibited visual
+  validation that would bring the app window to the front.
+- Traversal is sequential; hashing is bounded-concurrent.
+- No deletion, cleanup, rename, move or attribute mutation was added.
+
 ## [Unreleased] - M1 process-control hardening and product architecture
 
 Security and correctness work on the process-control capability. No install,

@@ -12,6 +12,7 @@ Authoritative product and engineering direction for StackBroom.
 - [Privacy and history](PRIVACY-AND-HISTORY.md)
 - [Release strategy](RELEASE-STRATEGY.md)
 - [M2 Storage Intelligence brief](M2-STORAGE-BRIEF.md)
+- [M2 implementation status](M2-IMPLEMENTATION.md)
 
 Historical CLI roadmap: [`../ROADMAP.md`](../ROADMAP.md).
 M1 implementation and audit evidence: [`M1-PROCESS-CONTROL.md`](M1-PROCESS-CONTROL.md), [`M1-IMPLEMENTATION.md`](M1-IMPLEMENTATION.md), [`M1-SECURITY-AUDIT.md`](M1-SECURITY-AUDIT.md).

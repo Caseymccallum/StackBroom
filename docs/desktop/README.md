@@ -6,7 +6,7 @@
 - [Validation evidence](VALIDATION.md)
 - [Screenshots](screenshots/)
 - [Optional BYOK AI adviser — design only](BYOK-AI.md)
-- [Future storage analysis — design only](STORAGE-ANALYSIS.md)
+- [M2 storage intelligence implementation](../product/M2-IMPLEMENTATION.md)
 
 Inspection remains read-only. The only mutation capability is explicit, verified process control (graceful close, termination and non-real-time priority). It does not clean up files, remove containers or images, change startup/Windows settings, contact an AI provider or open a production network listener.
 

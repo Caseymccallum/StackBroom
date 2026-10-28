@@ -107,7 +107,7 @@ func (s *DesktopService) GetAppInfo() AppInfo {
 			"CPU usage is a short interval sample from Windows system counters, not a continuous monitor.",
 			"Listener ownership is confirmed only when the PID and its native creation time match before and after sampling; otherwise it is inferred or unknown.",
 			"Docker and WSL inspection can take several seconds. The interface remains responsive and the scan can be cancelled.",
-			"Storage shows volume capacity only. It does not claim that used space is safely reclaimable.",
+			"Storage analysis is read-only and limited to an explicitly selected folder. It does not claim that used space is safely reclaimable.",
 			"No AI provider is contacted in this milestone.",
 		},
 		Preview:        preview,

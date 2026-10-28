@@ -18,6 +18,8 @@ interface PendingPreview {
   actionLabel: string;
   priority: string;
   targetName: string;
+  risk?: string;
+  permission?: string;
   expiresAt: string;
 }
 
@@ -110,6 +112,8 @@ export function ProcessDetails({ process, onClose, onCompleted, previewOnly = fa
         actionLabel: label,
         priority: preview.priority || "Normal",
         targetName: preview.targetName || process.name,
+        risk: preview.risk,
+        permission: preview.permission,
         expiresAt: preview.expiresAt,
       });
     } catch (error) {
@@ -234,6 +238,11 @@ export function ProcessDetails({ process, onClose, onCompleted, previewOnly = fa
                       ? "The application may prompt to save work. If it ignores the request, StackBroom will not force it closed."
                       : "This changes only the scheduling priority, not a CPU limit."}
                 </p>
+                {pending.risk ? (
+                  <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                    Risk: <strong>{pending.risk}</strong>. Permission: {pending.permission || "explicit per-action confirmation"}.
+                  </p>
+                ) : null}
                 <p className="mt-1 text-xs" style={{ color: previewExpired ? "var(--red)" : "var(--muted)" }} role="status">
                   {previewExpired
                     ? "This preview has expired. Cancel and choose the action again."

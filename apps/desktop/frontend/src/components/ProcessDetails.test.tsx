@@ -34,6 +34,8 @@ describe("ProcessDetails", () => {
       action: "terminate",
       priority: "Normal",
       targetName: "disposable.exe",
+      risk: "irreversible",
+      permission: "explicit per-action confirmation",
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     });
     confirm.mockResolvedValue({ operationId: "op-1", success: true, outcome: "success", details: "process exit verified after termination" });
@@ -46,6 +48,7 @@ describe("ProcessDetails", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /End Process/i }));
     expect(await screen.findByText(/Native preview: disposable\.exe/i)).toBeInTheDocument();
+    expect(screen.getByText(/Risk:/)).toHaveTextContent("irreversible");
     expect(preview).toHaveBeenCalledWith(1234, "terminate", 0, "opaque-token");
     expect(confirm).not.toHaveBeenCalled();
 

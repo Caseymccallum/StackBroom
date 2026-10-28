@@ -176,6 +176,118 @@ export interface QuickResult {
     "warnings": string[] | null;
 }
 
+export interface StorageChildren {
+    "parent": StorageNode;
+    "children": StorageNode[] | null;
+    "truncated": boolean;
+}
+
+export interface StorageDuplicateFile {
+    "nodeId": string;
+    "name": string;
+    "relativePath": string;
+    "linkCount"?: number;
+}
+
+export interface StorageDuplicateGroup {
+    "id": string;
+    "size": number;
+    "hash": string;
+    "note": string;
+    "files": StorageDuplicateFile[] | null;
+}
+
+export interface StorageFile {
+    "nodeId": string;
+    "name": string;
+    "relativePath": string;
+    "extension": string;
+    "logicalBytes": number;
+    "allocatedBytes": number;
+    "allocatedKnown": boolean;
+    "linkCount"?: number;
+    "isPlaceholder"?: boolean;
+    "isSparse"?: boolean;
+}
+
+export interface StorageNode {
+    "id": string;
+    "parentId"?: string;
+    "name": string;
+    "kind": string;
+    "logicalBytes": number;
+    "allocatedBytes": number;
+    "fileCount": number;
+    "dirCount": number;
+    "linkCount"?: number;
+    "childCount": number;
+    "isPlaceholder"?: boolean;
+    "isReparse"?: boolean;
+    "isSparse"?: boolean;
+    "truncated"?: boolean;
+}
+
+export interface StorageProgress {
+    "phase": string;
+    "items": number;
+    "bytes": number;
+    "errors": number;
+    "partial": boolean;
+    "message"?: string;
+}
+
+export interface StorageRoot {
+    "id": string;
+    "label": string;
+    "displayPath": string;
+    "wholeDrive"?: boolean;
+    "createdAt": string;
+}
+
+export interface StorageScanOptions {
+    "includeHidden": boolean;
+    "includeSystem": boolean;
+    "maxDepth": number;
+    "maxEntries": number;
+}
+
+export interface StorageScanView {
+    "scanId": string;
+    "rootId": string;
+    "rootLabel": string;
+    "status": string;
+    "progress": StorageProgress;
+    "partial": boolean;
+    "partialReason"?: string;
+    "totalLogical": number;
+    "totalAllocated": number;
+    "totalFiles": number;
+    "totalDirs": number;
+    "skippedCount": number;
+    "durationMs": number;
+    "hashDurationMs": number;
+    "startedAt": string;
+    "completedAt": string;
+    "nodes": StorageNode[] | null;
+    "largestFolders": StorageNode[] | null;
+    "largestFiles": StorageFile[] | null;
+    "types": StorageTypeStat[] | null;
+    "duplicates": StorageDuplicateGroup[] | null;
+    "skipped"?: StorageSkip[] | null;
+    "warnings"?: string[] | null;
+}
+
+export interface StorageSkip {
+    "relativePath": string;
+    "reason": string;
+}
+
+export interface StorageTypeStat {
+    "extension": string;
+    "files": number;
+    "logicalBytes": number;
+}
+
 export interface VolumeRow {
     "root": string;
     "label": string;

@@ -9,7 +9,7 @@ This roadmap supersedes feature ordering in the legacy technical roadmap while p
 | Milestone | Capability | Permission |
 |---|---|---|
 | M1 | Process details, graceful close, verified termination, limited priority | Explicit per action |
-| M2 | Storage Intelligence: user-scoped analysis, treemap, large files, duplicate candidates | Read-only |
+| M2 | Storage Intelligence: user-scoped analysis, treemap, large files, duplicate candidates | Read-only (implementation on `feat/m2-storage-intelligence`) |
 | M3 | Curated cleanup engine with exact previews and recoverable operations where supported | Explicit per action |
 | M4 | Installed applications, startup inventory/management, advanced process controls | Explicit per action |
 

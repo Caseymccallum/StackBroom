@@ -109,9 +109,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 .\bin\StackBroom.exe
 ```
 
-It provides Overview, Processes, Storage, Developer Tools and Settings screens,
-with real Windows metrics, session-only charts and review cards that cannot act.
-There is no cleanup, AI call or production network listener. See:
+It provides Overview, Processes, Storage, Developer Tools and Settings screens
+with real Windows metrics, session-only charts, verified process controls and a
+read-only storage explorer for an explicitly selected folder. Storage analysis
+includes folder aggregation, large files, a treemap, file-type totals and
+SHA-256-verified duplicate candidates, but no cleanup or deletion action. There
+is no AI call or production network listener. See:
 
 - [Desktop architecture](docs/desktop/ARCHITECTURE.md)
 - [Visual and accessibility review](docs/desktop/DESIGN-REVIEW.md)

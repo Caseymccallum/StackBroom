@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,274,240 bytes** (about 11.3 MB)
-- SHA-256: `E1E333D8D429BF613511F1595177C912AD6C89EC1B919E44B91A1B2683A97D93`
-- Source branch: `feat/m1-hardening-product-roadmap`; version `0.2.0`.
+- Size: **11,384,832 bytes** (about 11.4 MB)
+- SHA-256: `F5C14EA88BF95D0648F60DFAC116EBADDF1DDF5A0ADD61A5A9279DA97B7B307D`
+- Source branch: `feat/m2-storage-intelligence`; version `0.2.0`.
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -37,11 +37,13 @@ The binary is intentionally not committed. The build script reproduces it from t
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
+`internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, full-hash confirmation, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded node evidence, root-path privacy, concurrent-scan refusal and cancellation.
+
 The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045, a valid CPU interval sample and two fixed volumes. No live process termination, priority change or graceful close has been performed.
 
 ### Frontend
 
-`npm test` passes **23 tests / 9 files**:
+`npm test` passes **30 tests / 10 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -50,13 +52,15 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - listener search, ownership filter and pagination;
 - App load, navigation, theme change and keyboard shortcut with a mocked bridge;
 - process details confirmation, cancel, Escape, backend-error honesty, no `window.confirm`;
-- keyboard-focusable process detail buttons.
+- keyboard-focusable process detail buttons;
+- Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence and partial-result labelling;
+- no cleanup/delete action in the Storage UI.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 
 ### Visual capture
 
-28 current screenshots at exact 1366×768 and 1920×1080 client sizes, dark and light, in `docs/desktop/screenshots/`: the five screens, process details and the in-app action confirmation. Captures came from the real executable, not a static mock-up. `capture-process-modal.ps1` only opens preview state; it never confirms an action.
+The existing 28 screenshots cover the M1 UI at exact 1366×768 and 1920×1080 client sizes, dark and light. **M2 Storage screenshots were not captured in this task** because the owner is using another fullscreen application and explicitly prohibited visual validation that would bring the StackBroom window to the front. The M2 UI is covered by component tests only; a visual recapture is an outstanding gate.
 
 ## Performance observations
 
@@ -96,6 +100,8 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - Go 1.27.3 was not installed and no system-wide tooling was changed. Release builds should use Go 1.27.3+ after owner validation.
 - The Go race detector was not runnable locally because the installed environment has no CGO compiler; overlap/cancellation is covered by a functional concurrency test instead.
 - Screen-reader/axe/Narrator validation is not yet performed.
-- The full-folder storage analyzer and duplicate-file engine are design-only.
+- The storage analyzer is read-only and requires a user-selected folder. It has no cleanup or deletion capability.
+- M2 visual screenshots and screen-reader/axe/Narrator validation remain outstanding because visual validation was prohibited during this task.
+- Storage traversal is sequential; only duplicate hashing uses bounded workers.
 - The BYOK AI adviser is design-only.
 - The app is a desktop MVP, not a tagged or published release.

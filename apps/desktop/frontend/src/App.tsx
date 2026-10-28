@@ -50,8 +50,8 @@ const PAGE_META: Record<NavKey, { eyebrow: string; title: string; subtitle: stri
   },
   storage: {
     eyebrow: "Storage",
-    title: "Volume capacity",
-    subtitle: "A first-stage read-only view of fixed-volume capacity and free space—not a reclaimable-space promise.",
+    title: "Storage intelligence",
+    subtitle: "Read-only folder analysis, treemap and verified duplicate candidates. Used space is never presented as safely reclaimable.",
   },
   developer: {
     eyebrow: "Developer evidence",
