@@ -1,5 +1,7 @@
 # Cleanup Safety Specification
 
+Implementation design for M3: [`M3-CLEANUP-SPEC.md`](M3-CLEANUP-SPEC.md). This document remains the high-level safety policy; M3 is design-only and no deletion capability exists.
+
 ## Default rule
 
 StackBroom does not delete anything in M2. M2 discovers and measures. M3 introduces a curated, preview-based cleanup engine.

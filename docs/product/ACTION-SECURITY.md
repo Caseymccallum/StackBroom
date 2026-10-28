@@ -1,5 +1,7 @@
 # Action Security Architecture
 
+M3 applies this model through the rule-bound design in [`M3-CLEANUP-SPEC.md`](M3-CLEANUP-SPEC.md); no deletion capability is implemented in M2.
+
 ## Scope
 
 This document describes how StackBroom authorises system-changing actions. It applies to process control today and is the reusable pattern for startup, cleanup, file locks and application management.
