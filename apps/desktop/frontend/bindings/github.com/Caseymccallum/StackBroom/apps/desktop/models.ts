@@ -16,6 +16,96 @@ export interface AppInfo {
     "previewConfirm"?: boolean;
 }
 
+export interface CleanupCandidate {
+    "id": string;
+    "name": string;
+    "relativePath": string;
+    "logicalBytes": number;
+    "allocatedBytes": number;
+    "allocatedKnown": boolean;
+    "modifiedAt": string;
+    "linkCount"?: number;
+    "uncertain": boolean;
+    "uncertainReason"?: string;
+}
+
+export interface CleanupDiscoveryView {
+    "discoveryId": string;
+    "rule": CleanupRule;
+    "status": string;
+    "errorCode"?: string;
+    "errorMessage"?: string;
+    "progress": CleanupProgress;
+    "candidates": CleanupCandidate[] | null;
+    "excluded": CleanupExclusion[] | null;
+    "excludedCounts": { [_ in string]?: number } | null;
+    "excludedTotal": number;
+    "scannedFiles": number;
+    "eligible": number;
+    "totalLogical": number;
+    "totalAllocated": number;
+    "allocatedUnknown": number;
+    "truncated": boolean;
+    "partial": boolean;
+    "partialReason"?: string;
+    "coverage": StorageCoverage;
+    "skippedCount": number;
+    "startedAt": string;
+    "completedAt": string;
+}
+
+export interface CleanupExclusion {
+    "relativePath": string;
+    "reason": string;
+}
+
+export interface CleanupPreviewView {
+    "previewId": string;
+    "ruleId": string;
+    "ruleVersion": string;
+    "ruleTitle": string;
+    "selected": CleanupCandidate[] | null;
+    "excluded": CleanupExclusion[] | null;
+    "fileCount": number;
+    "totalLogical": number;
+    "totalAllocated": number;
+    "recoverableBytes": number;
+    "recoverableKnown": boolean;
+    "allocatedUnknown": number;
+    "deletionMode": string;
+    "recoveryNote": string;
+    "risks": string[] | null;
+    "sideEffects": string[] | null;
+    "expiresAt": string;
+}
+
+export interface CleanupProgress {
+    "phase": string;
+    "items": number;
+    "bytes": number;
+    "errors": number;
+    "partial": boolean;
+    "message"?: string;
+}
+
+export interface CleanupRule {
+    "id": string;
+    "version": string;
+    "title": string;
+    "description": string;
+    "owner": string;
+    "category": string;
+    "scopeDisplay": string;
+    "supportedWindows": string;
+    "minAgeDays": number;
+    "deletionMode": string;
+    "recoverable": string;
+    "requiresClosed"?: string[] | null;
+    "risks": string[] | null;
+    "evidence": string[] | null;
+    "whySafe": string;
+}
+
 export interface ContainerRow {
     "name": string;
     "image": string;
@@ -201,6 +291,8 @@ export interface StorageDuplicateCoverage {
     "policySkipped": number;
     "candidateConsidered": number;
     "candidateCap": number;
+    "hashAttempted": number;
+    "hashFailed": number;
     "verified": number;
     "changed": number;
     "truncated": boolean;

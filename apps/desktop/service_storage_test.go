@@ -122,6 +122,9 @@ func TestStorageServiceRequiresAuthorisedRootAndReturnsBoundedEvidence(t *testin
 	if err != nil || len(searchPage.Children) != 1 || searchPage.Children[0].Name != "media" {
 		t.Fatalf("full-directory search = %+v, %v", searchPage, err)
 	}
+	if searchPage.TotalLogical != searchPage.Children[0].LogicalBytes {
+		t.Errorf("search total does not describe matched dataset: %+v", searchPage)
+	}
 	if _, err := service.GetStorageNodePage(scanID, view.RootNodeID, "not-a-cursor", 2, ""); err == nil {
 		t.Error("invalid cursor accepted")
 	}

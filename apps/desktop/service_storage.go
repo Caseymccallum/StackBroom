@@ -340,6 +340,8 @@ func projectStorageResult(view StorageScanView, result *storage.Result) StorageS
 		PolicySkipped:       result.DuplicateCoverage.PolicySkipped,
 		CandidateConsidered: result.DuplicateCoverage.CandidateConsidered,
 		CandidateCap:        result.DuplicateCoverage.CandidateCap,
+		HashAttempted:       result.DuplicateCoverage.HashAttempted,
+		HashFailed:          result.DuplicateCoverage.HashFailed,
 		Verified:            result.DuplicateCoverage.Verified,
 		Changed:             result.DuplicateCoverage.Changed,
 		Truncated:           result.DuplicateCoverage.Truncated,

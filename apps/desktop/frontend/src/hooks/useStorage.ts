@@ -22,6 +22,7 @@ export interface StorageState {
   trail: StorageNode[];
   query: string;
   totalChildren: number;
+  totalLogical: number;
   remainingLogical: number;
   nextCursor: string;
   busy: boolean;
@@ -50,6 +51,7 @@ export function useStorage(): StorageState {
   const [trail, setTrail] = useState<StorageNode[]>([]);
   const [query, setQuery] = useState("");
   const [totalChildren, setTotalChildren] = useState(0);
+  const [totalLogical, setTotalLogical] = useState(0);
   const [remainingLogical, setRemainingLogical] = useState(0);
   const [nextCursor, setNextCursor] = useState("");
   const [busy, setBusy] = useState(false);
@@ -78,6 +80,7 @@ export function useStorage(): StorageState {
       setTrail([]);
       setQuery("");
       setTotalChildren(0);
+      setTotalLogical(0);
       setRemainingLogical(0);
       setNextCursor("");
     } catch (cause) {
@@ -104,6 +107,7 @@ export function useStorage(): StorageState {
             setTrail([]);
             setQuery("");
             setTotalChildren(next.rootChildCount ?? (next.nodes ?? []).length);
+            setTotalLogical(next.rootLogical ?? 0);
             setRemainingLogical(next.rootRemaining ?? 0);
             setNextCursor(next.nodesNextCursor ?? "");
           }
@@ -131,6 +135,7 @@ export function useStorage(): StorageState {
       setTrail([]);
       setQuery("");
       setTotalChildren(0);
+      setTotalLogical(0);
       setRemainingLogical(0);
       setNextCursor("");
       try {
@@ -166,6 +171,7 @@ export function useStorage(): StorageState {
         setCurrent(nodeID === view.rootNodeId ? null : page.node);
         setChildren((existing) => append ? [...existing, ...(page.children ?? [])] : (page.children ?? []));
         setTotalChildren(page.totalChildren);
+        setTotalLogical(page.totalLogical);
         setRemainingLogical(page.remainingLogical);
         setNextCursor(page.nextCursor ?? "");
         setQuery(term);
@@ -216,5 +222,5 @@ export function useStorage(): StorageState {
     await loadPage(current?.id ?? view.rootNodeId, nextCursor, query, true);
   }, [view?.scanId, view?.rootNodeId, current?.id, nextCursor, query, loadPage]);
 
-  return { root, view, current, children, trail, query, totalChildren, remainingLogical, nextCursor, busy, error, chooseRoot, startScan, cancel, openNode, goToTrail, search, nextPage };
+  return { root, view, current, children, trail, query, totalChildren, totalLogical, remainingLogical, nextCursor, busy, error, chooseRoot, startScan, cancel, openNode, goToTrail, search, nextPage };
 }

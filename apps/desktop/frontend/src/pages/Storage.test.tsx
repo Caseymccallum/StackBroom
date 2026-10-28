@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   trail: [],
   query: "",
   totalChildren: 0,
+  totalLogical: 0,
   remainingLogical: 0,
   nextCursor: "",
   busy: false,
@@ -76,6 +77,7 @@ beforeEach(() => {
   state.view = null;
   state.children = [];
   state.totalChildren = 0;
+  state.totalLogical = 0;
   state.remainingLogical = 0;
   state.nextCursor = "";
   state.query = "";
@@ -104,7 +106,7 @@ describe("StoragePage", () => {
       progress: { phase: "complete", items: 2, bytes: 100, errors: 0, partial: false },
       partial: false,
       coverage: { exhaustive: true, accessDenied: 0, hiddenExcluded: 0, systemExcluded: 0, reparseExcluded: 0, depthLimit: false, entryLimit: false, cancelled: false, timedOut: false, reasons: [] },
-      duplicateCoverage: { enumerated: 1, eligible: 1, policySkipped: 0, candidateConsidered: 1, candidateCap: 4000, verified: 0, changed: 0, truncated: false },
+      duplicateCoverage: { enumerated: 1, eligible: 1, policySkipped: 0, candidateConsidered: 1, candidateCap: 4000, hashAttempted: 0, hashFailed: 0, verified: 0, changed: 0, truncated: false },
       nodesNextCursor: "",
       rootChildCount: 1,
       rootLogical: 100,
@@ -147,7 +149,7 @@ describe("StoragePage", () => {
       scanId: "scan-1", rootId: "root-1", rootNodeId: "n1", rootLabel: "fixture", status: "completed",
       progress: { phase: "complete", items: 3, bytes: 100, errors: 0, partial: false }, partial: false,
       coverage: { exhaustive: true, accessDenied: 0, hiddenExcluded: 0, systemExcluded: 0, reparseExcluded: 0, depthLimit: false, entryLimit: false, cancelled: false, timedOut: false, reasons: [] },
-      duplicateCoverage: { enumerated: 1, eligible: 1, policySkipped: 0, candidateConsidered: 1, candidateCap: 4000, verified: 0, changed: 0, truncated: false },
+      duplicateCoverage: { enumerated: 1, eligible: 1, policySkipped: 0, candidateConsidered: 1, candidateCap: 4000, hashAttempted: 0, hashFailed: 0, verified: 0, changed: 0, truncated: false },
       nodesNextCursor: "cursor-1", rootChildCount: 3, rootLogical: 100, rootRemaining: 50,
       totalLogical: 100, totalAllocated: 100, totalFiles: 1, totalDirs: 1, skippedCount: 0,
       durationMs: 20, hashDurationMs: 0, startedAt: "2026-10-28T00:00:00Z", completedAt: "2026-10-28T00:00:01Z",
@@ -165,7 +167,7 @@ describe("StoragePage", () => {
       progress: { phase: "complete", items: 3, bytes: 10, errors: 1, partial: true },
       partial: true, partialReason: "cancelled", totalLogical: 10, totalAllocated: 10,
       coverage: { exhaustive: false, accessDenied: 0, hiddenExcluded: 0, systemExcluded: 0, reparseExcluded: 0, depthLimit: false, entryLimit: false, cancelled: true, timedOut: false, reasons: ["cancelled"] },
-      duplicateCoverage: { enumerated: 1, eligible: 0, policySkipped: 1, candidateConsidered: 0, candidateCap: 4000, verified: 0, changed: 0, truncated: false },
+      duplicateCoverage: { enumerated: 1, eligible: 0, policySkipped: 1, candidateConsidered: 0, candidateCap: 4000, hashAttempted: 0, hashFailed: 0, verified: 0, changed: 0, truncated: false },
       nodesNextCursor: "", rootChildCount: 0, rootLogical: 0, rootRemaining: 0,
       totalFiles: 1, totalDirs: 1, skippedCount: 1, durationMs: 5, hashDurationMs: 0,
       startedAt: "2026-10-28T00:00:00Z", completedAt: "2026-10-28T00:00:01Z",

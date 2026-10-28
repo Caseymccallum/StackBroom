@@ -66,6 +66,12 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 	for _, group := range sizeGroups {
 		results := hashFiles(ctx, group, partialHashBytes, request.Workers, progress)
 		for _, result := range results {
+			coverage.HashAttempted++
+			if !result.ok {
+				coverage.HashFailed++
+				coverage.Truncated = true
+				continue
+			}
 			key := fmt.Sprintf("%d:%s", group[0].LogicalBytes, result.hash)
 			partial[key] = append(partial[key], group[result.index])
 		}
@@ -85,8 +91,15 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 	for _, group := range fullGroups {
 		results := hashFiles(ctx, group, 0, request.Workers, progress)
 		for _, result := range results {
+			coverage.HashAttempted++
+			if !result.ok {
+				coverage.HashFailed++
+				coverage.Truncated = true
+				continue
+			}
 			if !fileStillMatches(group[result.index]) {
 				coverage.Changed++
+				coverage.Truncated = true
 				continue
 			}
 			coverage.Verified++
@@ -182,9 +195,7 @@ func hashFiles(ctx context.Context, files []*FileRecord, limit uint64, workers i
 		if progress != nil {
 			progress(done, len(files))
 		}
-		if result.ok {
-			output = append(output, result)
-		}
+		output = append(output, result)
 	}
 	return output
 }
@@ -219,23 +230,32 @@ func hashFile(ctx context.Context, file *FileRecord, limit uint64) (string, bool
 	return hex.EncodeToString(hasher.Sum(nil)), true
 }
 
-func fileStillMatches(file *FileRecord) bool {
+// ValidateFileRecord rechecks scope, identity and metadata for a previously
+// discovered file. It is read-only and is used before a cleanup preview.
+func ValidateFileRecord(file *FileRecord) error {
+	if file == nil {
+		return fmt.Errorf("missing file record")
+	}
 	if !pathWithinRoot(file.Root, file.Path) || !resolvedPathWithinRoot(file.Root, file.Path) {
-		return false
+		return fmt.Errorf("target is outside the approved root or has a reparse ancestor")
 	}
 	info, err := os.Lstat(platformPath(file.Path))
 	if err != nil || info.IsDir() || info.Size() < 0 {
-		return false
+		return fmt.Errorf("target is no longer a regular accessible file")
 	}
 	if uint64(info.Size()) != file.LogicalBytes || !info.ModTime().Equal(file.ModTime) {
-		return false
+		return fmt.Errorf("target metadata changed")
 	}
 	meta := inspectFile(file.Path, info)
 	if meta.Placeholder || meta.Reparse {
-		return false
+		return fmt.Errorf("target is a reparse point or cloud placeholder")
 	}
 	if file.FileID != "" && meta.FileID != "" && file.FileID != meta.FileID {
-		return false
+		return fmt.Errorf("target identity changed")
 	}
-	return true
+	return nil
+}
+
+func fileStillMatches(file *FileRecord) bool {
+	return ValidateFileRecord(file) == nil
 }

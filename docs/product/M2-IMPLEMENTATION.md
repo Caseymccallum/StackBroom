@@ -74,6 +74,26 @@
 - The treemap is an area-proportional recursive layout with a 60-tile budget. Remaining indexed children are represented by an explicit Other region with measured bytes; the table remains the keyboard/screen-reader alternative.
 - Bridge errors are structured (`errorCode`, `errorMessage`) and sanitised. Absolute paths other than the explicitly selected root are replaced before crossing the bridge.
 
+## Residual filesystem race analysis
+
+Protected by the current design:
+
+- Final path is a reparse point or cloud placeholder at discovery, preview or verified read.
+- A file is replaced by a junction/symlink before hashing; the verified open refuses it.
+- A file's size, write time or file ID changes before or after hashing; it is excluded.
+- Lexical path escape, resolved path escape and a reparse ancestor detected during the pre-open resolution check.
+- A directory replaces a normal child directory with a reparse point before its handle is opened.
+- Hard-link double counting and hard links being reported as independent copies.
+
+Not universally protected:
+
+- A malicious concurrent process can mutate an ancestor between the `EvalSymlinks` check and the final `CreateFile`/`Open` call. Windows path-based APIs do not provide a portable handle-relative open here.
+- The post-hash check is path-based; it verifies the path still resolves to the same identity, but cannot prove that the content handle belonged to the same ancestor chain if a race occurred.
+- A process with sufficient privileges can restore metadata after changing content; size/write-time checks are evidence, not a cryptographic proof of immutability.
+- Network shares, unusual reparse providers and volume snapshots may behave differently from the local NTFS fixtures tested here.
+
+These residual scenarios must be revisited before any M3 mutation. This document does not claim universal protection against all concurrent filesystem mutations.
+
 ## Safety evidence
 
 - Storage root must pass `storage.ValidateRoot`; reparse roots are rejected.

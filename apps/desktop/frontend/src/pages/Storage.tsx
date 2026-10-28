@@ -215,7 +215,7 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
 
                   <StorageTreemap
                     nodes={visibleChildren}
-                    totalBytes={storage.current?.logicalBytes ?? result.totalLogical}
+                    totalBytes={storage.query ? storage.totalLogical : (storage.current?.logicalBytes ?? result.rootLogical)}
                     onOpen={(node) => void storage.openNode(node)}
                   />
                   <StorageChildrenTable nodes={storage.children} onOpen={(node) => void storage.openNode(node)} />
@@ -257,7 +257,9 @@ function StorageCoveragePanel({ view }: { view: StorageScanView }) {
         <span>{duplicates.eligible} eligible</span>
         <span>{duplicates.policySkipped} policy-skipped</span>
         <span>{duplicates.candidateConsidered}/{duplicates.candidateCap} candidates considered</span>
+        <span>{duplicates.hashAttempted} hash attempts</span>
         <span>{duplicates.verified} verified</span>
+        {duplicates.hashFailed > 0 ? <span>{duplicates.hashFailed} hash failures</span> : null}
         {duplicates.changed > 0 ? <span>{duplicates.changed} changed during verification</span> : null}
         {duplicates.truncated ? <strong>Duplicate analysis incomplete</strong> : <span>Duplicate analysis complete</span>}
       </div>

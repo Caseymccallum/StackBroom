@@ -3,12 +3,17 @@ import { formatBytes, formatPercent } from "../lib/format";
 
 const MAX_TILES = 60;
 
-interface LayoutTile {
+export interface TreemapTile {
   node: StorageNode;
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+interface LayoutItem {
+  node: StorageNode;
+  value: number;
 }
 
 function tone(node: StorageNode): string {
@@ -39,39 +44,46 @@ function tone(node: StorageNode): string {
   }
 }
 
-function layout(nodes: StorageNode[]): LayoutTile[] {
-  const output: LayoutTile[] = [];
-  if (nodes.length === 0) return output;
-  const items = nodes.slice(0, MAX_TILES);
-  const sum = items.reduce((value, node) => value + Math.max(node.logicalBytes, 1), 0);
-  const normalized = items.map((node) => ({ node, value: Math.max(node.logicalBytes, 1) / sum }));
-  partition(normalized, 0, 0, 100, 100, output);
+export function computeTreemapLayout(nodes: StorageNode[]): TreemapTile[] {
+  const output: TreemapTile[] = [];
+  const items: LayoutItem[] = nodes
+    .filter((node) => node.logicalBytes > 0)
+    .slice(0, MAX_TILES)
+    .map((node) => ({ node, value: node.logicalBytes }));
+  if (items.length === 0) return output;
+  const total = items.reduce((value, item) => value + item.value, 0);
+  partition(items, total, 0, 0, 100, 100, output);
   return output;
 }
 
-function partition(nodes: { node: StorageNode; value: number }[], x: number, y: number, width: number, height: number, output: LayoutTile[]) {
-  if (nodes.length === 0) return;
-  if (nodes.length === 1) {
-    output.push({ node: nodes[0].node, x, y, width, height });
+function partition(items: LayoutItem[], regionTotal: number, x: number, y: number, width: number, height: number, output: TreemapTile[]) {
+  if (items.length === 0 || regionTotal <= 0) return;
+  if (items.length === 1) {
+    output.push({ node: items[0].node, x, y, width, height });
     return;
   }
   let cumulative = 0;
   let split = 1;
-  for (; split < nodes.length; split++) {
-    cumulative += nodes[split - 1].value;
-    if (cumulative >= 0.5) break;
+  for (; split < items.length; split++) {
+    cumulative += items[split - 1].value;
+    if (cumulative >= regionTotal / 2) break;
   }
-  if (split >= nodes.length) split = nodes.length - 1;
-  const left = nodes.slice(0, split);
-  const right = nodes.slice(split);
-  const leftShare = left.reduce((value, item) => value + item.value, 0);
-  const rightShare = 1 - leftShare;
+  if (split >= items.length) split = items.length - 1;
+  const left = items.slice(0, split);
+  const right = items.slice(split);
+  const leftTotal = left.reduce((value, item) => value + item.value, 0);
+  const rightTotal = regionTotal - leftTotal;
+  if (rightTotal <= 0) {
+    output.push(...left.map((item) => ({ node: item.node, x, y, width, height })));
+    return;
+  }
+  const leftShare = leftTotal / regionTotal;
   if (width >= height) {
-    partition(left, x, y, width * leftShare, height, output);
-    partition(right, x + width * leftShare, y, width * rightShare, height, output);
+    partition(left, leftTotal, x, y, width * leftShare, height, output);
+    partition(right, rightTotal, x + width * leftShare, y, width * (1 - leftShare), height, output);
   } else {
-    partition(left, x, y, width, height * leftShare, output);
-    partition(right, x, y + height * leftShare, width, height * rightShare, output);
+    partition(left, leftTotal, x, y, width, height * leftShare, output);
+    partition(right, rightTotal, x, y + height * leftShare, width, height * (1 - leftShare), output);
   }
 }
 
@@ -107,7 +119,7 @@ export function StorageTreemap({ nodes, totalBytes, onOpen }: { nodes: StorageNo
   }
   return (
     <div className="storage-treemap" role="group" aria-label="Area-proportional storage treemap. The table below provides equivalent keyboard access.">
-      {layout(visible).map((tile) => {
+      {computeTreemapLayout(visible).map((tile) => {
         const clickable = tile.node.kind === "dir";
         const percent = (tile.node.logicalBytes / total) * 100;
         return (

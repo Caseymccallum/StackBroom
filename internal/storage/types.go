@@ -133,6 +133,8 @@ type DuplicateCoverage struct {
 	PolicySkipped       int
 	CandidateConsidered int
 	CandidateCap        int
+	HashAttempted       int
+	HashFailed          int
 	Verified            int
 	Changed             int
 	Truncated           bool

@@ -179,6 +179,24 @@ func TestScanHandlesUnicodeAndDeepNames(t *testing.T) {
 	}
 }
 
+func TestDuplicateHashFailuresAreReported(t *testing.T) {
+	root := t.TempDir()
+	request := DefaultRequest(root)
+	request.MinDuplicateSize = 1
+	request.Workers = 1
+	files := []*FileRecord{
+		{Root: root, Path: filepath.Join(root, "missing-a.bin"), LogicalBytes: 100},
+		{Root: root, Path: filepath.Join(root, "missing-b.bin"), LogicalBytes: 100},
+	}
+	groups, coverage := NewScanner().findDuplicates(context.Background(), files, request, nil)
+	if len(groups) != 0 {
+		t.Errorf("missing files produced a duplicate group: %+v", groups)
+	}
+	if coverage.HashAttempted != 2 || coverage.HashFailed != 2 || !coverage.Truncated {
+		t.Errorf("hash failure coverage = %+v", coverage)
+	}
+}
+
 func TestDuplicateCandidateCapIsReported(t *testing.T) {
 	root := t.TempDir()
 	for index := 0; index < 4; index++ {

@@ -39,6 +39,8 @@ type StorageDuplicateCoverage struct {
 	PolicySkipped       int  `json:"policySkipped"`
 	CandidateConsidered int  `json:"candidateConsidered"`
 	CandidateCap        int  `json:"candidateCap"`
+	HashAttempted       int  `json:"hashAttempted"`
+	HashFailed          int  `json:"hashFailed"`
 	Verified            int  `json:"verified"`
 	Changed             int  `json:"changed"`
 	Truncated           bool `json:"truncated"`
