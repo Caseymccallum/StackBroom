@@ -43,7 +43,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ### Frontend
 
-`npm test` passes **30 tests / 10 files**:
+`npm test` passes **31 tests / 11 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -52,7 +52,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - listener search, ownership filter and pagination;
 - App load, navigation, theme change and keyboard shortcut with a mocked bridge;
 - process details confirmation, cancel, Escape, backend-error honesty, no `window.confirm`;
-- keyboard-focusable process detail buttons;
+- keyboard-focusable process detail buttons and drawer closure when a refreshed inventory no longer contains the PID;
 - Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence and partial-result labelling;
 - no cleanup/delete action in the Storage UI.
 
