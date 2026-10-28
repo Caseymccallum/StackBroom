@@ -11,6 +11,10 @@
 - Eligibility: regular file, at least 14 days old, single hard link, not hidden/system, not reparse, not cloud placeholder.
 - Exclusions: directories, links, placeholders, hidden/system content, newer files.
 - Deletion mode for a future milestone: Recycle Bin where supported; recovery uncertain.
+- Contents: application-created temporary data; contents vary and are not interpreted.
+- Consequences: applications may lose cached work or recreate files; an application that still owns an old file may fail.
+- Regeneration: application-dependent and not guaranteed.
+- Must close first: applications that still own the candidate files; this is a prerequisite for a future execution, not enforced by preview.
 - Risk: applications may still own old temporary files; Recycle Bin support varies.
 - Why defensible: narrow per-user temp scope plus long idle age and identity checks.
 
@@ -18,6 +22,10 @@
 
 - Scope: `%LOCALAPPDATA%\CrashDumps`.
 - Eligibility: `.dmp` regular files at least 7 days old, single link, not hidden/system, not reparse/placeholder.
+- Contents: process crash memory dumps that may contain private application data.
+- Consequences: diagnostic evidence is removed; support investigation may no longer be possible.
+- Regeneration: not supported.
+- Must close first: no fixed requirement; the application that produced the dump is usually already closed.
 - Risk: dumps are diagnostic evidence; users may need them for support.
 - Deletion mode: Recycle Bin where supported; recovery uncertain.
 
