@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
-  StorageChildren,
   StorageNode,
+  StorageNodePage,
   StorageRoot,
   StorageScanOptions,
   StorageScanView,
@@ -20,6 +20,10 @@ export interface StorageState {
   current: StorageNode | null;
   children: StorageNode[];
   trail: StorageNode[];
+  query: string;
+  totalChildren: number;
+  remainingLogical: number;
+  nextCursor: string;
   busy: boolean;
   error: string | null;
   chooseRoot: () => Promise<void>;
@@ -27,6 +31,8 @@ export interface StorageState {
   cancel: () => Promise<void>;
   openNode: (node: StorageNode) => Promise<void>;
   goToTrail: (index: number) => Promise<void>;
+  search: (query: string) => Promise<void>;
+  nextPage: () => Promise<void>;
 }
 
 const defaultOptions: StorageScanOptions = {
@@ -42,6 +48,10 @@ export function useStorage(): StorageState {
   const [current, setCurrent] = useState<StorageNode | null>(null);
   const [children, setChildren] = useState<StorageNode[]>([]);
   const [trail, setTrail] = useState<StorageNode[]>([]);
+  const [query, setQuery] = useState("");
+  const [totalChildren, setTotalChildren] = useState(0);
+  const [remainingLogical, setRemainingLogical] = useState(0);
+  const [nextCursor, setNextCursor] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -66,6 +76,10 @@ export function useStorage(): StorageState {
       setCurrent(null);
       setChildren([]);
       setTrail([]);
+      setQuery("");
+      setTotalChildren(0);
+      setRemainingLogical(0);
+      setNextCursor("");
     } catch (cause) {
       if (mounted.current) setError(errorMessage(cause));
     } finally {
@@ -83,11 +97,15 @@ export function useStorage(): StorageState {
         if (next.status !== "running") {
           setBusy(false);
           if (next.status === "error") {
-            setError(next.warnings?.[0] || "Storage scan failed.");
+            setError(next.errorMessage || next.warnings?.[0] || "Storage scan failed.");
           } else {
             setChildren(next.nodes ?? []);
             setCurrent(null);
             setTrail([]);
+            setQuery("");
+            setTotalChildren(next.rootChildCount ?? (next.nodes ?? []).length);
+            setRemainingLogical(next.rootRemaining ?? 0);
+            setNextCursor(next.nodesNextCursor ?? "");
           }
           return;
         }
@@ -111,6 +129,10 @@ export function useStorage(): StorageState {
       setCurrent(null);
       setChildren([]);
       setTrail([]);
+      setQuery("");
+      setTotalChildren(0);
+      setRemainingLogical(0);
+      setNextCursor("");
       try {
         const scanID = await StorageService.StartStorageScan(root.id, options);
         if (!mounted.current) return;
@@ -135,45 +157,64 @@ export function useStorage(): StorageState {
     }
   }, [view?.scanId]);
 
+  const loadPage = useCallback(
+    async (nodeID: string, cursor: string, term: string, append: boolean): Promise<StorageNodePage | null> => {
+      if (!view?.scanId) return null;
+      try {
+        const page = await StorageService.GetStorageNodePage(view.scanId, nodeID, cursor, 100, term);
+        if (!mounted.current) return null;
+        setCurrent(nodeID === view.rootNodeId ? null : page.node);
+        setChildren((existing) => append ? [...existing, ...(page.children ?? [])] : (page.children ?? []));
+        setTotalChildren(page.totalChildren);
+        setRemainingLogical(page.remainingLogical);
+        setNextCursor(page.nextCursor ?? "");
+        setQuery(term);
+        return page;
+      } catch (cause) {
+        if (mounted.current) setError(errorMessage(cause));
+        return null;
+      }
+    },
+    [view?.scanId, view?.rootNodeId],
+  );
+
   const openNode = useCallback(
     async (node: StorageNode) => {
       if (!view?.scanId || node.kind !== "dir") return;
-      try {
-        const result: StorageChildren = await StorageService.GetStorageNode(view.scanId, node.id);
-        if (!mounted.current) return;
-        setCurrent(result.parent);
-        setChildren(result.children ?? []);
-        setTrail((existing) => [...existing, result.parent]);
-      } catch (cause) {
-        if (mounted.current) setError(errorMessage(cause));
-      }
+      const page = await loadPage(node.id, "", "", false);
+      if (page) setTrail((existing) => [...existing, page.node]);
     },
-    [view?.scanId],
+    [view?.scanId, loadPage],
   );
 
   const goToTrail = useCallback(
     async (index: number) => {
       if (!view?.scanId) return;
       if (index < 0) {
-        setCurrent(null);
+        await loadPage(view.rootNodeId, "", "", false);
         setTrail([]);
-        setChildren(view.nodes ?? []);
         return;
       }
       const target = trail[index];
       if (!target) return;
-      try {
-        const result = await StorageService.GetStorageNode(view.scanId, target.id);
-        if (!mounted.current) return;
-        setCurrent(result.parent);
-        setChildren(result.children ?? []);
-        setTrail(trail.slice(0, index + 1));
-      } catch (cause) {
-        if (mounted.current) setError(errorMessage(cause));
-      }
+      const page = await loadPage(target.id, "", "", false);
+      if (page) setTrail(trail.slice(0, index + 1));
     },
-    [view?.scanId, view?.nodes, trail],
+    [view?.scanId, view?.rootNodeId, trail, loadPage],
   );
 
-  return { root, view, current, children, trail, busy, error, chooseRoot, startScan, cancel, openNode, goToTrail };
+  const search = useCallback(
+    async (term: string) => {
+      if (!view?.scanId) return;
+      await loadPage(current?.id ?? view.rootNodeId, "", term, false);
+    },
+    [view?.scanId, view?.rootNodeId, current?.id, loadPage],
+  );
+
+  const nextPage = useCallback(async () => {
+    if (!view?.scanId || !nextCursor) return;
+    await loadPage(current?.id ?? view.rootNodeId, nextCursor, query, true);
+  }, [view?.scanId, view?.rootNodeId, current?.id, nextCursor, query, loadPage]);
+
+  return { root, view, current, children, trail, query, totalChildren, remainingLogical, nextCursor, busy, error, chooseRoot, startScan, cancel, openNode, goToTrail, search, nextPage };
 }

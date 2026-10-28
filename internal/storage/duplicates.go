@@ -31,19 +31,25 @@ type hashResult struct {
 
 // findDuplicates stages candidates by size, partial content and complete
 // SHA-256. It never opens placeholders and never treats hard links as copies.
-func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, request Request, progress func(done, total int)) []DuplicateGroup {
+func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, request Request, progress func(done, total int)) ([]DuplicateGroup, DuplicateCoverage) {
+	coverage := DuplicateCoverage{
+		Enumerated:   len(files),
+		CandidateCap: request.MaxDuplicateFiles,
+	}
 	bySize := make(map[uint64][]*FileRecord)
-	candidates := 0
 	for _, file := range files {
 		if file.Placeholder || file.Reparse || file.LogicalBytes < request.MinDuplicateSize || file.LogicalBytes > request.MaxHashBytes {
+			coverage.PolicySkipped++
 			continue
 		}
-		if candidates >= request.MaxDuplicateFiles {
-			break
+		coverage.Eligible++
+		if coverage.CandidateConsidered >= request.MaxDuplicateFiles {
+			continue
 		}
 		bySize[file.LogicalBytes] = append(bySize[file.LogicalBytes], file)
-		candidates++
+		coverage.CandidateConsidered++
 	}
+	coverage.Truncated = coverage.Eligible > coverage.CandidateConsidered || ctx.Err() != nil
 
 	sizeGroups := make([][]*FileRecord, 0)
 	for _, group := range bySize {
@@ -53,7 +59,7 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 		}
 	}
 	if len(sizeGroups) == 0 {
-		return nil
+		return nil, coverage
 	}
 
 	partial := make(map[string][]*FileRecord)
@@ -72,7 +78,7 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 		}
 	}
 	if len(fullGroups) == 0 {
-		return nil
+		return nil, coverage
 	}
 
 	verified := make(map[string][]*FileRecord)
@@ -80,11 +86,14 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 		results := hashFiles(ctx, group, 0, request.Workers, progress)
 		for _, result := range results {
 			if !fileStillMatches(group[result.index]) {
+				coverage.Changed++
 				continue
 			}
+			coverage.Verified++
 			verified[result.hash] = append(verified[result.hash], group[result.index])
 		}
 	}
+	coverage.Truncated = coverage.Truncated || ctx.Err() != nil
 
 	groups := make([]DuplicateGroup, 0)
 	index := 0
@@ -135,7 +144,7 @@ func (s *Scanner) findDuplicates(ctx context.Context, files []*FileRecord, reque
 		}
 		return groups[i].Hash < groups[j].Hash
 	})
-	return groups
+	return groups, coverage
 }
 
 func hashFiles(ctx context.Context, files []*FileRecord, limit uint64, workers int, progress func(done, total int)) []hashResult {
@@ -150,7 +159,7 @@ func hashFiles(ctx context.Context, files []*FileRecord, limit uint64, workers i
 		go func() {
 			defer wait.Done()
 			for job := range jobs {
-				hash, ok := hashFile(ctx, job.file.Path, limit)
+				hash, ok := hashFile(ctx, job.file, limit)
 				results <- hashResult{index: job.index, hash: hash, ok: ok}
 			}
 		}()
@@ -180,8 +189,8 @@ func hashFiles(ctx context.Context, files []*FileRecord, limit uint64, workers i
 	return output
 }
 
-func hashFile(ctx context.Context, path string, limit uint64) (string, bool) {
-	handle, err := os.Open(platformPath(path))
+func hashFile(ctx context.Context, file *FileRecord, limit uint64) (string, bool) {
+	handle, err := openVerifiedContent(file.Path, file)
 	if err != nil {
 		return "", false
 	}
@@ -211,6 +220,9 @@ func hashFile(ctx context.Context, path string, limit uint64) (string, bool) {
 }
 
 func fileStillMatches(file *FileRecord) bool {
+	if !pathWithinRoot(file.Root, file.Path) || !resolvedPathWithinRoot(file.Root, file.Path) {
+		return false
+	}
 	info, err := os.Lstat(platformPath(file.Path))
 	if err != nil || info.IsDir() || info.Size() < 0 {
 		return false

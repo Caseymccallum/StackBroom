@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +68,12 @@ func TestScanAggregatesTreeTypesAndDuplicates(t *testing.T) {
 	}
 	if len(result.LargestFolders) == 0 || result.LargestFolders[0].Name != "b" {
 		t.Errorf("largest folders = %+v", result.LargestFolders)
+	}
+	if !result.Coverage.Exhaustive {
+		t.Errorf("unexpected coverage = %+v", result.Coverage)
+	}
+	if result.DuplicateCoverage.Enumerated != 4 || result.DuplicateCoverage.Eligible != 4 || result.DuplicateCoverage.Verified != 2 {
+		t.Errorf("duplicate coverage = %+v", result.DuplicateCoverage)
 	}
 }
 
@@ -140,6 +147,9 @@ func TestScanCancellationAndEntryLimitArePartial(t *testing.T) {
 	if !result.Partial || result.PartialReason != "cancelled" {
 		t.Errorf("cancelled result = partial %v reason %q", result.Partial, result.PartialReason)
 	}
+	if !result.DuplicateCoverage.Truncated {
+		t.Errorf("cancelled duplicate analysis was reported complete: %+v", result.DuplicateCoverage)
+	}
 }
 
 func TestScanRejectsMissingAndReparseRoots(t *testing.T) {
@@ -169,6 +179,20 @@ func TestScanHandlesUnicodeAndDeepNames(t *testing.T) {
 	}
 }
 
+func TestDuplicateCandidateCapIsReported(t *testing.T) {
+	root := t.TempDir()
+	for index := 0; index < 4; index++ {
+		writeFile(t, filepath.Join(root, fmt.Sprintf("copy-%d.bin", index)), 100, 'd')
+	}
+	result := scanFixture(t, root, func(request *Request) { request.MaxDuplicateFiles = 2 })
+	if result.DuplicateCoverage.Eligible != 4 || result.DuplicateCoverage.CandidateConsidered != 2 || !result.DuplicateCoverage.Truncated {
+		t.Errorf("duplicate cap coverage = %+v", result.DuplicateCoverage)
+	}
+	if !result.Coverage.Exhaustive {
+		t.Errorf("traversal coverage unexpectedly incomplete: %+v", result.Coverage)
+	}
+}
+
 func TestPartialHashMatchStillRequiresFullHash(t *testing.T) {
 	root := t.TempDir()
 	prefix := strings.Repeat("p", 70*1024)
@@ -193,6 +217,24 @@ func TestPartialHashMatchStillRequiresFullHash(t *testing.T) {
 	result := scanFixture(t, root, nil)
 	if len(result.Duplicates) != 0 {
 		t.Errorf("partial-prefix collision accepted as duplicate: %+v", result.Duplicates)
+	}
+}
+
+func TestFileRecordOutsideRootIsRejected(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	path := filepath.Join(outside, "secret.txt")
+	writeFile(t, path, 10, 's')
+	info, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := &FileRecord{Root: root, Path: path, LogicalBytes: 10, ModTime: info.ModTime()}
+	if fileStillMatches(record) {
+		t.Error("out-of-root file passed identity check")
+	}
+	if _, ok := hashFile(context.Background(), record, 0); ok {
+		t.Error("out-of-root file was read")
 	}
 }
 

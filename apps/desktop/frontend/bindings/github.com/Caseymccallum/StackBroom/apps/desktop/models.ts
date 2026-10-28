@@ -182,6 +182,30 @@ export interface StorageChildren {
     "truncated": boolean;
 }
 
+export interface StorageCoverage {
+    "exhaustive": boolean;
+    "accessDenied": number;
+    "hiddenExcluded": number;
+    "systemExcluded": number;
+    "reparseExcluded": number;
+    "depthLimit": boolean;
+    "entryLimit": boolean;
+    "cancelled": boolean;
+    "timedOut": boolean;
+    "reasons"?: string[] | null;
+}
+
+export interface StorageDuplicateCoverage {
+    "enumerated": number;
+    "eligible": number;
+    "policySkipped": number;
+    "candidateConsidered": number;
+    "candidateCap": number;
+    "verified": number;
+    "changed": number;
+    "truncated": boolean;
+}
+
 export interface StorageDuplicateFile {
     "nodeId": string;
     "name": string;
@@ -227,6 +251,17 @@ export interface StorageNode {
     "truncated"?: boolean;
 }
 
+export interface StorageNodePage {
+    "node": StorageNode;
+    "children": StorageNode[] | null;
+    "nextCursor"?: string;
+    "totalChildren": number;
+    "totalLogical": number;
+    "remainingCount": number;
+    "remainingLogical": number;
+    "truncated": boolean;
+}
+
 export interface StorageProgress {
     "phase": string;
     "items": number;
@@ -254,11 +289,16 @@ export interface StorageScanOptions {
 export interface StorageScanView {
     "scanId": string;
     "rootId": string;
+    "rootNodeId": string;
     "rootLabel": string;
     "status": string;
+    "errorCode"?: string;
+    "errorMessage"?: string;
     "progress": StorageProgress;
     "partial": boolean;
     "partialReason"?: string;
+    "coverage": StorageCoverage;
+    "duplicateCoverage": StorageDuplicateCoverage;
     "totalLogical": number;
     "totalAllocated": number;
     "totalFiles": number;
@@ -269,6 +309,10 @@ export interface StorageScanView {
     "startedAt": string;
     "completedAt": string;
     "nodes": StorageNode[] | null;
+    "nodesNextCursor"?: string;
+    "rootChildCount": number;
+    "rootLogical": number;
+    "rootRemaining": number;
     "largestFolders": StorageNode[] | null;
     "largestFiles": StorageFile[] | null;
     "types": StorageTypeStat[] | null;

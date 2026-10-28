@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,6 +102,66 @@ func TestStorageServiceRequiresAuthorisedRootAndReturnsBoundedEvidence(t *testin
 	}
 	if _, err := service.GetStorageNode(scanID, "missing"); err == nil {
 		t.Error("unrelated node ID accepted")
+	}
+
+	firstPage, err := service.GetStorageNodePage(scanID, view.RootNodeID, "", 2, "")
+	if err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if len(firstPage.Children) != 2 || firstPage.TotalChildren != 3 || firstPage.NextCursor == "" || !firstPage.Truncated {
+		t.Fatalf("first page = %+v", firstPage)
+	}
+	secondPage, err := service.GetStorageNodePage(scanID, view.RootNodeID, firstPage.NextCursor, 2, "")
+	if err != nil {
+		t.Fatalf("second page: %v", err)
+	}
+	if len(secondPage.Children) != 1 || secondPage.NextCursor != "" || secondPage.Truncated {
+		t.Fatalf("second page = %+v", secondPage)
+	}
+	searchPage, err := service.GetStorageNodePage(scanID, view.RootNodeID, "", 1, "med")
+	if err != nil || len(searchPage.Children) != 1 || searchPage.Children[0].Name != "media" {
+		t.Fatalf("full-directory search = %+v, %v", searchPage, err)
+	}
+	if _, err := service.GetStorageNodePage(scanID, view.RootNodeID, "not-a-cursor", 2, ""); err == nil {
+		t.Error("invalid cursor accepted")
+	}
+}
+
+func TestStorageErrorsSanitizeAbsolutePaths(t *testing.T) {
+	root := t.TempDir()
+	service := newTestStorageService(t, root)
+	authorised, err := service.SelectStorageRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.scanFn = func(ctx context.Context, request storage.Request, progress func(storage.Progress)) (*storage.Result, error) {
+		return nil, fmt.Errorf("cannot read C:\\Users\\VeryPrivate\\secret.txt: permission denied")
+	}
+	scanID, err := service.StartStorageScan(authorised.ID, StorageScanOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := waitForStorageScan(t, service, scanID)
+	if view.ErrorCode != "scan_failed" {
+		t.Errorf("error code = %q", view.ErrorCode)
+	}
+	if strings.Contains(view.ErrorMessage, "VeryPrivate") || strings.Contains(view.ErrorMessage, `C:\Users`) {
+		t.Errorf("absolute path leaked in error: %q", view.ErrorMessage)
+	}
+	for _, warning := range view.Warnings {
+		if strings.Contains(warning, "VeryPrivate") || strings.Contains(warning, `C:\Users`) {
+			t.Errorf("absolute path leaked in warning: %q", warning)
+		}
+	}
+}
+
+func TestStorageSelectErrorSanitizesAbsolutePaths(t *testing.T) {
+	service := NewStorageService()
+	service.selectDir = func() (string, error) {
+		return "", fmt.Errorf("dialog failed for C:\\Users\\VeryPrivate\\secret")
+	}
+	if _, err := service.SelectStorageRoot(); err == nil || strings.Contains(err.Error(), "VeryPrivate") {
+		t.Fatalf("select error leaked a path: %v", err)
 	}
 }
 

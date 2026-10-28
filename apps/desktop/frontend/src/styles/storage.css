@@ -44,6 +44,23 @@
   font-size: 15px;
 }
 
+.storage-coverage {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 11px;
+}
+
+.storage-coverage-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+}
+
 .storage-breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -74,28 +91,26 @@
 }
 
 .storage-treemap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  min-height: 150px;
-  padding: 3px;
+  position: relative;
+  height: 340px;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-elevated);
 }
 
 .storage-tile {
+  position: absolute;
   display: flex;
-  min-width: 80px;
-  height: 145px;
+  min-width: 0;
   flex-direction: column;
   justify-content: flex-end;
   gap: 2px;
-  padding: 8px;
+  padding: 7px;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  border-radius: 7px;
-  background: color-mix(in srgb, currentColor 14%, var(--surface-2));
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 16%, var(--surface-2));
   color: var(--text-soft);
   text-align: left;
   cursor: pointer;

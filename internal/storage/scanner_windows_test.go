@@ -4,6 +4,7 @@ package storage
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
@@ -51,12 +52,36 @@ func TestHiddenFilesAreExcludedByDefault(t *testing.T) {
 	t.Cleanup(func() { _ = syscall.SetFileAttributes(pointer, attributes) })
 
 	excluded := scanFixture(t, root, nil)
-	if excluded.TotalFiles != 0 || excluded.SkippedCount == 0 {
+	if excluded.TotalFiles != 0 || excluded.SkippedCount == 0 || excluded.Coverage.HiddenExcluded != 1 || excluded.Coverage.Exhaustive {
 		t.Errorf("hidden file was not excluded: %+v", excluded)
 	}
 	included := scanFixture(t, root, func(request *Request) { request.IncludeHidden = true })
 	if included.TotalFiles != 1 || included.TotalLogical != 32 {
 		t.Errorf("hidden file was not included when requested: %+v", included)
+	}
+}
+
+func TestReplacingFileWithJunctionPreventsVerifiedRead(t *testing.T) {
+	root := t.TempDir()
+	left := filepath.Join(root, "left.bin")
+	right := filepath.Join(root, "right.bin")
+	writeFile(t, left, 8192, 'x')
+	writeFile(t, right, 8192, 'x')
+	result := scanFixture(t, root, nil)
+	if len(result.Files) != 2 {
+		t.Fatalf("files = %d", len(result.Files))
+	}
+	target := t.TempDir()
+	if err := os.Remove(left); err != nil {
+		t.Fatal(err)
+	}
+	makeJunction(t, left, target)
+	record := result.Files[0]
+	if fileStillMatches(record) {
+		t.Error("replaced junction passed post-hash identity check")
+	}
+	if _, ok := hashFile(context.Background(), record, 0); ok {
+		t.Error("replaced junction was read as file content")
 	}
 }
 

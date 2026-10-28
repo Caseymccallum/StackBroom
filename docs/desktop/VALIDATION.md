@@ -3,8 +3,8 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,384,832 bytes** (about 11.4 MB)
-- SHA-256: `F5C14EA88BF95D0648F60DFAC116EBADDF1DDF5A0ADD61A5A9279DA97B7B307D`
+- Size: **11,412,992 bytes** (about 11.4 MB)
+- SHA-256: `779A7DECA3139DC0D99AD33F70ED934287A28A344CA53EDDB5935CDCDBB75500`
 - Source branch: `feat/m2-storage-intelligence`; version `0.2.0`.
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
@@ -37,13 +37,15 @@ The binary is intentionally not committed. The build script reproduces it from t
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
-`internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, full-hash confirmation, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded node evidence, root-path privacy, concurrent-scan refusal and cancellation.
+`internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, full-hash confirmation, duplicate candidate caps, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, files replaced by junctions before hashing, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded cursor pages, full-directory search, root-path privacy, sanitised error paths, concurrent-scan refusal and cancellation.
+
+Measured on a disposable 20,000-file/200-folder NTFS fixture: scan **1.977 s**, post-scan heap delta **20,562 KB**, total allocation delta **42,941 KB**, cancellation latency **sub-millisecond**. This is one local observation, not a general performance guarantee.
 
 The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045, a valid CPU interval sample and two fixed volumes. No live process termination, priority change or graceful close has been performed.
 
 ### Frontend
 
-`npm test` passes **31 tests / 11 files**:
+`npm test` passes **34 tests / 12 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -53,7 +55,8 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - App load, navigation, theme change and keyboard shortcut with a mocked bridge;
 - process details confirmation, cancel, Escape, backend-error honesty, no `window.confirm`;
 - keyboard-focusable process detail buttons and drawer closure when a refreshed inventory no longer contains the PID;
-- Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence and partial-result labelling;
+- Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence, coverage limits, cursor pagination and partial-result labelling;
+- area-proportional treemap budgets and Other-region accounting;
 - no cleanup/delete action in the Storage UI.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.

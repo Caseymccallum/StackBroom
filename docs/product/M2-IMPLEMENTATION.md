@@ -63,6 +63,17 @@
 - Placeholder, reparse, hard-link and truncated states are labelled.
 - No cleanup or deletion buttons.
 
+## Hardening update (M2 hardening milestone)
+
+- Verified content reads now open with `FILE_FLAG_OPEN_REPARSE_POINT`, check attributes and volume/file identity on the open handle, reject reparse points and cloud placeholders, and compare size/write time before returning a reader. Hashing reads from that verified handle; the path is rechecked after hashing.
+- A Windows test replaces an enumerated file with a junction before hashing and confirms both the verified reader and post-hash identity check refuse it.
+- Directory enumeration now uses `Readdirnames` batches (256 names) instead of loading a full `[]DirEntry`; global entry and depth limits still bound the scan.
+- Traversal coverage is explicit: exhaustive, access denied, hidden/system exclusions, reparse exclusions, depth limit, entry limit, cancellation and timeout. UI shows “Not exhaustive” with counts even when traversal completed.
+- Duplicate coverage exposes enumerated, eligible, policy-skipped, candidate-considered, candidate-cap, verified and changed counts. A candidate cap cannot look exhaustive.
+- Child navigation uses cursor pages over the complete indexed child list. Search is applied server-side before paging; every indexed child is reachable and payloads stay bounded.
+- The treemap is an area-proportional recursive layout with a 60-tile budget. Remaining indexed children are represented by an explicit Other region with measured bytes; the table remains the keyboard/screen-reader alternative.
+- Bridge errors are structured (`errorCode`, `errorMessage`) and sanitised. Absolute paths other than the explicitly selected root are replaced before crossing the bridge.
+
 ## Safety evidence
 
 - Storage root must pass `storage.ValidateRoot`; reparse roots are rejected.
@@ -77,12 +88,13 @@
 
 ## Performance observation
 
-Synthetic disposable fixture: 50 folders × 100 files (5,000 files, 1,000 bytes each), local Windows NTFS temp directory.
+Synthetic disposable fixture: 200 folders × 100 files (20,000 files, 1,000 bytes each), local Windows NTFS temp directory.
 
-- Scan: **1.190 s**
-- Heap allocation delta after GC: **4,300 KB**
-- Total allocation delta: **11,192 KB**
-- Fixture creation and test overhead excluded from the scan timer; whole test observed 8.96 s.
+- Scan: **1.977 s**
+- Heap allocation delta after GC: **20,562 KB**
+- Total allocation delta: **42,941 KB**
+- Cancellation latency measured from cancel request to scan return: **sub-millisecond (reported as 0s)**
+- Fixture creation and test overhead excluded from the scan timer; whole test observed 33.36 s (scan fixture) and 5.68 s (cancellation fixture).
 
 These are observations on this host, not a general performance guarantee. No hundreds-of-thousands-entry benchmark was run, and no real user profile or Windows system directory was scanned.
 
@@ -98,6 +110,8 @@ These are observations on this host, not a general performance guarantee. No hun
 - No M2 performance claim is made for 100k+ entries or slow network volumes.
 
 ## M3 Cleanup Engine readiness
+
+Detailed design: [M3 cleanup specification](M3-CLEANUP-SPEC.md).
 
 **Not ready for deletion.** M2 now provides discovery, bounded evidence, reparse protection, hard-link awareness and duplicate verification. M3 still needs:
 

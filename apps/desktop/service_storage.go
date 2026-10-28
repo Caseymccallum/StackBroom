@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,6 +41,7 @@ type storageScanSession struct {
 	Progress    storage.Progress
 	Result      *storage.Result
 	Error       string
+	ErrorCode   string
 	StartedAt   time.Time
 	CompletedAt time.Time
 	Cancel      context.CancelFunc
@@ -61,6 +66,26 @@ func NewStorageService() *StorageService {
 			return storage.NewScanner().Scan(ctx, request, progress)
 		},
 	}
+}
+
+var absoluteStoragePath = regexp.MustCompile(`(?i)([a-z]:\\[^\s"']+|\\\\[^\\\s"']+\\[^\s"']+)`)
+
+// sanitizeStorageError removes absolute paths from errors before they cross
+// the bridge. The selected root is already known to the user; all other raw
+// paths become <path>.
+func sanitizeStorageError(err error, root string) string {
+	if err == nil {
+		return ""
+	}
+	message := err.Error()
+	if root != "" {
+		message = strings.ReplaceAll(message, root, "<root>")
+	}
+	message = absoluteStoragePath.ReplaceAllString(message, "<path>")
+	if len(message) > 300 {
+		message = message[:300] + "…"
+	}
+	return message
 }
 
 func randomStorageID() (string, error) {
@@ -91,14 +116,14 @@ func selectStorageFolder() (string, error) {
 func (s *StorageService) SelectStorageRoot() (StorageRoot, error) {
 	path, err := s.selectDir()
 	if err != nil {
-		return StorageRoot{}, err
+		return StorageRoot{}, fmt.Errorf("folder selection failed: %s", sanitizeStorageError(err, ""))
 	}
 	if path == "" {
 		return StorageRoot{}, fmt.Errorf("no folder selected")
 	}
 	root, err := storage.ValidateRoot(path)
 	if err != nil {
-		return StorageRoot{}, err
+		return StorageRoot{}, fmt.Errorf("selected folder is not usable: %s", sanitizeStorageError(err, path))
 	}
 	id, err := randomStorageID()
 	if err != nil {
@@ -201,7 +226,8 @@ func (s *StorageService) StartStorageScan(rootID string, options StorageScanOpti
 		session.CompletedAt = time.Now()
 		if scanErr != nil {
 			session.Status = "error"
-			session.Error = scanErr.Error()
+			session.ErrorCode = "scan_failed"
+			session.Error = sanitizeStorageError(scanErr, grant.Path)
 		} else {
 			session.Result = result
 			switch {
@@ -279,6 +305,8 @@ func (s *StorageService) GetStorageScan(scanID string) (StorageScanView, error) 
 			Message: session.Progress.Message,
 		},
 	}
+	view.ErrorCode = session.ErrorCode
+	view.ErrorMessage = session.Error
 	if session.Error != "" {
 		view.Warnings = append(view.Warnings, session.Error)
 	}
@@ -294,6 +322,28 @@ func projectStorageResult(view StorageScanView, result *storage.Result) StorageS
 	view.RootLabel = result.Root.Name
 	view.Partial = result.Partial
 	view.PartialReason = result.PartialReason
+	view.Coverage = StorageCoverage{
+		Exhaustive:      result.Coverage.Exhaustive,
+		AccessDenied:    result.Coverage.AccessDenied,
+		HiddenExcluded:  result.Coverage.HiddenExcluded,
+		SystemExcluded:  result.Coverage.SystemExcluded,
+		ReparseExcluded: result.Coverage.ReparseExcluded,
+		DepthLimit:      result.Coverage.DepthLimit,
+		EntryLimit:      result.Coverage.EntryLimit,
+		Cancelled:       result.Coverage.Cancelled,
+		TimedOut:        result.Coverage.TimedOut,
+		Reasons:         result.Coverage.Reasons,
+	}
+	view.DuplicateCoverage = StorageDuplicateCoverage{
+		Enumerated:          result.DuplicateCoverage.Enumerated,
+		Eligible:            result.DuplicateCoverage.Eligible,
+		PolicySkipped:       result.DuplicateCoverage.PolicySkipped,
+		CandidateConsidered: result.DuplicateCoverage.CandidateConsidered,
+		CandidateCap:        result.DuplicateCoverage.CandidateCap,
+		Verified:            result.DuplicateCoverage.Verified,
+		Changed:             result.DuplicateCoverage.Changed,
+		Truncated:           result.DuplicateCoverage.Truncated,
+	}
 	view.TotalLogical = result.TotalLogical
 	view.TotalAllocated = result.TotalAllocated
 	view.TotalFiles = result.TotalFiles
@@ -301,10 +351,13 @@ func projectStorageResult(view StorageScanView, result *storage.Result) StorageS
 	view.SkippedCount = result.SkippedCount
 	view.DurationMS = result.Duration.Milliseconds()
 	view.HashDurationMS = result.HashDuration.Milliseconds()
-	if len(result.Root.Children) > maxStorageNodesPerResponse {
-		view.Warnings = append(view.Warnings, "Additional root children are not shown in this result page")
-	}
-	view.Nodes = mapStorageNodes(result.Root.Children, maxStorageNodesPerResponse)
+	view.RootNodeID = result.Root.ID
+	rootPage := buildStoragePage(*result.Root, result.Root.Children, 0, maxStorageNodesPerResponse, "")
+	view.Nodes = rootPage.Children
+	view.NodesNextCursor = rootPage.NextCursor
+	view.RootChildCount = rootPage.TotalChildren
+	view.RootLogical = rootPage.TotalLogical
+	view.RootRemaining = rootPage.RemainingLogical
 	view.LargestFolders = mapStorageNodes(result.LargestFolders, 50)
 	view.LargestFiles = mapStorageFiles(result.LargestFiles, 50)
 	view.Types = make([]StorageTypeStat, 0, len(result.Types))
@@ -344,6 +397,92 @@ func projectStorageResult(view StorageScanView, result *storage.Result) StorageS
 		view.Warnings = append(view.Warnings, fmt.Sprintf("%d additional skipped paths are not shown", result.SkippedCount-len(result.Skipped)))
 	}
 	return view
+}
+
+func encodeStorageCursor(offset int) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(strconv.Itoa(offset)))
+}
+
+func decodeStorageCursor(cursor string) (int, error) {
+	if cursor == "" {
+		return 0, nil
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		return 0, fmt.Errorf("invalid storage cursor")
+	}
+	offset, err := strconv.Atoi(string(raw))
+	if err != nil || offset < 0 {
+		return 0, fmt.Errorf("invalid storage cursor")
+	}
+	return offset, nil
+}
+
+func buildStoragePage(parent storage.Node, children []*storage.Node, offset, pageSize int, query string) StorageNodePage {
+	query = strings.ToLower(strings.TrimSpace(query))
+	filtered := make([]*storage.Node, 0, len(children))
+	for _, child := range children {
+		if query == "" || strings.Contains(strings.ToLower(child.Name), query) {
+			filtered = append(filtered, child)
+		}
+	}
+	total := len(filtered)
+	if offset > total {
+		offset = total
+	}
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+	page := StorageNodePage{
+		Node:          mapStorageNode(&parent),
+		Children:      mapStorageNodes(filtered[offset:end], pageSize),
+		TotalChildren: total,
+		Truncated:     end < total,
+	}
+	if end < total {
+		page.NextCursor = encodeStorageCursor(end)
+	}
+	for _, child := range filtered {
+		page.TotalLogical += child.LogicalBytes
+	}
+	for _, child := range filtered[end:] {
+		page.RemainingCount++
+		page.RemainingLogical += child.LogicalBytes
+	}
+	return page
+}
+
+// GetStorageNodePage returns a stable cursor page over every indexed child.
+// Search is applied to the complete indexed child list before paging.
+func (s *StorageService) GetStorageNodePage(scanID, nodeID, cursor string, pageSize int, query string) (StorageNodePage, error) {
+	s.mu.Lock()
+	session := s.scans[scanID]
+	if session == nil || session.Result == nil {
+		s.mu.Unlock()
+		return StorageNodePage{}, fmt.Errorf("storage scan result not found")
+	}
+	if !session.CompletedAt.IsZero() && time.Since(session.CompletedAt) > storageScanLifetime {
+		s.mu.Unlock()
+		return StorageNodePage{}, fmt.Errorf("storage scan result expired")
+	}
+	result := session.Result
+	s.mu.Unlock()
+	node := result.Nodes[nodeID]
+	if node == nil {
+		return StorageNodePage{}, fmt.Errorf("storage node not found")
+	}
+	if pageSize <= 0 {
+		pageSize = 100
+	}
+	if pageSize > maxStorageNodesPerResponse {
+		pageSize = maxStorageNodesPerResponse
+	}
+	offset, err := decodeStorageCursor(cursor)
+	if err != nil {
+		return StorageNodePage{}, err
+	}
+	return buildStoragePage(*node, node.Children, offset, pageSize, query), nil
 }
 
 func mapStorageNodes(nodes []*storage.Node, limit int) []StorageNode {
@@ -416,16 +555,11 @@ func (s *StorageService) GetStorageNode(scanID, nodeID string) (StorageChildren,
 	if node == nil {
 		return StorageChildren{}, fmt.Errorf("storage node not found")
 	}
-	children := node.Children
-	truncated := false
-	if len(children) > maxStorageNodesPerResponse {
-		children = children[:maxStorageNodesPerResponse]
-		truncated = true
-	}
+	page := buildStoragePage(*node, node.Children, 0, maxStorageNodesPerResponse, "")
 	return StorageChildren{
-		Parent:    mapStorageNode(node),
-		Children:  mapStorageNodes(children, maxStorageNodesPerResponse),
-		Truncated: truncated,
+		Parent:    page.Node,
+		Children:  page.Children,
+		Truncated: page.Truncated,
 	}, nil
 }
 

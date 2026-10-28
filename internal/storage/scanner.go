@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,23 +19,28 @@ type Scanner struct{}
 func NewScanner() *Scanner { return &Scanner{} }
 
 type scanState struct {
-	request      Request
-	root         string
-	rootNode     *Node
-	nodes        map[string]*Node
-	files        []*FileRecord
-	seenFileIDs  map[string]bool
-	skipped      []Skip
-	skippedCount int
-	totalLogical uint64
-	totalAlloc   uint64
-	totalFiles   int
-	totalDirs    int
-	items        int
-	limit        bool
-	cancelled    bool
-	progress     func(Progress)
-	lastProgress time.Time
+	request         Request
+	root            string
+	rootNode        *Node
+	nodes           map[string]*Node
+	files           []*FileRecord
+	seenFileIDs     map[string]bool
+	skipped         []Skip
+	skippedCount    int
+	totalLogical    uint64
+	totalAlloc      uint64
+	totalFiles      int
+	totalDirs       int
+	items           int
+	limit           bool
+	cancelled       bool
+	accessDenied    int
+	hiddenExcluded  int
+	systemExcluded  int
+	reparseExcluded int
+	depthLimit      bool
+	progress        func(Progress)
+	lastProgress    time.Time
 }
 
 // ValidateRoot resolves an explicitly selected folder and refuses reparse
@@ -88,6 +94,19 @@ func (s *Scanner) Scan(ctx context.Context, request Request, progress func(Progr
 	state.emit("enumerating", "")
 	state.scanDirectory(ctx, state.rootNode, 0)
 
+	coverage := Coverage{
+		AccessDenied:    state.accessDenied,
+		HiddenExcluded:  state.hiddenExcluded,
+		SystemExcluded:  state.systemExcluded,
+		ReparseExcluded: state.reparseExcluded,
+		DepthLimit:      state.depthLimit,
+		EntryLimit:      state.limit,
+		Cancelled:       errors.Is(ctx.Err(), context.Canceled),
+		TimedOut:        errors.Is(ctx.Err(), context.DeadlineExceeded),
+	}
+	coverage.Exhaustive = coverage.AccessDenied == 0 && coverage.HiddenExcluded == 0 &&
+		coverage.SystemExcluded == 0 && coverage.ReparseExcluded == 0 && !coverage.DepthLimit &&
+		!coverage.EntryLimit && !coverage.Cancelled && !coverage.TimedOut
 	result := &Result{
 		Root:             state.rootNode,
 		Nodes:            state.nodes,
@@ -98,6 +117,7 @@ func (s *Scanner) Scan(ctx context.Context, request Request, progress func(Progr
 		TotalDirectories: state.totalDirs,
 		Skipped:          state.skipped,
 		SkippedCount:     state.skippedCount,
+		Coverage:         coverage,
 		Partial:          state.limit || state.cancelled || ctx.Err() != nil,
 		Duration:         time.Since(start),
 	}
@@ -111,17 +131,48 @@ func (s *Scanner) Scan(ctx context.Context, request Request, progress func(Progr
 	case ctx.Err() != nil:
 		result.PartialReason = "scan stopped"
 	}
+	if coverage.Cancelled {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, "cancelled")
+	}
+	if coverage.TimedOut {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, "timeout")
+	}
+	if coverage.AccessDenied > 0 {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, fmt.Sprintf("access denied on %d path(s)", coverage.AccessDenied))
+	}
+	if coverage.HiddenExcluded > 0 {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, fmt.Sprintf("%d hidden item(s) excluded", coverage.HiddenExcluded))
+	}
+	if coverage.SystemExcluded > 0 {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, fmt.Sprintf("%d system item(s) excluded", coverage.SystemExcluded))
+	}
+	if coverage.ReparseExcluded > 0 {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, fmt.Sprintf("%d reparse point(s) not followed", coverage.ReparseExcluded))
+	}
+	if coverage.DepthLimit {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, "depth limit reached")
+	}
+	if coverage.EntryLimit {
+		result.Coverage.Reasons = append(result.Coverage.Reasons, "entry limit reached")
+	}
 	state.finalize(result)
 	state.emit("aggregating", result.PartialReason)
 	if len(state.files) > 0 && ctx.Err() == nil {
 		hashStart := time.Now()
-		result.Duplicates = s.findDuplicates(ctx, state.files, request, func(done, total int) {
+		var duplicateCoverage DuplicateCoverage
+		result.Duplicates, duplicateCoverage = s.findDuplicates(ctx, state.files, request, func(done, total int) {
 			state.emitDetailed("hashing", fmt.Sprintf("%d/%d candidate files", done, total), false)
 		})
+		result.DuplicateCoverage = duplicateCoverage
 		result.HashDuration = time.Since(hashStart)
 		if ctx.Err() == context.Canceled {
 			result.Partial = true
 			result.PartialReason = "cancelled during duplicate hashing"
+		}
+	} else if ctx.Err() != nil {
+		result.DuplicateCoverage = DuplicateCoverage{
+			Enumerated: len(state.files),
+			Truncated:  true,
 		}
 	}
 	result.Duration = time.Since(start)
@@ -196,125 +247,151 @@ func (s *scanState) scanDirectory(ctx context.Context, directory *Node, depth in
 		s.cancelled = true
 		return
 	}
+	if !pathWithinRoot(s.root, directory.Path) || !resolvedPathWithinRoot(s.root, directory.Path) {
+		directory.Truncated = true
+		s.accessDenied++
+		s.addSkip(directory.Path, "folder is outside the approved root or has a reparse ancestor")
+		return
+	}
 	before, err := os.Lstat(platformPath(directory.Path))
 	if err != nil || !before.IsDir() || inspectFile(directory.Path, before).Reparse {
 		directory.Truncated = true
+		s.accessDenied++
 		s.addSkip(directory.Path, "folder became unreadable or a reparse point")
 		return
 	}
-	entries, err := os.ReadDir(platformPath(directory.Path))
+	directoryHandle, err := openVerifiedDirectory(directory.Path)
 	if err != nil {
 		directory.Truncated = true
-		s.addSkip(directory.Path, err.Error())
+		s.accessDenied++
+		s.addSkip(directory.Path, "folder could not be enumerated")
 		return
 	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
-	for _, entry := range entries {
-		if s.limit || s.cancelled {
-			return
-		}
-		if ctx.Err() != nil {
-			s.cancelled = true
-			return
-		}
-		if s.items >= s.request.MaxEntries {
-			s.limit = true
-			return
-		}
-		s.items++
-		fullPath := filepath.Join(directory.Path, entry.Name())
-		info, err := os.Lstat(platformPath(fullPath))
-		if err != nil {
-			s.addSkip(fullPath, err.Error())
-			continue
-		}
-		meta := inspectFile(fullPath, info)
-		if !s.request.IncludeHidden && meta.Hidden {
-			s.addSkip(fullPath, "hidden item excluded")
-			continue
-		}
-		if !s.request.IncludeSystem && meta.System {
-			s.addSkip(fullPath, "system item excluded")
-			continue
-		}
-		if meta.Reparse || info.Mode()&os.ModeSymlink != 0 {
-			link := s.newNode(directory.ID, fullPath, "link")
-			link.IsReparse = true
-			link.Truncated = true
-			directory.Children = append(directory.Children, link)
-			directory.DirCount++
-			s.addSkip(fullPath, "reparse point not followed")
-			continue
-		}
-		if info.IsDir() {
-			if depth >= s.request.MaxDepth {
-				directory.Truncated = true
-				s.addSkip(fullPath, fmt.Sprintf("maximum depth %d reached", s.request.MaxDepth))
+	defer directoryHandle.Close()
+	for {
+		names, readErr := directoryHandle.Readdirnames(256)
+		for _, entryName := range names {
+			if s.limit || s.cancelled {
+				return
+			}
+			if ctx.Err() != nil {
+				s.cancelled = true
+				return
+			}
+			if s.items >= s.request.MaxEntries {
+				s.limit = true
+				return
+			}
+			s.items++
+			fullPath := filepath.Join(directory.Path, entryName)
+			info, err := os.Lstat(platformPath(fullPath))
+			if err != nil {
+				s.accessDenied++
+				s.addSkip(fullPath, "path could not be inspected")
 				continue
 			}
-			child := s.newNode(directory.ID, fullPath, "dir")
-			child.IsHidden = meta.Hidden
-			child.IsSystem = meta.System
-			directory.Children = append(directory.Children, child)
-			directory.DirCount++
-			s.totalDirs++
-			s.scanDirectory(ctx, child, depth+1)
-			directory.LogicalBytes += child.LogicalBytes
-			directory.AllocatedBytes += child.AllocatedBytes
-			continue
-		}
-
-		size := uint64(0)
-		if info.Size() > 0 {
-			size = uint64(info.Size())
-		}
-		allocated := size
-		if meta.AllocatedKnown {
-			allocated = meta.AllocatedBytes
-		}
-		accounted := true
-		if meta.FileID != "" {
-			if s.seenFileIDs[meta.FileID] {
-				accounted = false
-			} else {
-				s.seenFileIDs[meta.FileID] = true
+			meta := inspectFile(fullPath, info)
+			if !s.request.IncludeHidden && meta.Hidden {
+				s.hiddenExcluded++
+				s.addSkip(fullPath, "hidden item excluded")
+				continue
 			}
+			if !s.request.IncludeSystem && meta.System {
+				s.systemExcluded++
+				s.addSkip(fullPath, "system item excluded")
+				continue
+			}
+			if meta.Reparse || info.Mode()&os.ModeSymlink != 0 {
+				link := s.newNode(directory.ID, fullPath, "link")
+				link.IsReparse = true
+				link.Truncated = true
+				directory.Children = append(directory.Children, link)
+				directory.DirCount++
+				s.reparseExcluded++
+				s.addSkip(fullPath, "reparse point not followed")
+				continue
+			}
+			if info.IsDir() {
+				if depth >= s.request.MaxDepth {
+					directory.Truncated = true
+					s.depthLimit = true
+					s.addSkip(fullPath, fmt.Sprintf("maximum depth %d reached", s.request.MaxDepth))
+					continue
+				}
+				child := s.newNode(directory.ID, fullPath, "dir")
+				child.IsHidden = meta.Hidden
+				child.IsSystem = meta.System
+				directory.Children = append(directory.Children, child)
+				directory.DirCount++
+				s.totalDirs++
+				s.scanDirectory(ctx, child, depth+1)
+				directory.LogicalBytes += child.LogicalBytes
+				directory.AllocatedBytes += child.AllocatedBytes
+				continue
+			}
+
+			size := uint64(0)
+			if info.Size() > 0 {
+				size = uint64(info.Size())
+			}
+			allocated := size
+			if meta.AllocatedKnown {
+				allocated = meta.AllocatedBytes
+			}
+			accounted := true
+			if meta.FileID != "" {
+				if s.seenFileIDs[meta.FileID] {
+					accounted = false
+				} else {
+					s.seenFileIDs[meta.FileID] = true
+				}
+			}
+			fileNode := s.newNode(directory.ID, fullPath, "file")
+			fileNode.LogicalBytes = size
+			fileNode.AllocatedBytes = allocated
+			fileNode.LinkCount = meta.LinkCount
+			fileNode.IsPlaceholder = meta.Placeholder
+			fileNode.IsSparse = meta.Sparse
+			fileNode.IsHidden = meta.Hidden
+			fileNode.IsSystem = meta.System
+			directory.Children = append(directory.Children, fileNode)
+			directory.FileCount++
+			s.totalFiles++
+			if accounted {
+				directory.LogicalBytes += size
+				directory.AllocatedBytes += allocated
+				s.totalLogical += size
+				s.totalAlloc += allocated
+			}
+			s.files = append(s.files, &FileRecord{
+				NodeID:         fileNode.ID,
+				Root:           s.root,
+				Path:           fullPath,
+				RelativePath:   s.relative(fullPath),
+				Name:           entryName,
+				Extension:      normalizeExtension(filepath.Ext(entryName)),
+				LogicalBytes:   size,
+				AllocatedBytes: allocated,
+				AllocatedKnown: meta.AllocatedKnown,
+				LinkCount:      meta.LinkCount,
+				FileID:         meta.FileID,
+				ModTime:        info.ModTime(),
+				Placeholder:    meta.Placeholder,
+				Reparse:        meta.Reparse,
+				Sparse:         meta.Sparse,
+				Accounted:      accounted,
+			})
+			s.maybeProgress()
 		}
-		fileNode := s.newNode(directory.ID, fullPath, "file")
-		fileNode.LogicalBytes = size
-		fileNode.AllocatedBytes = allocated
-		fileNode.LinkCount = meta.LinkCount
-		fileNode.IsPlaceholder = meta.Placeholder
-		fileNode.IsSparse = meta.Sparse
-		fileNode.IsHidden = meta.Hidden
-		fileNode.IsSystem = meta.System
-		directory.Children = append(directory.Children, fileNode)
-		directory.FileCount++
-		s.totalFiles++
-		if accounted {
-			directory.LogicalBytes += size
-			directory.AllocatedBytes += allocated
-			s.totalLogical += size
-			s.totalAlloc += allocated
+		if readErr == io.EOF {
+			break
 		}
-		s.files = append(s.files, &FileRecord{
-			NodeID:         fileNode.ID,
-			Path:           fullPath,
-			RelativePath:   s.relative(fullPath),
-			Name:           entry.Name(),
-			Extension:      normalizeExtension(filepath.Ext(entry.Name())),
-			LogicalBytes:   size,
-			AllocatedBytes: allocated,
-			AllocatedKnown: meta.AllocatedKnown,
-			LinkCount:      meta.LinkCount,
-			FileID:         meta.FileID,
-			ModTime:        info.ModTime(),
-			Placeholder:    meta.Placeholder,
-			Reparse:        meta.Reparse,
-			Sparse:         meta.Sparse,
-			Accounted:      accounted,
-		})
-		s.maybeProgress()
+		if readErr != nil {
+			directory.Truncated = true
+			s.accessDenied++
+			s.addSkip(directory.Path, "folder enumeration stopped unexpectedly")
+			break
+		}
 	}
 }
 

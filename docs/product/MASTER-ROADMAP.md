@@ -10,7 +10,7 @@ This roadmap supersedes feature ordering in the legacy technical roadmap while p
 |---|---|---|
 | M1 | Process details, graceful close, verified termination, limited priority | Explicit per action |
 | M2 | Storage Intelligence: user-scoped analysis, treemap, large files, duplicate candidates | Read-only (implementation on `feat/m2-storage-intelligence`) |
-| M3 | Curated cleanup engine with exact previews and recoverable operations where supported | Explicit per action |
+| M3 | Curated cleanup engine with exact previews and recoverable operations where supported | Explicit per action; design in `M3-CLEANUP-SPEC.md`, not implemented |
 | M4 | Installed applications, startup inventory/management, advanced process controls | Explicit per action |
 
 ### Wave B — Distinctive product features

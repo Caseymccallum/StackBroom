@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronRight, FolderOpen, HardDrive, Pause, Play, Search, ShieldCheck } from "lucide-react";
 import type { QuickResult, StorageDuplicateGroup, StorageFile, StorageNode, StorageScanOptions, StorageScanView } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { formatBytes, formatPercent } from "../lib/format";
@@ -23,15 +23,37 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
   const usedPercent = total > 0 ? (used / total) * 100 : 0;
   const storage = useStorage();
   const [options, setOptions] = useState<StorageScanOptions>(initialOptions);
-  const [query, setQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const running = storage.view?.status === "running";
   const result = storage.view && ["completed", "cancelled", "timeout"].includes(storage.view.status) ? storage.view : null;
+
+  useEffect(() => {
+    setSearchTerm(storage.query);
+  }, [storage.query]);
+
+  useEffect(() => {
+    if (!storage.view?.scanId) return;
+    const timer = window.setTimeout(() => {
+      if (searchTerm !== storage.query) void storage.search(searchTerm);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm, storage.query, storage.view?.scanId, storage.search]);
+
   const visibleChildren = useMemo(() => {
-    const children = storage.children ?? [];
-    const queryText = query.trim().toLowerCase();
-    if (!queryText) return children;
-    return children.filter((node) => node.name.toLowerCase().includes(queryText));
-  }, [storage.children, query]);
+    if (!result || storage.remainingLogical <= 0) return storage.children;
+    const other: StorageNode = {
+      id: "__other",
+      name: storage.query ? `Other matches (${storage.totalChildren - storage.children.length})` : `Other (${storage.totalChildren - storage.children.length})`,
+      kind: "other",
+      logicalBytes: storage.remainingLogical,
+      allocatedBytes: 0,
+      fileCount: 0,
+      dirCount: 0,
+      childCount: 0,
+      truncated: true,
+    };
+    return [...storage.children, other];
+  }, [result, storage.children, storage.totalChildren, storage.remainingLogical, storage.query]);
 
   return (
     <div className="grid" style={{ gap: 16 }}>
@@ -166,6 +188,8 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
                     </div>
                   ) : null}
 
+                  <StorageCoveragePanel view={result} />
+
                   <div className="storage-breadcrumb" aria-label="Storage path">
                     <button type="button" className="crumb" onClick={() => void storage.goToTrail(-1)}>{result.rootLabel}</button>
                     {storage.trail.map((node, index) => (
@@ -180,10 +204,13 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
                     <label className="search-wrap">
                       <span className="sr-only">Filter current folder</span>
                       <Search className="search-icon" aria-hidden="true" />
-                      <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter current folder" />
+                      <input className="input" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search the complete indexed folder" />
                     </label>
-                    <Badge>{visibleChildren.length} children shown</Badge>
-                    {storage.current?.truncated ? <Badge tone="amber">Truncated</Badge> : null}
+                    <Badge>{storage.children.length}/{storage.totalChildren} children loaded</Badge>
+                    {storage.nextCursor ? <Badge tone="amber">More indexed children available</Badge> : null}
+                    {storage.nextCursor ? (
+                      <Button onClick={() => void storage.nextPage()}>Load more</Button>
+                    ) : null}
                   </div>
 
                   <StorageTreemap
@@ -191,7 +218,7 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
                     totalBytes={storage.current?.logicalBytes ?? result.totalLogical}
                     onOpen={(node) => void storage.openNode(node)}
                   />
-                  <StorageChildrenTable nodes={visibleChildren} onOpen={(node) => void storage.openNode(node)} />
+                  <StorageChildrenTable nodes={storage.children} onOpen={(node) => void storage.openNode(node)} />
                   <StorageEvidence view={result} onOpen={(node) => void storage.openNode(node)} />
                 </div>
               )}
@@ -203,6 +230,40 @@ export function StoragePage({ quick, full }: { quick: QuickResult | null; full: 
   );
 }
 
+
+function StorageCoveragePanel({ view }: { view: StorageScanView }) {
+  const coverage = view.coverage;
+  const duplicates = view.duplicateCoverage;
+  return (
+    <div className="storage-coverage" role="status" aria-live="polite">
+      <div>
+        <Badge tone={coverage.exhaustive ? "teal" : "amber"}>
+          {coverage.exhaustive ? "Exhaustive traversal" : "Not exhaustive"}
+        </Badge>
+        <span className="muted"> Coverage describes what this scan could read, not what exists on the volume.</span>
+      </div>
+      <div className="storage-coverage-facts">
+        {coverage.hiddenExcluded > 0 ? <span>{coverage.hiddenExcluded} hidden excluded</span> : null}
+        {coverage.systemExcluded > 0 ? <span>{coverage.systemExcluded} system excluded</span> : null}
+        {coverage.reparseExcluded > 0 ? <span>{coverage.reparseExcluded} reparse points not followed</span> : null}
+        {coverage.accessDenied > 0 ? <span>{coverage.accessDenied} access errors</span> : null}
+        {coverage.depthLimit ? <span>Depth limit reached</span> : null}
+        {coverage.entryLimit ? <span>Entry limit reached</span> : null}
+        {coverage.cancelled ? <span>Scan cancelled</span> : null}
+        {coverage.timedOut ? <span>Scan timed out</span> : null}
+      </div>
+      <div className="storage-coverage-facts">
+        <span>Duplicate analysis: {duplicates.enumerated} files enumerated</span>
+        <span>{duplicates.eligible} eligible</span>
+        <span>{duplicates.policySkipped} policy-skipped</span>
+        <span>{duplicates.candidateConsidered}/{duplicates.candidateCap} candidates considered</span>
+        <span>{duplicates.verified} verified</span>
+        {duplicates.changed > 0 ? <span>{duplicates.changed} changed during verification</span> : null}
+        {duplicates.truncated ? <strong>Duplicate analysis incomplete</strong> : <span>Duplicate analysis complete</span>}
+      </div>
+    </div>
+  );
+}
 
 function StorageChildrenTable({ nodes, onOpen }: { nodes: StorageNode[]; onOpen: (node: StorageNode) => void }) {
   if (nodes.length === 0) {

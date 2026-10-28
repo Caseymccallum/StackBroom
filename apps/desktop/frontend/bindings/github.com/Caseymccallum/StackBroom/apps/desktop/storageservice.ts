@@ -29,6 +29,14 @@ export function GetStorageNode(scanID: string, nodeID: string): $CancellableProm
 }
 
 /**
+ * GetStorageNodePage returns a stable cursor page over every indexed child.
+ * Search is applied to the complete indexed child list before paging.
+ */
+export function GetStorageNodePage(scanID: string, nodeID: string, cursor: string, pageSize: number, query: string): $CancellablePromise<$models.StorageNodePage> {
+    return $Call.ByID(3958133074, scanID, nodeID, cursor, pageSize, query);
+}
+
+/**
  * GetStorageRoot returns the display metadata for an authorised root only.
  */
 export function GetStorageRoot(rootID: string): $CancellablePromise<$models.StorageRoot> {

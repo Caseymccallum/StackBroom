@@ -20,6 +20,30 @@ type StorageScanOptions struct {
 	MaxEntries    int  `json:"maxEntries"`
 }
 
+type StorageCoverage struct {
+	Exhaustive      bool     `json:"exhaustive"`
+	AccessDenied    int      `json:"accessDenied"`
+	HiddenExcluded  int      `json:"hiddenExcluded"`
+	SystemExcluded  int      `json:"systemExcluded"`
+	ReparseExcluded int      `json:"reparseExcluded"`
+	DepthLimit      bool     `json:"depthLimit"`
+	EntryLimit      bool     `json:"entryLimit"`
+	Cancelled       bool     `json:"cancelled"`
+	TimedOut        bool     `json:"timedOut"`
+	Reasons         []string `json:"reasons,omitempty"`
+}
+
+type StorageDuplicateCoverage struct {
+	Enumerated          int  `json:"enumerated"`
+	Eligible            int  `json:"eligible"`
+	PolicySkipped       int  `json:"policySkipped"`
+	CandidateConsidered int  `json:"candidateConsidered"`
+	CandidateCap        int  `json:"candidateCap"`
+	Verified            int  `json:"verified"`
+	Changed             int  `json:"changed"`
+	Truncated           bool `json:"truncated"`
+}
+
 type StorageProgress struct {
 	Phase   string `json:"phase"`
 	Items   int    `json:"items"`
@@ -80,30 +104,50 @@ type StorageDuplicateGroup struct {
 	Files []StorageDuplicateFile `json:"files"`
 }
 
+type StorageNodePage struct {
+	Node             StorageNode   `json:"node"`
+	Children         []StorageNode `json:"children"`
+	NextCursor       string        `json:"nextCursor,omitempty"`
+	TotalChildren    int           `json:"totalChildren"`
+	TotalLogical     uint64        `json:"totalLogical"`
+	RemainingCount   int           `json:"remainingCount"`
+	RemainingLogical uint64        `json:"remainingLogical"`
+	Truncated        bool          `json:"truncated"`
+}
+
 type StorageScanView struct {
-	ScanID         string                  `json:"scanId"`
-	RootID         string                  `json:"rootId"`
-	RootLabel      string                  `json:"rootLabel"`
-	Status         string                  `json:"status"`
-	Progress       StorageProgress         `json:"progress"`
-	Partial        bool                    `json:"partial"`
-	PartialReason  string                  `json:"partialReason,omitempty"`
-	TotalLogical   uint64                  `json:"totalLogical"`
-	TotalAllocated uint64                  `json:"totalAllocated"`
-	TotalFiles     int                     `json:"totalFiles"`
-	TotalDirs      int                     `json:"totalDirs"`
-	SkippedCount   int                     `json:"skippedCount"`
-	DurationMS     int64                   `json:"durationMs"`
-	HashDurationMS int64                   `json:"hashDurationMs"`
-	StartedAt      time.Time               `json:"startedAt"`
-	CompletedAt    time.Time               `json:"completedAt"`
-	Nodes          []StorageNode           `json:"nodes"`
-	LargestFolders []StorageNode           `json:"largestFolders"`
-	LargestFiles   []StorageFile           `json:"largestFiles"`
-	Types          []StorageTypeStat       `json:"types"`
-	Duplicates     []StorageDuplicateGroup `json:"duplicates"`
-	Skipped        []StorageSkip           `json:"skipped,omitempty"`
-	Warnings       []string                `json:"warnings,omitempty"`
+	ScanID            string                   `json:"scanId"`
+	RootID            string                   `json:"rootId"`
+	RootNodeID        string                   `json:"rootNodeId"`
+	RootLabel         string                   `json:"rootLabel"`
+	Status            string                   `json:"status"`
+	ErrorCode         string                   `json:"errorCode,omitempty"`
+	ErrorMessage      string                   `json:"errorMessage,omitempty"`
+	Progress          StorageProgress          `json:"progress"`
+	Partial           bool                     `json:"partial"`
+	PartialReason     string                   `json:"partialReason,omitempty"`
+	Coverage          StorageCoverage          `json:"coverage"`
+	DuplicateCoverage StorageDuplicateCoverage `json:"duplicateCoverage"`
+	TotalLogical      uint64                   `json:"totalLogical"`
+	TotalAllocated    uint64                   `json:"totalAllocated"`
+	TotalFiles        int                      `json:"totalFiles"`
+	TotalDirs         int                      `json:"totalDirs"`
+	SkippedCount      int                      `json:"skippedCount"`
+	DurationMS        int64                    `json:"durationMs"`
+	HashDurationMS    int64                    `json:"hashDurationMs"`
+	StartedAt         time.Time                `json:"startedAt"`
+	CompletedAt       time.Time                `json:"completedAt"`
+	Nodes             []StorageNode            `json:"nodes"`
+	NodesNextCursor   string                   `json:"nodesNextCursor,omitempty"`
+	RootChildCount    int                      `json:"rootChildCount"`
+	RootLogical       uint64                   `json:"rootLogical"`
+	RootRemaining     uint64                   `json:"rootRemaining"`
+	LargestFolders    []StorageNode            `json:"largestFolders"`
+	LargestFiles      []StorageFile            `json:"largestFiles"`
+	Types             []StorageTypeStat        `json:"types"`
+	Duplicates        []StorageDuplicateGroup  `json:"duplicates"`
+	Skipped           []StorageSkip            `json:"skipped,omitempty"`
+	Warnings          []string                 `json:"warnings,omitempty"`
 }
 
 type StorageSkip struct {

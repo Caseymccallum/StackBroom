@@ -4,6 +4,23 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M2 storage hardening
+
+### Changed
+
+- Content hashing now opens each candidate with `FILE_FLAG_OPEN_REPARSE_POINT`, verifies reparse/placeholder attributes, size, write time and file identity on the handle, and reads from that verified handle.
+- Files replaced by junctions or other reparse points before hashing are refused.
+- Directory enumeration uses 256-name batches instead of materialising a complete `[]DirEntry`.
+- Scan coverage now distinguishes exhaustive traversal, access denial, hidden/system/reparse exclusions, depth/entry limits, cancellation and timeout.
+- Duplicate coverage now reports enumerated, eligible, policy-skipped, candidate-considered, candidate-cap, verified and changed counts.
+- Child navigation uses cursor pages over all indexed children; full-directory search is server-side and payloads remain bounded.
+- Treemap uses an area-proportional recursive layout with a visible-node budget and an explicit Other region.
+- Bridge errors carry sanitised `errorCode`/`errorMessage` values; absolute paths other than the selected root are removed.
+
+### Design
+
+- Added `docs/product/M3-CLEANUP-SPEC.md` for versioned rules, exact previews, Recycle Bin/`IFileOperation`, cancellation, history, restoration, privilege and race-condition requirements. No deletion code exists.
+
 ## [Unreleased] - M2 storage intelligence
 
 Read-only storage analysis for an explicitly selected folder. No cleanup or
