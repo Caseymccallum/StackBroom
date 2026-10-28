@@ -196,7 +196,7 @@ export function ProcessDetails({ process, onClose, onCompleted, initialConfirm }
                       : "This changes only the scheduling priority, not a CPU limit."}
                 </p>
                 <div className="mt-3 flex gap-2">
-                  <Button onClick={executePending} disabled={loading} style={{ backgroundColor: "var(--red)", color: "white" }}>
+                  <Button autoFocus onClick={executePending} disabled={loading} style={{ backgroundColor: "var(--red)", color: "white" }}>
                     Confirm {pending.label}
                   </Button>
                   <Button onClick={() => setPending(null)} disabled={loading} variant="ghost">Cancel</Button>
