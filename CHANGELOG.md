@@ -4,6 +4,27 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3B-1 recovery-first execution architecture
+
+Execution remains disabled in ordinary builds. No deletion has been tested.
+
+### Added
+
+- Native-only immutable execution context with exact file identities, rule version, trusted root, recycle-only permission, expiry and single atomic consumption.
+- Fail-closed cleanup target validation for identity, hard links, reparse points, placeholders, hidden/system state, size/write time and scope.
+- Trusted known-folder scope policy for `%TEMP%` and `%LOCALAPPDATA%`; environment overrides outside the trusted location are refused.
+- Execution state machine, per-item outcomes, recovery-evidence gate and post-operation presence checks.
+- Build-tagged Windows `IFileOperation` STA worker with Recycle Bin flags, COM lifecycle cleanup and no permanent-deletion mode.
+- Backend feature gate: ordinary builds have no compiled executor and an environment variable cannot enable one.
+- Privacy-filtered local action history with retention, clearing and no paths or file contents.
+- Disabled future confirmation UI, explicit Select all eligible action and no automatic candidate selection.
+- Four-finding security review and M3B threat model.
+
+### Corrected
+
+- Preview candidates are no longer selected automatically.
+- Preview and execution now refuse missing file identity, hidden/system files, hard links and untrusted environment scopes.
+
 ## [Unreleased] - M3A cleanup discovery and preview
 
 Read-only cleanup discovery. No file deletion, movement, renaming, quarantine or attribute mutation exists.

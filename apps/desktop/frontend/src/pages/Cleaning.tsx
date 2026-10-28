@@ -16,9 +16,9 @@ export function CleaningPage() {
   }, [cleanup.loadRules]);
 
   useEffect(() => {
-    if (!cleanup.discovery || cleanup.discovery.status === "running") return;
-    setSelectedIDs((cleanup.discovery.candidates ?? []).map((candidate) => candidate.id));
-  }, [cleanup.discovery]);
+    if (!cleanup.discovery) return;
+    setSelectedIDs([]);
+  }, [cleanup.discovery?.discoveryId]);
 
   const toggle = (candidate: CleanupCandidate) => {
     setSelectedIDs((current) => current.includes(candidate.id)
@@ -103,6 +103,12 @@ export function CleaningPage() {
                   >
                     Preview selected cleanup
                   </Button>
+                  <Button variant="ghost" onClick={() => setSelectedIDs(candidates.map((candidate) => candidate.id))} disabled={candidates.length === 0}>
+                    Select all eligible
+                  </Button>
+                  <Button variant="ghost" onClick={() => setSelectedIDs([])} disabled={selectedIDs.length === 0}>
+                    Clear selection
+                  </Button>
                   <span className="muted">{selectedIDs.length} selected · preview only</span>
                 </div>
                 {candidates.length === 0 ? (
@@ -186,10 +192,20 @@ function PreviewCard({ preview, onClear }: { preview: CleanupPreviewView; onClea
         </div>
         <div className="banner" style={{ marginTop: 10, borderColor: "var(--amber)" }} role="status">
           <AlertTriangle size={16} style={{ color: "var(--amber)" }} />
-          <div><strong>Preview only.</strong> {preview.recoveryNote} No cleanup method exists in this milestone.</div>
+          <div><strong>Preview only.</strong> {preview.recoveryNote} No cleanup method is enabled in this build.</div>
         </div>
         {(preview.excluded ?? []).length > 0 && <p className="muted">{(preview.excluded ?? []).length} selected target(s) changed and were excluded from this preview.</p>}
-        <div className="cleanup-actions"><Button variant="ghost" onClick={onClear}>Close preview</Button></div>
+        <details style={{ marginTop: 10 }}>
+          <summary>Exact selected targets ({preview.fileCount})</summary>
+          <ul className="cleanup-exclusions">
+            {(preview.selected ?? []).map((candidate) => <li key={candidate.id}><span>{candidate.relativePath}</span><span className="muted">{formatBytes(candidate.logicalBytes)}</span></li>)}
+          </ul>
+        </details>
+        <div className="cleanup-actions" style={{ marginTop: 12 }}>
+          <Button variant="ghost" onClick={onClear}>Close preview</Button>
+          <Button variant="primary" disabled aria-describedby="execution-gate">Confirm cleanup</Button>
+          <span id="execution-gate" className="muted">Execution disabled: independent review and owner-authorised disposable-fixture testing are required.</span>
+        </div>
       </CardBody>
     </Card>
   );

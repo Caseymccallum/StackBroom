@@ -3,10 +3,10 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,485,184 bytes** (about 11.5 MB)
-- SHA-256: `B191047D708BFB7230DECE988883723D51F35CAAEAE19DC919F3E99EF4A4CACA`
-- Source branch: `feat/m3a-cleanup-discovery`; version `0.2.0`.
-- Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
+- Size: **11,564,032 bytes** (about 11.6 MB)
+- SHA-256: `91A44BABA2401C28217943793F9C29389012935DBF7E0EC8333423C06C6A802F`
+- Source branch: `feat/m3b-cleanup-engine`; version `0.2.0`.
+- Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
 
@@ -34,8 +34,11 @@ The binary is intentionally not committed. The build script reproduces it from t
 - preview/confirm execution once, duplicate refusal and protected/stale target refusal;
 - no `exePath` crossing the bridge;
 - priority readback evidence;
-- curated cleanup rules, no mutation method (including `ConfirmCleanup`, `DeleteFiles`, `MoveToRecycleBin`), discovery-to-preview flow and preview expiry;
-- cleanup rule age, extension, hard-link and changed-target exclusions.
+- curated cleanup rules, gated `ConfirmCleanup`, no `DeleteFiles`/`MoveToRecycleBin`/`CleanupFiles`, discovery-to-preview flow and preview expiry;
+- cleanup rule age, extension, hard-link, trusted-scope and changed-target exclusions;
+- execution context single use, expiry, rule-version refusal, recovery gate, partial/aborted results, cancellation and access-denial outcomes;
+- local history retention, clearing and privacy filtering;
+- backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build.
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
@@ -49,7 +52,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ### Frontend
 
-`npm test` passes **40 tests / 13 files**:
+`npm test` passes **41 tests / 13 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -62,7 +65,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence, coverage limits, cursor pagination and partial-result labelling;
 - area-proportional treemap budgets, Other-region accounting, recursive region proportions, zero/disproportionate sizes and non-overlap/bounds;
 - no cleanup/delete action in the Storage UI;
-- Cleaning catalogue, preview-only language, individual candidate selection, preview request, unknown recovery and the absence of Clean Now/delete/confirm controls.
+- Cleaning catalogue, preview-only language, empty default selection, explicit Select all eligible/Clear selection, preview request, unknown recovery and a disabled Confirm cleanup control with no Clean Now/delete action.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 
@@ -85,8 +88,8 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 
 - The frontend receives only sanitized DTOs. A JSON serialisation test asserts that command lines, home paths, project roots and a recognised secret do not cross the boundary.
 - `privacy.Apply` runs at the service boundary for both quick and full scans.
-- Process control is the only mutation capability. It is limited to graceful close, forced termination and five non-real-time priority classes, requires a backend target token and explicit in-app confirmation, and refuses protected, critical and StackBroom processes.
-- No Docker removal/prune, file deletion, startup change or Windows settings mutation is exposed.
+- Process control is the only enabled mutation capability. It is limited to graceful close, forced termination and five non-real-time priority classes, requires a backend target token and explicit in-app confirmation, and refuses protected, critical and StackBroom processes.
+- Cleanup execution is compiled out of ordinary builds (`cleanup_execution` tag absent). The gated `ConfirmCleanup` method refuses before any native path, including when its environment variable is set. No file deletion has been tested or enabled.
 - `GetProcessDetails` no longer returns `exePath`; paths remain internal to identity checks.
 - No shell execution, arbitrary filesystem write API or unrestricted system API is exposed to the frontend.
 - Docker remote endpoints are refused by the existing engine; the desktop shell has no override.
@@ -108,8 +111,11 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 - Go 1.27.3 was not installed and no system-wide tooling was changed. Release builds should use Go 1.27.3+ after owner validation.
 - The Go race detector was not runnable locally because the installed environment has no CGO compiler; overlap/cancellation is covered by a functional concurrency test instead.
 - Screen-reader/axe/Narrator validation is not yet performed.
-- The storage analyzer is read-only and requires a user-selected folder. It has no cleanup or deletion capability. The Cleaning section is discovery/preview only and exposes no mutation method.
-- M2 visual screenshots and screen-reader/axe/Narrator validation remain outstanding because visual validation was prohibited during this task.
+- The storage analyzer is read-only and requires a user-selected folder. The Cleaning section is discovery/preview only in ordinary builds; its disabled confirmation control performs nothing.
+- The tagged Windows `IFileOperation` worker has never been executed. Their COM vtable indices, recycle flags and resource cleanup are source-reviewed only. The native recovery verifier is unavailable, so a tagged build refuses before calling the executor.
+- Recycle Bin evidence/restoration and permanent-fallback behaviour remain unverified. No live deletion is authorised.
+- Path-based `IFileOperation` has a residual ancestor-substitution window and is not described as race-safe.
+- M2/M3A visual screenshots and screen-reader/axe/Narrator validation remain outstanding because visual validation was prohibited during this task.
 - Storage traversal is sequential; only duplicate hashing uses bounded workers.
 - The BYOK AI adviser is design-only.
 - The app is a desktop MVP, not a tagged or published release.
