@@ -3,8 +3,8 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,272,704 bytes** (about 11.3 MB)
-- SHA-256: `80CB02B9CAE001FEF443FC09A634A5C9EFA2F952960D9205D4654EF5CC7B59CF`
+- Size: **11,274,240 bytes** (about 11.3 MB)
+- SHA-256: `E1E333D8D429BF613511F1595177C912AD6C89EC1B919E44B91A1B2683A97D93`
 - Source branch: `feat/m1-hardening-product-roadmap`; version `0.2.0`.
 - Build tags: `production`; `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.

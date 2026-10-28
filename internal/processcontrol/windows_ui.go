@@ -93,6 +93,10 @@ func sendGracefulClose(pid int32, expected time.Time) (int, error) {
 	windowCount := 0
 	var lastErr error
 	for _, hwnd := range windows {
+		ownerPID, err := getWindowThreadProcessId(hwnd)
+		if err != nil || ownerPID != pid {
+			continue
+		}
 		if err := postMessage(hwnd, WM_CLOSE, 0, 0); err != nil {
 			lastErr = err
 		} else {

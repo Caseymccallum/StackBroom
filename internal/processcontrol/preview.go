@@ -103,7 +103,8 @@ func (s *OperationStore) GetPreview(operationID string) (*OperationPreview, erro
 		return nil, fmt.Errorf("operation expired")
 	}
 
-	return preview, nil
+	snapshot := *preview
+	return &snapshot, nil
 }
 
 // ConsumePreview atomically retrieves and removes a preview (single-use)
@@ -122,9 +123,11 @@ func (s *OperationStore) ConsumePreview(operationID string) (*OperationPreview, 
 		return nil, fmt.Errorf("operation expired")
 	}
 
-	// Atomically remove to prevent duplicate execution
+	// Atomically remove to prevent duplicate execution, then return a copy so
+	// the caller cannot mutate store-owned state.
 	delete(s.operations, operationID)
-	return preview, nil
+	snapshot := *preview
+	return &snapshot, nil
 }
 
 // TryConsumePreview attempts to consume a preview with atomic check-and-delete
@@ -145,7 +148,8 @@ func (s *OperationStore) TryConsumePreview(operationID string) (*OperationPrevie
 
 	// Atomic remove - if this fails, the operation was already consumed
 	delete(s.operations, operationID)
-	return preview, nil
+	snapshot := *preview
+	return &snapshot, nil
 }
 
 // cleanupExpired removes expired operations (must be called with write lock)

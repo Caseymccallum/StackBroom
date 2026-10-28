@@ -7,7 +7,7 @@ import (
 
 // ExecuteGracefulClose requests a graceful close through WM_CLOSE and verifies
 // whether the process actually exited. A message delivery is not success.
-func ExecuteGracefulClose(preview *OperationPreview, actions NativeActions) OperationResult {
+func ExecuteGracefulClose(preview OperationPreview, actions NativeActions) OperationResult {
 	operationID := preview.OperationID
 
 	handle, identity, err := actions.OpenVerified(preview.PID, PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE, preview.Target.CreateTime)

@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-func previewFor(t *testing.T, action ProcessAction, priority PriorityClass) *OperationPreview {
+func previewFor(t *testing.T, action ProcessAction, priority PriorityClass) OperationPreview {
 	t.Helper()
-	return &OperationPreview{
+	return OperationPreview{
 		OperationID: "op-1",
 		PID:         123,
 		Action:      action,

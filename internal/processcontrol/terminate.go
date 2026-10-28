@@ -6,7 +6,7 @@ import (
 )
 
 // ExecuteTerminate forcefully terminates the verified target.
-func ExecuteTerminate(preview *OperationPreview, actions NativeActions) OperationResult {
+func ExecuteTerminate(preview OperationPreview, actions NativeActions) OperationResult {
 	operationID := preview.OperationID
 
 	handle, identity, err := actions.OpenVerified(preview.PID, PROCESS_TERMINATE|SYNCHRONIZE, preview.Target.CreateTime)

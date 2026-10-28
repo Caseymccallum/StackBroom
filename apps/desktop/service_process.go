@@ -119,11 +119,11 @@ func (s *ProcessControlService) ConfirmProcessAction(operationID string) (map[st
 
 	switch preview.Action {
 	case processcontrol.ActionGracefulClose:
-		result = processcontrol.ExecuteGracefulClose(preview, s.actions)
+		result = processcontrol.ExecuteGracefulClose(*preview, s.actions)
 	case processcontrol.ActionTerminate:
-		result = processcontrol.ExecuteTerminate(preview, s.actions)
+		result = processcontrol.ExecuteTerminate(*preview, s.actions)
 	case processcontrol.ActionSetPriority:
-		result = processcontrol.ExecuteSetPriority(preview, s.actions)
+		result = processcontrol.ExecuteSetPriority(*preview, s.actions)
 	default:
 		return nil, fmt.Errorf("invalid action type")
 	}

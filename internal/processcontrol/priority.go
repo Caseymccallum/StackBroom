@@ -7,7 +7,7 @@ import (
 
 // ExecuteSetPriority changes the priority class of the verified target and
 // verifies the new value by reading it back.
-func ExecuteSetPriority(preview *OperationPreview, actions NativeActions) OperationResult {
+func ExecuteSetPriority(preview OperationPreview, actions NativeActions) OperationResult {
 	operationID := preview.OperationID
 
 	if preview.Priority != PriorityIdle &&
