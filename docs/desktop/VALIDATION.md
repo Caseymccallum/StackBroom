@@ -5,7 +5,7 @@
 - Executable: `apps/desktop/bin/StackBroom.exe`
 - Size: **11,607,040 bytes** (about 11.6 MB)
 - SHA-256: `9FF6EA9A7D2DB336D17BEDB26343B4B68AB698642496F4F340831B59D75CF628`
-- Source branch: `feat/m3c-crash-dump-prototype`; version `0.2.0`.
+- Source branch: `feat/m3c2-native-gate`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -51,6 +51,8 @@ The opt-in execution sources compile with `go test -tags cleanup_execution ./int
 M3B-4 root tests, root vet, tagged cleanup/storage/history tests and tagged vet all passed. The M3B-4 decision is recorded in `docs/product/M3B-4-RECOVERY-FEASIBILITY.md`: Recycle Bin execution is NO-GO, managed quarantine is CONDITIONAL for a separate feasibility prototype, and the production posture remains preview-only. The M3B-4 receipt lifecycle tests pass; `go test -race` was not run because the local toolchain requires cgo, which is disabled.
 
 M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`. A dedicated `internal/cleanup/permanent` prototype is compiled out of ordinary builds and is not wired to the service or UI. Its ordinary and tagged tests pass, including an owner-visible gate test and a non-mutating native test that opens, verifies and closes a fixture handle without marking it for deletion. No live deletion or restoration was performed. The native findings are in `docs/product/M3C-NATIVE-DISPOSITION.md`.
+
+M3C-2 adds an elevation refusal to the native availability gate, repeated native target validation and a `Verified` result requirement. The test-only `m3c2_fixture` harness creates an isolated NTFS root and validates its identity, contents and sentinels without calling disposition. The gated single-file live test is skipped unless all three explicit authorisation variables are set; it was not run. Audit details are in `docs/product/M3C-2-AUDIT.md`.
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 

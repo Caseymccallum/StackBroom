@@ -24,6 +24,13 @@ func TestPermanentNativeGateRefusesWithoutEnvironment(t *testing.T) {
 	if err == nil || result.State != StateFailed {
 		t.Fatalf("result = %+v err=%v", result, err)
 	}
+	elevated, elevationErr := processElevated()
+	if elevationErr != nil {
+		t.Fatal(elevationErr)
+	}
+	if elevated {
+		t.Skip("test process is elevated; the delete gate correctly refuses it")
+	}
 	t.Setenv("STACKBROOM_ENABLE_PERMANENT_DELETE", "1")
 	result, err = executor.Execute(context.Background(), nil, nil)
 	if err == nil || result.ReasonCode != "no_targets" || result.State != StateFailed {

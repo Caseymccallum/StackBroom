@@ -38,10 +38,18 @@ const (
 
 var (
 	kernel32Permanent = syscall.NewLazyDLL("kernel32.dll")
+	advapi32Permanent = syscall.NewLazyDLL("advapi32.dll")
 	procSetInfo       = kernel32Permanent.NewProc("SetFileInformationByHandle")
 	procFinalPath     = kernel32Permanent.NewProc("GetFinalPathNameByHandleW")
 	procVolumeInfo    = kernel32Permanent.NewProc("GetVolumeInformationW")
+	procGetCurrent    = kernel32Permanent.NewProc("GetCurrentProcess")
+	procOpenToken     = advapi32Permanent.NewProc("OpenProcessToken")
+	procTokenInfo     = advapi32Permanent.NewProc("GetTokenInformation")
 )
+
+type tokenElevation struct {
+	TokenIsElevated uint32
+}
 
 type windowsExecutor struct{}
 
@@ -50,6 +58,13 @@ func NewNativeExecutor() Executor { return windowsExecutor{} }
 func (windowsExecutor) Available() error {
 	if os.Getenv("STACKBROOM_ENABLE_PERMANENT_DELETE") != "1" {
 		return ErrDisabled
+	}
+	elevated, err := processElevated()
+	if err != nil {
+		return fmt.Errorf("elevation state could not be checked: %w", err)
+	}
+	if elevated {
+		return ErrElevated
 	}
 	return nil
 }
@@ -263,6 +278,27 @@ func isNTFS(path string) bool {
 		return false
 	}
 	return strings.EqualFold(syscall.UTF16ToString(fileSystem[:]), "NTFS")
+}
+
+func processElevated() (bool, error) {
+	current, _, _ := procGetCurrent.Call()
+	var token syscall.Handle
+	r, _, callErr := procOpenToken.Call(current, 0x0008, uintptr(unsafe.Pointer(&token))) // TOKEN_QUERY
+	if r == 0 {
+		return false, callErr
+	}
+	defer syscall.CloseHandle(token)
+	var info tokenElevation
+	var returned uint32
+	r, _, callErr = procTokenInfo.Call(
+		uintptr(token), 20, // TokenElevation
+		uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info),
+		uintptr(unsafe.Pointer(&returned)),
+	)
+	if r == 0 {
+		return false, callErr
+	}
+	return info.TokenIsElevated != 0, nil
 }
 
 func classifyError(err error, where string) (ItemStatus, string, string) {

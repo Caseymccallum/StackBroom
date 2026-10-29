@@ -79,9 +79,9 @@ through other open handles; that is not a simpler recovery story.
   records an allocation estimate and marks `SpaceReclaimedKnown=false`.
 - The handle does not make an ancestor junction race impossible by itself. The
   existing ancestor guards narrow it; the final path check detects a mismatch.
-- No elevation is requested. A process already elevated is not cryptographically
-  prevented from acting with its existing token; a future hardening pass may
-  refuse elevated processes explicitly.
+- No elevation is requested. The native availability gate now reads
+  `TokenElevation` and refuses an already-elevated process with `ErrElevated`;
+  it does not change the token or request UAC.
 
 ### Not supported
 
@@ -108,6 +108,19 @@ through other open handles; that is not a simpler recovery story.
   returns the refusing stub.
 - No permanent-delete UI is exposed. The Cleaning screen continues to say
   cleaning is unavailable.
+
+## Test-only harness and elevation gate
+
+The test harness lives in `internal/cleanup/permanent/harness`, compiles only
+with `windows && m3c2_fixture`, and requires
+`STACKBROOM_M3C2_HARNESS_AUTHORIZED=1`. It creates its own temporary NTFS root,
+records the target identity/content and sentinels, and never calls the native
+disposition worker.
+
+The live test requires the additional
+`STACKBROOM_M3C2_LIVE_DELETE_AUTHORIZED=1` and
+`STACKBROOM_ENABLE_PERMANENT_DELETE=1` gates. See `M3C-2-AUDIT.md` for the
+exact command and expected evidence.
 
 ## First authorised disposable-file test
 

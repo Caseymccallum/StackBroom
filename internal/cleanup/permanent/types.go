@@ -11,7 +11,10 @@ import (
 	"github.com/Caseymccallum/StackBroom/internal/cleanup/execution"
 )
 
-var ErrDisabled = errors.New("permanent cleanup is disabled in this build")
+var (
+	ErrDisabled = errors.New("permanent cleanup is disabled in this build")
+	ErrElevated = errors.New("cleanup is refused because StackBroom is running elevated")
+)
 
 const RuleID = "crash-dumps-old"
 

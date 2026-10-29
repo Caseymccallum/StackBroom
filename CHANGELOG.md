@@ -4,6 +4,30 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3C-2 native validation gate
+
+No live deletion or restoration was performed. The native test harness is
+compile-tagged and runtime-authorised; the live test is skipped without separate
+owner approval.
+
+### Added
+
+- Audit record for the handle-bound permanent-delete implementation.
+- Test-only `m3c2_fixture` harness with a generated NTFS fixture root, exact
+  identity/content verification, sentinel files and a runtime authorisation
+  guard.
+- A gated single-file live test that remains skipped unless all three explicit
+  authorisation conditions are present.
+
+### Corrected
+
+- The native executor now refuses an already-elevated process before opening a
+  target.
+- The native worker repeats target validation, `.dmp` and age checks instead of
+  relying only on engine preflight.
+- A deletion is counted only after the executor marks it `Verified` and the
+  original path is absent.
+
 ## [Unreleased] - M3C cleanup UX and crash-dump prototype
 
 Execution remains disabled in ordinary builds. No user file, Recycle Bin item or
