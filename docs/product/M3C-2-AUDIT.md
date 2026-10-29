@@ -201,12 +201,14 @@ The following non-destructive native cases are implemented in
 - modified file: `changed/metadata_changed`;
 - renamed file: `changed/inaccessible`; the renamed file remains byte-for-byte
   intact;
+- target junction: `refused/not_regular`; the junction remains intact;
 - reparse/junction ancestor: `refused/scope`; the junction and its outside
   target remain intact.
 
 The direct target-symlink case is also implemented but skips on a machine where
-creating a file symlink requires an unavailable privilege. The junction-ancestor
-case exercises the reparse rejection without that privilege.
+creating a file symlink requires an unavailable privilege. The target-junction
+and junction-ancestor cases exercise the reparse rejection without that
+privilege.
 
 Every case verifies both unselected sentinel files and the selected target or
 its protected replacement. The single-file live deletion remains separately
@@ -223,7 +225,7 @@ gated and was not run.
 | Outside-fixture context refusal | Real fixture/context validation |
 | Native handle open/identity/final-path verification | Real NTFS fixture; no disposition call |
 | Native locked/hidden/system/hard-link/modified/renamed refusal | Real Windows fixture; no disposition call |
-| Native reparse/junction refusal | Real junction; no disposition call; direct file-symlink test skips without the symlink privilege |
+| Native reparse/junction refusal | Real target junction and junction ancestor; no disposition call; direct file-symlink test skips without the symlink privilege |
 | Disposable live deletion | Real NTFS fixture and real disposition; skipped unless authorised |
 | Requested/processed/deleted accounting | Pure result tests and engine early-failure tests |
 | History privacy | Local file, no native API |

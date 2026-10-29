@@ -46,7 +46,7 @@ The binary is intentionally not committed. The build script reproduces it from t
 - backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build;
 - permanent prototype: wrong permission/rule, expired context, changed target, scope escape, hard link, unavailable executor, false success, partial/cancelled results, permanent history and native gate refusal;
 - M3C-5 requested-count accounting: an early validation failure reports the selected file as requested with zero processed and zero deleted;
-- M3C-5 native refusal cases: locked, hidden, system, hard-linked, modified, renamed and junction-ancestor targets remain untouched, with both unselected sentinels verified.
+- M3C-5 native refusal cases: locked, hidden, system, hard-linked, modified, renamed, target-junction and junction-ancestor targets remain untouched, with both unselected sentinels verified.
 
 The opt-in execution sources compile with `go test -tags cleanup_execution ./internal/cleanup/execution` and `go test -tags cleanup_execution ./... -run '^$'` from `apps/desktop`. This is a compile/review check only; no COM operation was called.
 
@@ -56,7 +56,7 @@ M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is
 
 M3C-3 adds an elevation refusal to the native availability gate, repeated native target validation and a `Verified` result requirement. The test-only `m3c2_fixture` harness creates an isolated NTFS root, validates its identity/content/sentinels and proves lock/ancestor-guard/open/verify interaction without calling disposition. The gated single-file live test is skipped unless all three explicit authorisation variables are set; it was not run. Audit details are in `docs/product/M3C-2-AUDIT.md`.
 
-M3C-5 incorporates the frontend review tests from `94222a1`: the capability notice is accurate, the permanent confirmation becomes single-use after a terminal result, and a changed preview ID clears the old result. `Result.Requested` now preserves the selection size through early validation failures; `Processed` and `Deleted` remain separate. The tagged refusal suite covers locked, hidden, system, hard-linked, modified, renamed and junction-ancestor cases without a disposition call. The direct target-symlink case skips when file-symlink creation is not permitted by the local privilege policy. The disposable live deletion was not run.
+M3C-5 incorporates the frontend review tests from `94222a1`: the capability notice is accurate, the permanent confirmation becomes single-use after a terminal result, and a changed preview ID clears the old result. `Result.Requested` now preserves the selection size through early validation failures; `Processed` and `Deleted` remain separate. The tagged refusal suite covers locked, hidden, system, hard-linked, modified, renamed, target-junction and junction-ancestor cases without a disposition call. The direct target-symlink case skips when file-symlink creation is not permitted by the local privilege policy; the junction cases cover reparse refusal without that privilege. The disposable live deletion was not run.
 
 M3C-4 adds the gated `ConfirmPermanentCleanup` Wails method, permanent-only preview context, explicit confirmation UI and truthful result counts. Ordinary builds and ordinary previews leave permanent availability false; no permanent deletion is reachable without the tagged native build and the explicit permanent-delete runtime gate.
 

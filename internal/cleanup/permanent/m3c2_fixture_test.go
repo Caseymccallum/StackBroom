@@ -239,6 +239,30 @@ func TestM3C2ReparsePointRefusedWithoutFollowing(t *testing.T) {
 	assertSentinelsIntact(t, fixture)
 }
 
+func TestM3C2JunctionTargetRefusedWithoutFollowing(t *testing.T) {
+	fixture := prepareRefusalFixture(t)
+	if err := fixture.ReleaseLock(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(fixture.Target.File.Path); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	command := exec.Command("cmd", "/c", "mklink", "/J", fixture.Target.File.Path, outside)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Skipf("could not create a target junction: %v (%s)", err, output)
+	}
+	defer os.Remove(fixture.Target.File.Path)
+	item := deleteOne(context.Background(), fixture.Root, fixture.Target)
+	if item.Status != ItemRefused || item.ReasonCode != "not_regular" {
+		t.Fatalf("junction target was not refused: %+v", item)
+	}
+	if _, err := os.Lstat(fixture.Target.File.Path); err != nil {
+		t.Fatalf("junction target was removed or followed: %v", err)
+	}
+	assertSentinelsIntact(t, fixture)
+}
+
 func TestM3C2ReparseAncestorRefusedWithoutMutation(t *testing.T) {
 	fixture := prepareRefusalFixture(t)
 	if err := fixture.ReleaseLock(); err != nil {
