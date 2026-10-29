@@ -183,7 +183,11 @@ func openExclusive(path string) (syscall.Handle, error) {
 }
 
 func verifyHandle(handle syscall.Handle, target execution.Target) ItemResult {
-	item := ItemResult{TargetID: target.ID, Status: ItemUnknown, RecoveryAvailable: false}
+	item := ItemResult{
+		TargetID: target.ID, Status: ItemUnknown, RecoveryAvailable: false,
+		LogicalBytes: target.File.LogicalBytes, AllocatedBytes: target.File.AllocatedBytes,
+		AllocatedKnown: target.File.AllocatedKnown,
+	}
 	var info syscall.ByHandleFileInformation
 	if err := syscall.GetFileInformationByHandle(handle, &info); err != nil {
 		item.Status, item.ReasonCode, item.Message = ItemUnknown, "identity_read_failed", "the file identity could not be read"
@@ -238,7 +242,9 @@ func finalPath(handle syscall.Handle) (string, error) {
 	if r == 0 {
 		return "", callErr
 	}
-	if r > uintptr(len(buffer)) {
+	// The API returns the required capacity (including the terminator) when
+	// the supplied buffer is too small. An equal-length result is not usable.
+	if r >= uintptr(len(buffer)) {
 		return "", fmt.Errorf("path is too long")
 	}
 	path := syscall.UTF16ToString(buffer[:r])
