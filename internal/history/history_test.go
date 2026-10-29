@@ -42,3 +42,20 @@ func TestHistoryIsBoundedAndPrivacyFiltered(t *testing.T) {
 		t.Error("history was not cleared")
 	}
 }
+
+func TestPermanentHistoryNeverClaimsRecovery(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "history", "permanent.jsonl")
+	store := NewStore(path, 30, 10)
+	store.Record(execution.Record{
+		At: time.Now(), Type: "execution", RuleID: "crash-dumps-old", RuleVersion: "1.0.0",
+		State: execution.StateCompleted, TargetCount: 1, LogicalBytes: 100, AllocatedBytes: 100,
+		DeletionMode: "permanent", ReasonCode: "deleted", RecoveryAvailable: true,
+	})
+	entries, err := store.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].DeletionMode != "permanent" || entries[0].RecoveryAvailable {
+		t.Fatalf("permanent history = %+v", entries)
+	}
+}

@@ -76,7 +76,7 @@ describe("CleaningPage", () => {
     expect(state.createPreview).toHaveBeenCalledWith(["c1"]);
   });
 
-  it("supports an explicit Select all eligible action without changing exclusions", () => {
+  it("selects individual files, clears selection and explains skipped files", () => {
     state.discovery = {
       discoveryId: "d2", rule, status: "completed",
       progress: { phase: "complete", items: 1, bytes: 100, errors: 0, partial: false },
@@ -87,23 +87,31 @@ describe("CleaningPage", () => {
       skippedCount: 0, startedAt: "2026-10-01T00:00:00Z", completedAt: "2026-10-01T00:00:01Z",
     };
     render(<CleaningPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Select all/i }));
-    expect(screen.getByRole("checkbox", { name: /Select old\.tmp/i })).toBeChecked();
-    expect(screen.queryByRole("checkbox", { name: /Select new\.tmp/i })).not.toBeInTheDocument();
+    const checkbox = screen.getByRole("checkbox", { name: /Select old\.tmp/i });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: /Clear selection/i }));
-    expect(screen.getByRole("checkbox", { name: /Select old\.tmp/i })).not.toBeChecked();
+    expect(checkbox).not.toBeChecked();
+    expect(screen.getByText("Changed in the last 14 days")).toBeInTheDocument();
+    expect(screen.getByText("Recycle Bin or permanent deletion?")).toBeInTheDocument();
+    expect(screen.getAllByText(/Permanent deletion/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Applications may still use them/i)).toBeInTheDocument();
+    expect(screen.getAllByText("100 B").length).toBeGreaterThan(0);
   });
 
   it("renders a plain recovery estimate and a disabled clean control in a review", () => {
     state.preview = {
       previewId: "p1", ruleId: rule.id, ruleVersion: rule.version, ruleTitle: rule.title,
-      selected: [], excluded: [], fileCount: 1, totalLogical: 100, totalAllocated: 100,
+      selected: [{ id: "c1", name: "old.tmp", relativePath: "old.tmp", logicalBytes: 50, allocatedBytes: 50, allocatedKnown: true, modifiedAt: "2026-10-01T00:00:00Z", uncertain: false }],
+      excluded: [], fileCount: 1, totalLogical: 100, totalAllocated: 100,
       recoverableBytes: 50, recoverableKnown: false, allocatedUnknown: 1,
       deletionMode: "recycle", executionAvailable: false,
       recoveryNote: "Windows may not be able to put every file in the Recycle Bin.",
       risks: [], sideEffects: [], expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
     };
     render(<CleaningPage />);
+    expect(screen.getByText("old.tmp")).toBeInTheDocument();
     expect(screen.getByText("At least 100 B")).toBeInTheDocument();
     expect(screen.getByText("At least 50 B")).toBeInTheDocument();
     expect(screen.getByText(/1 file couldn't be measured/i)).toBeInTheDocument();

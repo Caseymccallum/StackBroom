@@ -81,6 +81,9 @@ func (e *Engine) Execute(ctx context.Context, execution *Context, progress func(
 	if err := execution.Consume(started); err != nil {
 		return failed(result, "context", err.Error())
 	}
+	if execution.Permission() != RecycleOnly {
+		return failed(result, "permission", "this engine only supports recycle cleanup")
+	}
 	rule, ok := e.ruleResolver(execution.RuleID())
 	if !ok || rule.ID != execution.RuleID() || rule.Version != execution.RuleVersion() {
 		return failed(result, "rule_changed", "cleanup rule is no longer available at the previewed version")

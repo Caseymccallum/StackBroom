@@ -35,6 +35,19 @@ func TestContextCopiesTargetsAndConsumesAtomically(t *testing.T) {
 		t.Fatalf("consumed %d times", count)
 	}
 }
+func TestContextRequiresAnExplicitSupportedPermission(t *testing.T) {
+	c, _, cleanup := fixtureExecution(t, 1)
+	defer cleanup()
+	target := c.Targets()[0]
+	expires := time.Now().Add(time.Minute)
+	if _, err := NewContext("permanent", "crash-dumps-old", "1.0.0", target.File.Root, []Target{target}, expires, PermanentOnly); err != nil {
+		t.Fatalf("permanent permission refused: %v", err)
+	}
+	if _, err := NewContext("unknown", "crash-dumps-old", "1.0.0", target.File.Root, []Target{target}, expires, Permission("unknown")); err == nil {
+		t.Fatal("unknown permission accepted")
+	}
+}
+
 func TestCancelledEngineNeverCallsExecutor(t *testing.T) {
 	c, root, cleanup := fixtureExecution(t, 1)
 	defer cleanup()

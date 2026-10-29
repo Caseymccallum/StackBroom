@@ -22,6 +22,7 @@ Authoritative product and engineering direction for StackBroom.
 - [M3B-3 recovery verification](M3B-3-RECOVERY-VERIFICATION.md)
 - [M3B-4 recovery feasibility decision](M3B-4-RECOVERY-FEASIBILITY.md)
 - [M3C limited cleanup path](M3C-LIMITED-CLEANUP.md)
+- [M3C native disposition findings](M3C-NATIVE-DISPOSITION.md)
 - [Maintenance history contract](MAINTENANCE-HISTORY.md)
 
 Historical CLI roadmap: [`../ROADMAP.md`](../ROADMAP.md).

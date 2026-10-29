@@ -175,15 +175,15 @@ func privacyFilter(entry Record) Record {
 	default:
 		entry.State = "unknown"
 	}
-	if entry.DeletionMode != "recycle" {
+	if entry.DeletionMode != "recycle" && entry.DeletionMode != "permanent" {
 		entry.DeletionMode = "unknown"
 	}
 	switch entry.ReasonCode {
-	case "", "recycled", "missing_execution", "context", "rule_changed", "deletion_mode", "prerequisite_unverified", "scope_changed", "execution_unavailable", "recovery_unavailable", "target_changed", "executor_failed", "cancelled", "aborted", "partial", "no_verified_recovery":
+	case "", "recycled", "deleted", "missing_execution", "context", "permission", "rule_changed", "deletion_mode", "prerequisite_unverified", "scope_changed", "execution_unavailable", "recovery_unavailable", "no_targets", "target_changed", "executor_failed", "cancelled", "aborted", "partial", "no_verified_recovery", "no_verified_deletion", "still_present", "outcome_unverified", "verification_failed":
 	default:
 		entry.ReasonCode = "unknown"
 	}
-	if entry.State != "completed" {
+	if entry.DeletionMode == "permanent" || entry.State != "completed" {
 		entry.RecoveryAvailable = false
 	}
 	if entry.TargetCount < 0 {

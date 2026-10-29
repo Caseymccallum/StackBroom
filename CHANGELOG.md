@@ -4,10 +4,11 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
-## [Unreleased] - M3C cleanup UX and limited path
+## [Unreleased] - M3C cleanup UX and crash-dump prototype
 
-Execution remains disabled. No user file, Recycle Bin item or native Shell/COM
-operation was touched. Tests use disposable temporary fixtures only.
+Execution remains disabled in ordinary builds. No user file, Recycle Bin item or
+native disposition operation was executed. Tests use disposable temporary
+fixtures only; native tests open a fixture handle without marking it for deletion.
 
 ### Changed
 
@@ -25,9 +26,15 @@ operation was touched. Tests use disposable temporary fixtures only.
 
 ### Added
 
-- M3C limited-cleanup plan: one vetted category, recycle-only where proven,
-  quarantine as the recoverable fallback, permanent deletion deferred.
-- Frontend tests for expiry, plain error/reason copy and the simplified workflow.
+- Dedicated `internal/cleanup/permanent` prototype for `crash-dumps-old`, using
+  an exclusive handle, basic `FileDispositionInfo`, identity/path rechecks and a
+  post-close absence check. It is compiled out of ordinary builds and not wired
+  into the UI or service.
+- Permanent-only execution permission and result/history vocabulary; recovery is
+  always reported unavailable and reclaimed space remains an estimate.
+- Native tests that open and verify a disposable fixture without deleting it.
+- Frontend tests for expiry, plain error/reason copy, individual selection,
+  skipped reasons, exact selected targets and the recycle/permanent distinction.
 
 ## [Unreleased] - M3B-4 recovery feasibility decision
 

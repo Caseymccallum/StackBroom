@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,605,504 bytes** (about 11.6 MB)
-- SHA-256: `7F89103A96C69ECA71CC47E9EF09D052A90B2F05D50BDEEFD970888243213E90`
-- Source branch: `feat/cleanup-ux`; version `0.2.0`.
+- Size: **11,607,040 bytes** (about 11.6 MB)
+- SHA-256: `9FF6EA9A7D2DB336D17BEDB26343B4B68AB698642496F4F340831B59D75CF628`
+- Source branch: `feat/m3c-crash-dump-prototype`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -43,13 +43,14 @@ The binary is intentionally not committed. The build script reproduces it from t
 - M3B-4 incomplete no-fallback evidence and invalid restoration evidence refusal;
 - opaque receipt token, target binding and privacy;
 - aggregate engine availability fails closed by default;
-- backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build.
+- backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build;
+- permanent prototype: wrong permission/rule, expired context, changed target, scope escape, hard link, unavailable executor, false success, partial/cancelled results, permanent history and native gate refusal.
 
 The opt-in execution sources compile with `go test -tags cleanup_execution ./internal/cleanup/execution` and `go test -tags cleanup_execution ./... -run '^$'` from `apps/desktop`. This is a compile/review check only; no COM operation was called.
 
 M3B-4 root tests, root vet, tagged cleanup/storage/history tests and tagged vet all passed. The M3B-4 decision is recorded in `docs/product/M3B-4-RECOVERY-FEASIBILITY.md`: Recycle Bin execution is NO-GO, managed quarantine is CONDITIONAL for a separate feasibility prototype, and the production posture remains preview-only. The M3B-4 receipt lifecycle tests pass; `go test -race` was not run because the local toolchain requires cgo, which is disabled.
 
-M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`; no native cleanup or permanent-delete build was added.
+M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`. A dedicated `internal/cleanup/permanent` prototype is compiled out of ordinary builds and is not wired to the service or UI. Its ordinary and tagged tests pass, including an owner-visible gate test and a non-mutating native test that opens, verifies and closes a fixture handle without marking it for deletion. No live deletion or restoration was performed. The native findings are in `docs/product/M3C-NATIVE-DISPOSITION.md`.
 
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 

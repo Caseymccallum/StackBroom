@@ -10,7 +10,14 @@ import (
 
 type Permission string
 
-const RecycleOnly Permission = "recycle_only"
+const (
+	// RecycleOnly is the Shell recovery path. It remains gated by the M3B
+	// architecture and is not used by the permanent prototype.
+	RecycleOnly Permission = "recycle_only"
+	// PermanentOnly is reserved for the narrow crash-dump handle-bound
+	// prototype. It grants no recovery and is compiled out of ordinary builds.
+	PermanentOnly Permission = "permanent_delete"
+)
 
 // Target is a native-only exact identity. It must never be reconstructed from
 // frontend display fields.
@@ -36,8 +43,8 @@ func NewContext(id, ruleID, ruleVersion, root string, targets []Target, expiresA
 	if id == "" || ruleID == "" || ruleVersion == "" || root == "" {
 		return nil, fmt.Errorf("execution context identity is incomplete")
 	}
-	if permission != RecycleOnly {
-		return nil, fmt.Errorf("only a recoverable execution permission is supported")
+	if permission != RecycleOnly && permission != PermanentOnly {
+		return nil, fmt.Errorf("unsupported execution permission")
 	}
 	if len(targets) == 0 {
 		return nil, fmt.Errorf("execution context has no targets")

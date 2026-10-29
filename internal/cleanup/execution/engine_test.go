@@ -143,6 +143,20 @@ func TestEngineCompletesOnlyWithRecoveryEvidence(t *testing.T) {
 	}
 }
 
+func TestRecycleEngineRefusesPermanentPermission(t *testing.T) {
+	recycleContext, root, cleanupFixture := fixtureExecution(t, 1)
+	defer cleanupFixture()
+	permanentContext, err := NewContext("p2", "crash-dumps-old", "1.0.0", root, recycleContext.Targets(), time.Now().Add(10*time.Minute), PermanentOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := &fakeExecutor{remove: 1}
+	result := newTestEngine(root, executor, fakeVerifier{available: true}).Execute(context.Background(), permanentContext, nil)
+	if result.ReasonCode != "permission" || executor.calls != 0 {
+		t.Fatalf("result = %+v calls=%d", result, executor.calls)
+	}
+}
+
 func TestEngineRefusesUnavailableRecoveryBeforeExecution(t *testing.T) {
 	execution, root, cleanupFixture := fixtureExecution(t, 1)
 	defer cleanupFixture()

@@ -69,7 +69,10 @@ Recommended first action:
 - Otherwise use a **StackBroom-managed quarantine** and label it honestly:
   files leave their original folder, remain recoverable, and still use disk
   space until the user empties the quarantine.
-- Never add a permanent-delete option to this milestone.
+- Do not add a permanent-delete option to the consumer UI in this milestone.
+  The current follow-up contains a tagged, unwired permanent backend prototype
+  because handle-bound `FileDispositionInfo` is the narrowest API that can bind
+  the exact file; it is not a shipped action.
 - Never act on unselected files, unrelated roots or protected paths.
 - Revalidate every selected file at confirmation; a changed file is refused, not
   silently skipped.
@@ -99,3 +102,17 @@ the default, and it must never be substituted silently for recycling.
 - Unselected files are unchanged and outside the operation.
 - The UI says whether space was reclaimed or only moved.
 - Ordinary builds remain incapable of cleanup until the review gate is cleared.
+
+## M3C follow-up status
+
+- The Cleaning screen now uses the plain workflow and copy described above.
+- A handle-bound permanent-delete prototype exists in `internal/cleanup/permanent`
+  behind `windows && cleanup_execution` plus
+  `STACKBROOM_ENABLE_PERMANENT_DELETE=1`.
+- The prototype is not wired into the Wails service or any UI action. Ordinary
+  builds use a refusing stub.
+- The prototype uses basic `FileDispositionInfo`, an exclusive `DELETE` handle,
+  identity/attribute/path rechecks, ancestor guards and a post-close path check.
+- Native findings and limitations are in `M3C-NATIVE-DISPOSITION.md`.
+- No live delete or restoration has been run. A disposable-fixture test plan is
+  documented but not authorised here.

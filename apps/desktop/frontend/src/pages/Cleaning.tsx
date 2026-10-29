@@ -63,6 +63,14 @@ export function CleaningPage() {
               <div>{cleanupError(cleanup.error)}</div>
             </div>
           )}
+          <details className="cleanup-disclosure" style={{ marginTop: 10 }}>
+            <summary><ChevronDown size={14} aria-hidden="true" /> Recycle Bin or permanent deletion?</summary>
+            <p className="cleanup-note">
+              <strong>Recycle Bin</strong> keeps a file recoverable until you empty it.
+              <strong> Permanent deletion</strong> removes it immediately and cannot be undone.
+              This build does not offer permanent deletion.
+            </p>
+          </details>
         </CardBody>
       </Card>
 
