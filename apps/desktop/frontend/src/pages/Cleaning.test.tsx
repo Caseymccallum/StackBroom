@@ -48,11 +48,13 @@ beforeEach(() => {
 });
 
 describe("CleaningPage", () => {
-  it("shows a curated rule and an explicit preview-only state before a preview exists", () => {
+  it("shows a curated rule and an explicit not-available state before a review exists", () => {
     render(<CleaningPage />);
     expect(screen.getByText("Old per-user temporary files")).toBeInTheDocument();
-    expect(screen.getByText(/Preview only — cleaning not yet available/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cleaning not available yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cleaning isn't available in this build\./i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /clean now|delete|confirm cleanup/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/independent security review|owner-authorised|execution gate|safety provider|native execution|audit approval/i)).not.toBeInTheDocument();
   });
 
   it("does not select candidates automatically and requires conscious selection", () => {
@@ -68,9 +70,9 @@ describe("CleaningPage", () => {
     render(<CleaningPage />);
     const checkbox = screen.getByRole("checkbox", { name: /Select old\.tmp/i });
     expect(checkbox).not.toBeChecked();
-    expect(screen.getByRole("button", { name: /Preview selected cleanup/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Review selected files/i })).toBeDisabled();
     fireEvent.click(checkbox);
-    fireEvent.click(screen.getByRole("button", { name: /Preview selected cleanup/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Review selected files/i }));
     expect(state.createPreview).toHaveBeenCalledWith(["c1"]);
   });
 
@@ -85,26 +87,29 @@ describe("CleaningPage", () => {
       skippedCount: 0, startedAt: "2026-10-01T00:00:00Z", completedAt: "2026-10-01T00:00:01Z",
     };
     render(<CleaningPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Select all eligible/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Select all/i }));
     expect(screen.getByRole("checkbox", { name: /Select old\.tmp/i })).toBeChecked();
     expect(screen.queryByRole("checkbox", { name: /Select new\.tmp/i })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Clear selection/i }));
     expect(screen.getByRole("checkbox", { name: /Select old\.tmp/i })).not.toBeChecked();
   });
 
-  it("renders recovery uncertainty and a disabled execution control in a preview", () => {
+  it("renders a plain recovery estimate and a disabled clean control in a review", () => {
     state.preview = {
       previewId: "p1", ruleId: rule.id, ruleVersion: rule.version, ruleTitle: rule.title,
       selected: [], excluded: [], fileCount: 1, totalLogical: 100, totalAllocated: 100,
-      recoverableBytes: 0, recoverableKnown: false, allocatedUnknown: 1,
+      recoverableBytes: 50, recoverableKnown: false, allocatedUnknown: 1,
       deletionMode: "recycle", executionAvailable: false,
-      recoveryNote: "Recycle Bin availability depends on policy.",
-      risks: [], sideEffects: [], expiresAt: "2026-10-01T00:10:00Z",
+      recoveryNote: "Windows may not be able to put every file in the Recycle Bin.",
+      risks: [], sideEffects: [], expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
     };
     render(<CleaningPage />);
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
-    expect(screen.getByText(/No cleanup method is enabled/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Confirm cleanup/i })).toBeDisabled();
+    expect(screen.getByText("At least 100 B")).toBeInTheDocument();
+    expect(screen.getByText("At least 50 B")).toBeInTheDocument();
+    expect(screen.getByText(/1 file couldn't be measured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Expires in 10m/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cleaning isn't available in this build yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Clean selected files/i })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /clean now|delete/i })).not.toBeInTheDocument();
   });
 });

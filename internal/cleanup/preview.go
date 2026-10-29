@@ -62,7 +62,7 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 		RecoverableKnown: true,
 		ExpiresAt:        now.Add(ttl),
 		Risks:            append([]string(nil), discovery.Rule.Risks...),
-		SideEffects:      []string{"No files are changed by this preview.", "A future cleanup would move selected files to the Recycle Bin where supported."},
+		SideEffects:      []string{"No files are changed by this review.", "Cleaning would move selected files to the Recycle Bin when Windows allows it."},
 	}
 	for _, id := range candidateIDs {
 		if seen[id] {
@@ -107,9 +107,9 @@ func BuildPreview(discovery *Discovery, candidateIDs []string, now time.Time, tt
 	}
 	switch preview.Rule.DeletionMode {
 	case "recycle":
-		preview.RecoveryNote = "A future cleanup would prefer the Recycle Bin. Availability depends on volume, file size, policy and file type; permanent deletion is not enabled by this rule."
+		preview.RecoveryNote = "Windows may not be able to put every file in the Recycle Bin. StackBroom will not permanently delete a file instead."
 	default:
-		preview.RecoveryNote = "Recovery is not guaranteed for this rule."
+		preview.RecoveryNote = "This cleanup method cannot be made recoverable."
 	}
 	return preview, nil
 }

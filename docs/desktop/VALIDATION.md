@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,600,896 bytes** (about 11.6 MB)
-- SHA-256: `EFB67684CE92B41BFD855F93A3E0B44823BBD7AC8F5F3126343D57C7B7B7D8DE`
-- Source branch: `feat/m3b-4-recovery-feasibility`; version `0.2.0`.
+- Size: **11,605,504 bytes** (about 11.6 MB)
+- SHA-256: `F44DC7C4675EF727FC04FA5AE496FB6EE26F2EAD2EB985C329C8CD77C8F9A790`
+- Source branch: `feat/cleanup-ux`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -49,6 +49,8 @@ The opt-in execution sources compile with `go test -tags cleanup_execution ./int
 
 M3B-4 root tests, root vet, tagged cleanup/storage/history tests and tagged vet all passed. The M3B-4 decision is recorded in `docs/product/M3B-4-RECOVERY-FEASIBILITY.md`: Recycle Bin execution is NO-GO, managed quarantine is CONDITIONAL for a separate feasibility prototype, and the production posture remains preview-only. The M3B-4 receipt lifecycle tests pass; `go test -race` was not run because the local toolchain requires cgo, which is disabled.
 
+M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`; no native cleanup or permanent-delete build was added.
+
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
 `internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, hash-attempt/failure coverage, full-hash confirmation, duplicate candidate caps, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, files replaced by junctions before hashing, parent-directory junction substitution, offline-placeholder refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded cursor pages, full-directory search and matched totals, root-path privacy, sanitised error paths, concurrent-scan refusal and cancellation.
@@ -61,7 +63,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ### Frontend
 
-`npm test` passes **41 tests / 13 files**:
+`npm test` passes **45 tests / 14 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -74,13 +76,16 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - Storage explorer root-selection empty state, measured evidence rendering, accessible child rows, duplicate evidence, coverage limits, cursor pagination and partial-result labelling;
 - area-proportional treemap budgets, Other-region accounting, recursive region proportions, zero/disproportionate sizes and non-overlap/bounds;
 - no cleanup/delete action in the Storage UI;
-- Cleaning catalogue, preview-only language, empty default selection, explicit Select all eligible/Clear selection, preview request, unknown recovery and a disabled Confirm cleanup control with no Clean Now/delete action.
+- Cleaning catalogue, plain Find files/Choose/Review/Clean/Results language, empty default selection, explicit Select all/Clear selection, review request, known/unknown recovery estimates and a disabled Clean selected files control with no Clean Now/delete action;
+- preview expiry shows time remaining rather than “Just now”;
+- skipped-file reasons, search states and errors are translated to plain language;
+- aligned disclosure summaries and no developer-oriented gate/review terminology.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 
 ### Visual capture
 
-The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 client sizes, dark and light. **M2 Storage and M3A Cleaning screenshots were not captured in this task** because the owner is using another fullscreen application and explicitly prohibited visual validation that would bring the StackBroom window to the front. Both UIs are covered by component tests only; a visual recapture at both sizes and themes is an outstanding gate.
+The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 client sizes, dark and light. **M2 Storage, M3A Cleaning and M3C simplified Cleaning screenshots were not captured in this task** because the owner is using another fullscreen application and explicitly prohibited visual validation that would bring the StackBroom window to the front. These UIs are covered by component tests only; a visual recapture at both sizes and themes is an outstanding gate.
 
 ## Performance observations
 

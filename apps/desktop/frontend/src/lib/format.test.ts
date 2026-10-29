@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryLabel, formatBytes, formatPercent, formatPorts, listenerAddress, ownershipLabel } from "./format";
+import { categoryLabel, formatBytes, formatExpiry, formatPercent, formatPorts, listenerAddress, ownershipLabel } from "./format";
 
 describe("format helpers", () => {
   it("formats bytes with honest unknowns", () => {
@@ -30,5 +30,14 @@ describe("format helpers", () => {
     expect(categoryLabel("other")).toBe("Process");
     expect(ownershipLabel("inferred")).toBe("Inferred");
     expect(ownershipLabel("")).toBe("Not associated");
+  });
+
+  it("formats a future review expiry instead of calling it just now", () => {
+    const now = Date.parse("2026-10-28T12:00:00Z");
+    expect(formatExpiry("2026-10-28T12:00:30Z", now)).toBe("in 30s");
+    expect(formatExpiry("2026-10-28T12:10:00Z", now)).toBe("in 10m");
+    expect(formatExpiry("2026-10-28T14:00:00Z", now)).toBe("in 2h");
+    expect(formatExpiry("2026-10-28T11:59:59Z", now)).toBe("Expired");
+    expect(formatExpiry("not-a-date", now)).toBe("Not available");
   });
 });

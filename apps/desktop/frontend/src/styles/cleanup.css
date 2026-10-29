@@ -3,6 +3,103 @@
   gap: 14px;
 }
 
+.cleanup-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cleanup-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.cleanup-steps li + li::before {
+  content: "→";
+  margin-right: 2px;
+  color: var(--faint);
+}
+
+.cleanup-steps li.active {
+  border-color: var(--accent-line);
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.cleanup-steps li.done {
+  color: var(--accent-strong);
+}
+
+.cleanup-step-number {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  color: var(--faint);
+  background: var(--surface-3);
+  font-size: 10px;
+}
+
+.cleanup-steps li.active .cleanup-step-number,
+.cleanup-steps li.done .cleanup-step-number {
+  color: #05201e;
+  background: var(--accent);
+}
+
+.cleanup-disclosure {
+  margin: 7px 0;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.cleanup-disclosure summary,
+.cleanup-exclusions summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--accent-strong);
+}
+
+.cleanup-disclosure summary::-webkit-details-marker,
+.cleanup-exclusions summary::-webkit-details-marker {
+  display: none;
+}
+
+.cleanup-disclosure summary svg,
+.cleanup-exclusions summary svg {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+
+.cleanup-disclosure[open] > summary svg,
+.cleanup-exclusions[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.cleanup-disclosure ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.cleanup-note {
+  margin: 7px 0 0;
+  font-size: 11.5px;
+}
+
 .cleanup-rule.active {
   border-color: var(--accent-line);
 }
@@ -83,6 +180,14 @@
   margin-top: 3px;
   color: var(--text);
   font-size: 15px;
+}
+
+.cleanup-summary small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .cleanup-actions {

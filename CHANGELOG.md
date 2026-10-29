@@ -4,6 +4,31 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3C cleanup UX and limited path
+
+Execution remains disabled. No user file, Recycle Bin item or native Shell/COM
+operation was touched. Tests use disposable temporary fixtures only.
+
+### Changed
+
+- Cleaning now uses plain language: Find files, choose files, review, clean and
+  results. Developer-oriented execution/review language was removed from the
+  screen.
+- The unavailable Clean action explains that cleaning is not available in this
+  build instead of exposing internal gates.
+- Preview expiry now shows time remaining rather than “Just now”.
+- Recovery and space estimates show known values as “At least …” when some files
+  could not be measured.
+- Skipped-file reasons and search statuses are translated to plain language.
+- Disclosure summaries use aligned, rotating icons and no duplicate native
+  marker.
+
+### Added
+
+- M3C limited-cleanup plan: one vetted category, recycle-only where proven,
+  quarantine as the recoverable fallback, permanent deletion deferred.
+- Frontend tests for expiry, plain error/reason copy and the simplified workflow.
+
 ## [Unreleased] - M3B-4 recovery feasibility decision
 
 Execution remains disabled. No user file, Recycle Bin item or native Shell/COM

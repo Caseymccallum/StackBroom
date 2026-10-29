@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronDown, FolderSearch, ShieldCheck, Sparkles } from "lucide-react";
 import type { CleanupCandidate, CleanupPreviewView, CleanupRule } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
-import { formatBytes, formatWhen } from "../lib/format";
+import { formatBytes, formatExpiry, formatWhen } from "../lib/format";
+import { cleanupError, cleanupReason, cleanupStatus } from "../lib/cleanup";
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState } from "../components/ui";
 import { useCleanup } from "../hooks/useCleanup";
+
+const steps = ["Find files", "Choose files", "Review", "Clean", "Results"];
 
 export function CleaningPage() {
   const cleanup = useCleanup();
   const [selectedIDs, setSelectedIDs] = useState<string[]>([]);
   const candidates = cleanup.discovery?.candidates ?? [];
   const selected = useMemo(() => new Set(selectedIDs), [selectedIDs]);
+  const activeStep = cleanup.preview ? 2 : cleanup.discovery ? 1 : 0;
 
   useEffect(() => {
     void cleanup.loadRules();
@@ -30,21 +34,33 @@ export function CleaningPage() {
     <div className="grid" style={{ gap: 16 }}>
       <Card>
         <CardHeader
-          title="Cleaning preview"
-          subtitle="Curated, read-only discovery. No file is deleted, moved, renamed or modified in this milestone."
-          action={<Badge tone="amber">Preview only — cleaning not yet available</Badge>}
+          title="Cleaning"
+          subtitle="Find old files, choose what to review, and decide what to clean."
+          action={<Badge tone="amber">Cleaning not available yet</Badge>}
         />
         <CardBody>
+          <ol className="cleanup-steps" aria-label="Cleanup steps">
+            {steps.map((step, index) => (
+              <li
+                key={step}
+                className={index === activeStep ? "active" : index < activeStep ? "done" : ""}
+                aria-current={index === activeStep ? "step" : undefined}
+              >
+                <span className="cleanup-step-number">{index + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
           <div className="banner" style={{ borderColor: "var(--amber)" }}>
-            <ShieldCheck size={16} style={{ color: "var(--amber)" }} />
+            <ShieldCheck size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
             <div>
-              <strong>Nothing here cleans your disk yet.</strong> Analyse a curated category, review exactly what is eligible and build an expiring preview. Execution is intentionally not implemented.
+              <strong>Cleaning isn't available in this build.</strong> You can find and review files, but nothing will be cleaned or removed yet.
             </div>
           </div>
           {cleanup.error && (
             <div className="banner" style={{ marginTop: 10, borderColor: "var(--red)" }} role="alert">
-              <AlertTriangle size={16} style={{ color: "var(--red)" }} />
-              <div>{cleanup.error}</div>
+              <AlertTriangle size={16} style={{ color: "var(--red)" }} aria-hidden="true" />
+              <div>{cleanupError(cleanup.error)}</div>
             </div>
           )}
         </CardBody>
@@ -61,38 +77,38 @@ export function CleaningPage() {
           />
         ))}
         {cleanup.rules.length === 0 && (
-          <Card><CardBody><EmptyState icon={<Sparkles size={20} />} title="Curated rules are loading">The cleanup catalogue is read from the local application.</EmptyState></CardBody></Card>
+          <Card><CardBody><EmptyState icon={<Sparkles size={20} />} title="Loading cleanup options">Your cleanup options are read from this app.</EmptyState></CardBody></Card>
         )}
       </div>
 
       {cleanup.discovery && (
         <Card>
           <CardHeader
-            title={`Discovery: ${cleanup.discovery.rule.title}`}
-            subtitle={`Scope: ${cleanup.discovery.rule.scopeDisplay} · rule ${cleanup.discovery.rule.id} v${cleanup.discovery.rule.version}`}
+            title={`Files found: ${cleanup.discovery.rule.title}`}
+            subtitle={`Where: ${cleanup.discovery.rule.scopeDisplay}`}
             action={cleanup.discovery.status === "running"
-              ? <Button onClick={() => void cleanup.cancel()}>Cancel discovery</Button>
-              : <Badge tone={cleanup.discovery.partial ? "amber" : "teal"}>{cleanup.discovery.status}</Badge>}
+              ? <Button onClick={() => void cleanup.cancel()}>Stop searching</Button>
+              : <Badge tone={cleanup.discovery.partial ? "amber" : "teal"}>{cleanupStatus(cleanup.discovery.status)}</Badge>}
           />
           <CardBody>
             {cleanup.discovery.status === "running" ? (
               <div className="storage-progress" role="status" aria-live="polite">
-                <div><strong>{cleanup.discovery.progress.phase || "starting"}</strong><span className="muted"> · {cleanup.discovery.progress.items.toLocaleString()} items · {formatBytes(cleanup.discovery.progress.bytes)} observed</span></div>
-                <span className="muted">{cleanup.discovery.progress.errors} skipped/errors</span>
+                <div><strong>Searching…</strong><span className="muted"> · {cleanup.discovery.progress.items.toLocaleString()} files checked · {formatBytes(cleanup.discovery.progress.bytes)} found</span></div>
+                <span className="muted">{cleanup.discovery.progress.errors} skipped</span>
               </div>
             ) : (
               <div style={{ display: "grid", gap: 12 }}>
                 <div className="grid cleanup-summary">
-                  <Summary label="Files found" value={cleanup.discovery.scannedFiles.toLocaleString()} />
-                  <Summary label="Eligible" value={cleanup.discovery.eligible.toLocaleString()} />
-                  <Summary label="Known size" value={formatBytes(cleanup.discovery.totalLogical)} />
-                  <Summary label="Allocated" value={formatBytes(cleanup.discovery.totalAllocated)} />
-                  <Summary label="Excluded" value={cleanup.discovery.excludedTotal.toLocaleString()} />
+                  <Summary label="Files checked" value={cleanup.discovery.scannedFiles.toLocaleString()} />
+                  <Summary label="Ready to choose" value={cleanup.discovery.eligible.toLocaleString()} />
+                  <Summary label="Size" value={formatBytes(cleanup.discovery.totalLogical)} />
+                  <Summary label="Space used" value={knownTotal(cleanup.discovery.totalAllocated, cleanup.discovery.allocatedUnknown)} />
+                  <Summary label="Skipped" value={cleanup.discovery.excludedTotal.toLocaleString()} />
                 </div>
                 {cleanup.discovery.partial && (
                   <div className="banner" style={{ borderColor: "var(--amber)" }} role="alert">
-                    <AlertTriangle size={16} style={{ color: "var(--amber)" }} />
-                    <div><strong>Partial discovery.</strong> {cleanup.discovery.partialReason || "Not every path could be inspected."}</div>
+                    <AlertTriangle size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
+                    <div><strong>Some folders couldn't be checked.</strong> The list may be incomplete.</div>
                   </div>
                 )}
                 <div className="cleanup-actions">
@@ -101,23 +117,23 @@ export function CleaningPage() {
                     disabled={cleanup.busy || selectedIDs.length === 0}
                     onClick={() => void cleanup.createPreview(selectedIDs)}
                   >
-                    Preview selected cleanup
+                    Review selected files
                   </Button>
                   <Button variant="ghost" onClick={() => setSelectedIDs(candidates.map((candidate) => candidate.id))} disabled={candidates.length === 0}>
-                    Select all eligible
+                    Select all
                   </Button>
                   <Button variant="ghost" onClick={() => setSelectedIDs([])} disabled={selectedIDs.length === 0}>
                     Clear selection
                   </Button>
-                  <span className="muted">{selectedIDs.length} selected · preview only</span>
+                  <span className="muted">{selectedIDs.length} selected</span>
                 </div>
                 {candidates.length === 0 ? (
-                  <EmptyState icon={<FolderSearch size={20} />} title="No eligible candidates">The rule found no files that met its age, extension and identity checks.</EmptyState>
+                  <EmptyState icon={<FolderSearch size={20} />} title="No old files found">Nothing matched the age and file checks for this option.</EmptyState>
                 ) : (
-                  <div className="table-wrap" tabIndex={0} role="region" aria-label="Cleanup candidate table">
+                  <div className="table-wrap" tabIndex={0} role="region" aria-label="Files you can choose">
                     <table className="table">
-                      <caption className="sr-only">Eligible cleanup candidates. Selection is for a preview only.</caption>
-                      <thead><tr><th>Select</th><th>File</th><th>Logical</th><th>Allocated</th><th>Modified</th><th>Evidence</th></tr></thead>
+                      <caption className="sr-only">Files you can choose to review.</caption>
+                      <thead><tr><th>Choose</th><th>File</th><th>Size</th><th>Space used</th><th>Last changed</th><th>Status</th></tr></thead>
                       <tbody>
                         {candidates.map((candidate) => (
                           <tr key={candidate.id}>
@@ -126,19 +142,22 @@ export function CleaningPage() {
                             <td className="num">{formatBytes(candidate.logicalBytes)}</td>
                             <td className="num">{candidate.allocatedKnown ? formatBytes(candidate.allocatedBytes) : "Unknown"}</td>
                             <td>{formatWhen(candidate.modifiedAt)}</td>
-                            <td>{candidate.uncertain ? <Badge tone="amber">Uncertain</Badge> : <span className="muted">Verified at discovery</span>}</td>
+                            <td>{candidate.uncertain ? <Badge tone="amber">Needs checking</Badge> : <span className="muted">Checked</span>}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 )}
+                {candidates.some((candidate) => candidate.uncertain) && (
+                  <p className="muted">Files marked “Needs checking” couldn't be fully checked. Find files again before cleaning.</p>
+                )}
                 {(cleanup.discovery.excluded ?? []).length > 0 && (
                   <details className="cleanup-exclusions">
-                    <summary><ChevronDown size={14} /> Excluded or uncertain targets ({cleanup.discovery.excludedTotal})</summary>
+                    <summary><ChevronDown size={14} aria-hidden="true" /> Files skipped ({cleanup.discovery.excludedTotal})</summary>
                     <ul>
                       {(cleanup.discovery.excluded ?? []).map((exclusion) => (
-                        <li key={`${exclusion.relativePath}-${exclusion.reason}`}><span>{exclusion.relativePath}</span><span className="muted">{exclusion.reason}</span></li>
+                        <li key={`${exclusion.relativePath}-${exclusion.reason}`}><span>{exclusion.relativePath}</span><span className="muted">{cleanupReason(exclusion.reason)}</span></li>
                       ))}
                     </ul>
                   </details>
@@ -161,57 +180,97 @@ function RuleCard({ rule, active, busy, onAnalyse }: { rule: CleanupRule; active
       <CardBody>
         <div className="cleanup-rule-head">
           <div><Badge tone="teal">{rule.category}</Badge><h3 className="card-title" style={{ marginTop: 6 }}>{rule.title}</h3></div>
-          <Badge>{rule.recoverable === "uncertain" ? "Recovery uncertain" : rule.recoverable}</Badge>
+          <Badge tone={rule.recoverable === "uncertain" ? "amber" : "neutral"}>
+            {rule.recoverable === "uncertain" ? "Recycle Bin may vary" : "Recycle Bin"}
+          </Badge>
         </div>
         <p className="muted">{rule.description}</p>
         <dl className="cleanup-facts">
-          <div><dt>Scope</dt><dd className="mono">{rule.scopeDisplay}</dd></div>
-          <div><dt>Owner</dt><dd>{rule.owner}</dd></div>
-          <div><dt>Minimum age</dt><dd>{rule.minAgeDays} days</dd></div>
-          <div><dt>Future deletion mode</dt><dd>{rule.deletionMode === "recycle" ? "Recycle Bin where supported" : rule.deletionMode}</dd></div>
+          <div><dt>Where</dt><dd className="mono">{rule.scopeDisplay}</dd></div>
+          <div><dt>Applies to</dt><dd>{rule.owner}</dd></div>
+          <div><dt>Older than</dt><dd>{rule.minAgeDays} days</dd></div>
+          <div><dt>How it would be cleaned</dt><dd>{rule.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available"}</dd></div>
         </dl>
-        <details><summary>Why this rule is considered safe</summary><p className="muted">{rule.whySafe}</p><ul>{(rule.evidence ?? []).map((item) => <li key={item}>{item}</li>)}</ul></details>
-        <details><summary>Risks and prerequisites</summary><ul>{(rule.risks ?? []).map((item) => <li key={item}>{item}</li>)}</ul>{rule.requiresClosed?.length ? <p className="muted">Close first: {rule.requiresClosed.join("; ")}</p> : null}</details>
-        <div className="cleanup-rule-action"><Button variant="primary" onClick={onAnalyse} disabled={busy}>Analyse category</Button></div>
+        <details className="cleanup-disclosure">
+          <summary><ChevronDown size={14} aria-hidden="true" /> What's included</summary>
+          <p className="muted">{rule.whySafe}</p>
+          <ul>{(rule.evidence ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
+        </details>
+        <details className="cleanup-disclosure">
+          <summary><ChevronDown size={14} aria-hidden="true" /> What to know</summary>
+          <ul>{(rule.risks ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
+          {rule.requiresClosed?.length ? <p className="muted">Close these apps first: {rule.requiresClosed.join("; ")}</p> : null}
+        </details>
+        <div className="cleanup-rule-action"><Button variant="primary" onClick={onAnalyse} disabled={busy}>Find files</Button></div>
       </CardBody>
     </Card>
   );
 }
 
+function knownTotal(value: number, unknownCount: number): string {
+  if (unknownCount === 0) return formatBytes(value);
+  if (value > 0) return `At least ${formatBytes(value)}`;
+  return "Unknown";
+}
+
+function recoveryEstimate(preview: CleanupPreviewView): { value: string; note: string } {
+  const unknown = preview.allocatedUnknown > 0
+    ? `${preview.allocatedUnknown.toLocaleString()} file${preview.allocatedUnknown === 1 ? "" : "s"} couldn't be measured.`
+    : "";
+  if (preview.recoverableKnown) return { value: formatBytes(preview.recoverableBytes), note: "" };
+  if (preview.recoverableBytes > 0) return { value: `At least ${formatBytes(preview.recoverableBytes)}`, note: unknown };
+  return { value: "Unknown", note: unknown };
+}
+
 function PreviewCard({ preview, onClear }: { preview: CleanupPreviewView; onClear: () => void }) {
+  const estimate = recoveryEstimate(preview);
+  const expiry = formatExpiry(preview.expiresAt);
   return (
     <Card>
-      <CardHeader title="Exact cleanup preview" subtitle={`Rule ${preview.ruleId} v${preview.ruleVersion} · expires ${formatWhen(preview.expiresAt)}`} action={<Badge tone="amber">No execution</Badge>} />
+      <CardHeader
+        title="Review selected files"
+        subtitle={expiry === "Expired" ? "This review expired. Find files again." : `Expires ${expiry}`}
+        action={<Badge tone="amber">Nothing changed yet</Badge>}
+      />
       <CardBody>
         <div className="grid cleanup-summary">
-          <Summary label="Selected files" value={preview.fileCount.toLocaleString()} />
-          <Summary label="Logical size" value={formatBytes(preview.totalLogical)} />
-          <Summary label="Allocated size" value={formatBytes(preview.totalAllocated)} />
-          <Summary label="Recoverable estimate" value={preview.recoverableKnown ? formatBytes(preview.recoverableBytes) : "Unknown"} />
-          <Summary label="Future mode" value={preview.deletionMode === "recycle" ? "Recycle where supported" : preview.deletionMode} />
+          <Summary label="Files selected" value={preview.fileCount.toLocaleString()} />
+          <Summary label="Size" value={formatBytes(preview.totalLogical)} />
+          <Summary label="Space used" value={knownTotal(preview.totalAllocated, preview.allocatedUnknown)} />
+          <Summary
+            label="Space in selected files"
+            value={estimate.value}
+            note={estimate.note || (preview.deletionMode === "recycle" ? "The Recycle Bin may keep this space until you empty it." : "")}
+          />
+          <Summary label="Cleanup method" value={preview.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available"} />
         </div>
         <div className="banner" style={{ marginTop: 10, borderColor: "var(--amber)" }} role="status">
-          <AlertTriangle size={16} style={{ color: "var(--amber)" }} />
-          <div><strong>Preview only.</strong> {preview.recoveryNote} No cleanup method is enabled in this build.</div>
+          <AlertTriangle size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
+          <div>
+            <strong>Nothing has been changed.</strong> Cleaning isn't available in this build, so you can review these files but not clean them yet.
+            {preview.recoveryNote ? <p className="cleanup-note">{preview.recoveryNote}</p> : null}
+          </div>
         </div>
-        {(preview.excluded ?? []).length > 0 && <p className="muted">{(preview.excluded ?? []).length} selected target(s) changed and were excluded from this preview.</p>}
-        <details style={{ marginTop: 10 }}>
-          <summary>Exact selected targets ({preview.fileCount})</summary>
+        {(preview.excluded ?? []).length > 0 && (
+          <p className="muted">Some files changed since you selected them and aren't in this review. Find files again to see the latest list.</p>
+        )}
+        <details className="cleanup-disclosure" style={{ marginTop: 10 }}>
+          <summary><ChevronDown size={14} aria-hidden="true" /> Selected files ({preview.fileCount})</summary>
           <ul className="cleanup-exclusions">
             {(preview.selected ?? []).map((candidate) => <li key={candidate.id}><span>{candidate.relativePath}</span><span className="muted">{formatBytes(candidate.logicalBytes)}</span></li>)}
           </ul>
         </details>
         <div className="cleanup-actions" style={{ marginTop: 12 }}>
-          <Button variant="ghost" onClick={onClear}>Close preview</Button>
-          <Button variant="primary" disabled aria-describedby="execution-gate">Confirm cleanup</Button>
-          <span id="execution-gate" className="muted">Execution disabled: independent review and owner-authorised disposable-fixture testing are required.</span>
+          <Button variant="ghost" onClick={onClear}>Close review</Button>
+          <Button variant="primary" disabled aria-describedby="cleaning-unavailable">Clean selected files</Button>
+          <span id="cleaning-unavailable" className="muted">Cleaning isn't available in this build yet.</span>
         </div>
       </CardBody>
     </Card>
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
-  return <div><span>{label}</span><strong>{value}</strong></div>;
+function Summary({ label, value, note }: { label: string; value: string; note?: string }) {
+  return <div><span>{label}</span><strong>{value}</strong>{note ? <small>{note}</small> : null}</div>;
 }
 

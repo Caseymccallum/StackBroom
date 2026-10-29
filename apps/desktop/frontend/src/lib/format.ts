@@ -39,6 +39,18 @@ export function formatWhen(iso: string | null | undefined): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+export function formatExpiry(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return "Not available";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  const delta = date.getTime() - now;
+  if (delta <= 0) return "Expired";
+  if (delta < 60_000) return `in ${Math.ceil(delta / 1000)}s`;
+  if (delta < 3_600_000) return `in ${Math.ceil(delta / 60_000)}m`;
+  if (delta < 86_400_000) return `in ${Math.ceil(delta / 3_600_000)}h`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export function formatClock(iso: string | null | undefined): string {
   if (!iso) return "—";
   const date = new Date(iso);
