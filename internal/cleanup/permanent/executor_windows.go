@@ -93,6 +93,14 @@ func deleteOne(ctx context.Context, target execution.Target) ItemResult {
 		item.Status, item.ReasonCode, item.Message = ItemRefused, "unsupported_filesystem", "only .dmp files on NTFS are supported"
 		return item
 	}
+	if target.File.ModTime.IsZero() || time.Since(target.File.ModTime) < 7*24*time.Hour {
+		item.Status, item.ReasonCode, item.Message = ItemChanged, "age", "the file is not old enough for crash-dump cleanup"
+		return item
+	}
+	if err := storage.ValidateCleanupTarget(&target.File); err != nil {
+		item.Status, item.ReasonCode, item.Message = ItemChanged, storage.ValidateTargetErrorCode(err), "the file changed before cleanup"
+		return item
+	}
 	release, err := storage.GuardCleanupAncestors(target.File)
 	if err != nil {
 		item.Status, item.ReasonCode, item.Message = ItemRefused, "ancestor_guard", "the file's folder could not be protected"
