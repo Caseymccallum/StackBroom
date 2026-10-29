@@ -67,9 +67,12 @@ export interface CleanupExecutionItem {
     "hresult"?: number;
     "recoveryAvailable": boolean;
     "recoveryKind"?: string;
+    "verified": boolean;
     "logicalBytes": number;
     "allocatedBytes": number;
     "allocatedKnown": boolean;
+    "spaceReclaimedBytes": number;
+    "spaceReclaimedKnown": boolean;
 }
 
 export interface CleanupExecutionView {
@@ -77,6 +80,17 @@ export interface CleanupExecutionView {
     "state": string;
     "states": string[] | null;
     "aborted": boolean;
+    "permanent": boolean;
+    "recoveryAvailable": boolean;
+    "requested": number;
+    "processed": number;
+    "deleted": number;
+    "refused": number;
+    "changed": number;
+    "stillPresent": number;
+    "outcomeUnknown": number;
+    "spaceReclaimedBytes": number;
+    "spaceReclaimedKnown": boolean;
     "reasonCode"?: string;
     "message"?: string;
     "items": CleanupExecutionItem[] | null;
@@ -119,6 +133,8 @@ export interface CleanupPreviewView {
     "allocatedUnknown": number;
     "deletionMode": string;
     "executionAvailable": boolean;
+    "permanentAvailable": boolean;
+    "executionMode"?: string;
     "recoveryNote": string;
     "risks": string[] | null;
     "sideEffects": string[] | null;
@@ -145,6 +161,7 @@ export interface CleanupRule {
     "supportedWindows": string;
     "minAgeDays": number;
     "deletionMode": string;
+    "permanentAvailable": boolean;
     "recoverable": string;
     "requiresClosed"?: string[] | null;
     "risks": string[] | null;

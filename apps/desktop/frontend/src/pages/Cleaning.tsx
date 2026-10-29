@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { CleanupExecutionView } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { AlertTriangle, ChevronDown, FolderSearch, ShieldCheck, Sparkles } from "lucide-react";
 import type { CleanupCandidate, CleanupPreviewView, CleanupRule } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { formatBytes, formatExpiry, formatWhen } from "../lib/format";
@@ -176,7 +177,9 @@ export function CleaningPage() {
         </Card>
       )}
 
-      {cleanup.preview && <PreviewCard preview={cleanup.preview} onClear={cleanup.clearPreview} />}
+      {cleanup.preview && (
+        <PreviewCard preview={cleanup.preview} onClear={cleanup.clearPreview} onConfirm={cleanup.confirmPermanent} />
+      )}
     </div>
   );
 }
@@ -188,8 +191,8 @@ function RuleCard({ rule, active, busy, onAnalyse }: { rule: CleanupRule; active
       <CardBody>
         <div className="cleanup-rule-head">
           <div><Badge tone="teal">{rule.category}</Badge><h3 className="card-title" style={{ marginTop: 6 }}>{rule.title}</h3></div>
-          <Badge tone={rule.recoverable === "uncertain" ? "amber" : "neutral"}>
-            {rule.recoverable === "uncertain" ? "Recycle Bin may vary" : "Recycle Bin"}
+          <Badge tone={rule.permanentAvailable ? "red" : rule.recoverable === "uncertain" ? "amber" : "neutral"}>
+            {rule.permanentAvailable ? "Permanent deletion" : rule.recoverable === "uncertain" ? "Recycle Bin may vary" : "Recycle Bin"}
           </Badge>
         </div>
         <p className="muted">{rule.description}</p>
@@ -197,7 +200,7 @@ function RuleCard({ rule, active, busy, onAnalyse }: { rule: CleanupRule; active
           <div><dt>Where</dt><dd className="mono">{rule.scopeDisplay}</dd></div>
           <div><dt>Applies to</dt><dd>{rule.owner}</dd></div>
           <div><dt>Older than</dt><dd>{rule.minAgeDays} days</dd></div>
-          <div><dt>How it would be cleaned</dt><dd>{rule.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available"}</dd></div>
+          <div><dt>How it would be cleaned</dt><dd>{rule.permanentAvailable ? "Permanent deletion" : rule.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available"}</dd></div>
         </dl>
         <details className="cleanup-disclosure">
           <summary><ChevronDown size={14} aria-hidden="true" /> What's included</summary>
@@ -230,15 +233,38 @@ function recoveryEstimate(preview: CleanupPreviewView): { value: string; note: s
   return { value: "Unknown", note: unknown };
 }
 
-function PreviewCard({ preview, onClear }: { preview: CleanupPreviewView; onClear: () => void }) {
+function PreviewCard({
+  preview,
+  onClear,
+  onConfirm,
+}: {
+  preview: CleanupPreviewView;
+  onClear: () => void;
+  onConfirm: (previewID: string) => Promise<CleanupExecutionView | null>;
+}) {
   const estimate = recoveryEstimate(preview);
   const expiry = formatExpiry(preview.expiresAt);
+  const permanent = preview.permanentAvailable === true;
+  const [confirming, setConfirming] = useState(false);
+  const [executing, setExecuting] = useState(false);
+  const [result, setResult] = useState<CleanupExecutionView | null>(null);
+  const cleanupMethod = permanent ? "Permanent deletion" : preview.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available";
+
+  const confirmPermanent = async () => {
+    if (!permanent || executing) return;
+    setExecuting(true);
+    const next = await onConfirm(preview.previewId);
+    if (next) setResult(next);
+    setConfirming(false);
+    setExecuting(false);
+  };
+
   return (
     <Card>
       <CardHeader
         title="Review selected files"
         subtitle={expiry === "Expired" ? "This review expired. Find files again." : `Expires ${expiry}`}
-        action={<Badge tone="amber">Nothing changed yet</Badge>}
+        action={permanent ? <Badge tone="red">Permanent deletion</Badge> : <Badge tone="amber">Nothing changed yet</Badge>}
       />
       <CardBody>
         <div className="grid cleanup-summary">
@@ -248,15 +274,28 @@ function PreviewCard({ preview, onClear }: { preview: CleanupPreviewView; onClea
           <Summary
             label="Space in selected files"
             value={estimate.value}
-            note={estimate.note || (preview.deletionMode === "recycle" ? "The Recycle Bin may keep this space until you empty it." : "")}
+            note={estimate.note || (permanent ? "This is an estimate; disk space may not be reclaimed immediately." : preview.deletionMode === "recycle" ? "The Recycle Bin may keep this space until you empty it." : "")}
           />
-          <Summary label="Cleanup method" value={preview.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available"} />
+          <Summary label="Cleanup method" value={cleanupMethod} />
         </div>
-        <div className="banner" style={{ marginTop: 10, borderColor: "var(--amber)" }} role="status">
-          <AlertTriangle size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
+        <div
+          className={permanent ? "banner banner-error" : "banner"}
+          style={{ marginTop: 10, borderColor: permanent ? "var(--red)" : "var(--amber)" }}
+          role={permanent ? "alert" : "status"}
+        >
+          <AlertTriangle size={16} style={{ color: permanent ? "var(--red)" : "var(--amber)" }} aria-hidden="true" />
           <div>
-            <strong>Nothing has been changed.</strong> Cleaning isn't available in this build, so you can review these files but not clean them yet.
-            {preview.recoveryNote ? <p className="cleanup-note">{preview.recoveryNote}</p> : null}
+            {permanent ? (
+              <>
+                <strong>Permanent deletion cannot be undone.</strong> The selected files will be deleted. StackBroom cannot restore them from the Recycle Bin.
+                {preview.recoveryNote ? <p className="cleanup-note">{preview.recoveryNote}</p> : null}
+              </>
+            ) : (
+              <>
+                <strong>Nothing has been changed.</strong> Cleaning isn't available in this build, so you can review these files but not clean them yet.
+                {preview.recoveryNote ? <p className="cleanup-note">{preview.recoveryNote}</p> : null}
+              </>
+            )}
           </div>
         </div>
         {(preview.excluded ?? []).length > 0 && (
@@ -268,13 +307,54 @@ function PreviewCard({ preview, onClear }: { preview: CleanupPreviewView; onClea
             {(preview.selected ?? []).map((candidate) => <li key={candidate.id}><span>{candidate.relativePath}</span><span className="muted">{formatBytes(candidate.logicalBytes)}</span></li>)}
           </ul>
         </details>
+        {confirming && permanent && (
+          <div className="banner banner-error cleanup-confirm" style={{ marginTop: 12 }} role="alertdialog" aria-modal="true" aria-labelledby="permanent-confirm-title">
+            <AlertTriangle size={18} style={{ color: "var(--red)" }} aria-hidden="true" />
+            <div>
+              <strong id="permanent-confirm-title">Delete these files permanently?</strong>
+              <p>This is irreversible. The selected files will not be available in the Recycle Bin.</p>
+              <div className="cleanup-actions">
+                <Button variant="primary" onClick={() => void confirmPermanent()} disabled={executing}>Delete permanently</Button>
+                <Button variant="ghost" onClick={() => setConfirming(false)} disabled={executing}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        )}
+        {result && <ExecutionResult result={result} />}
         <div className="cleanup-actions" style={{ marginTop: 12 }}>
           <Button variant="ghost" onClick={onClear}>Close review</Button>
-          <Button variant="primary" disabled aria-describedby="cleaning-unavailable">Clean selected files</Button>
-          <span id="cleaning-unavailable" className="muted">Cleaning isn't available in this build yet.</span>
+          {permanent ? (
+            <Button variant="primary" onClick={() => setConfirming(true)} disabled={!preview.executionAvailable || executing} aria-describedby="permanent-warning">
+              Delete permanently…
+            </Button>
+          ) : (
+            <Button variant="primary" disabled aria-describedby="cleaning-unavailable">Clean selected files</Button>
+          )}
+          <span id={permanent ? "permanent-warning" : "cleaning-unavailable"} className="muted">
+            {permanent ? (preview.executionAvailable ? "You will be asked to confirm. This cannot be undone." : "Permanent deletion isn't available in this build.") : "Cleaning isn't available in this build yet."}
+          </span>
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+function ExecutionResult({ result }: { result: CleanupExecutionView }) {
+  const state = result.state === "completed" ? "Cleaning complete" : result.state === "partial" ? "Partially complete" : "Cleaning did not complete";
+  return (
+    <div className="banner" style={{ marginTop: 12, borderColor: result.state === "completed" ? "var(--accent-line)" : "var(--amber)" }} role="status">
+      <div>
+        <strong>{state}.</strong>
+        <p className="cleanup-note">
+          Requested {result.requested}; processed {result.processed}; deleted {result.deleted}; refused {result.refused}; changed {result.changed}; still present {result.stillPresent}; unknown {result.outcomeUnknown}.
+        </p>
+        <p className="cleanup-note">
+          {result.permanent ? "Permanent deletion was requested. Recovery is unavailable." : "Recovery depends on the Recycle Bin."}
+          {" "}
+          {result.spaceReclaimedKnown ? `Space reclaimed: ${formatBytes(result.spaceReclaimedBytes)}.` : "Space reclaimed: not measured."}
+        </p>
+      </div>
+    </div>
   );
 }
 

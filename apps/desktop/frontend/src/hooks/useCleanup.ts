@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   CleanupDiscoveryView,
+  CleanupExecutionView,
   CleanupPreviewView,
   CleanupRule,
 } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
@@ -23,6 +24,7 @@ export interface CleanupState {
   start: (rule: CleanupRule) => Promise<void>;
   cancel: () => Promise<void>;
   createPreview: (candidateIDs: string[]) => Promise<void>;
+  confirmPermanent: (previewID: string) => Promise<CleanupExecutionView | null>;
   clearPreview: () => void;
 }
 
@@ -118,7 +120,22 @@ export function useCleanup(): CleanupState {
     }
   }, [discovery?.discoveryId]);
 
+  const confirmPermanent = useCallback(async (previewID: string) => {
+    if (!previewID) return null;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await CleanupService.ConfirmPermanentCleanup(previewID);
+      return next ?? null;
+    } catch (cause) {
+      if (mounted.current) setError(errorMessage(cause));
+      return null;
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  }, []);
+
   const clearPreview = useCallback(() => setPreview(null), []);
 
-  return { rules, rule, discovery, preview, busy, error, loadRules, start, cancel, createPreview, clearPreview };
+  return { rules, rule, discovery, preview, busy, error, loadRules, start, cancel, createPreview, confirmPermanent, clearPreview };
 }

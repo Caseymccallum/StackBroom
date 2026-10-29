@@ -3,21 +3,22 @@ package main
 import "time"
 
 type CleanupRule struct {
-	ID               string   `json:"id"`
-	Version          string   `json:"version"`
-	Title            string   `json:"title"`
-	Description      string   `json:"description"`
-	Owner            string   `json:"owner"`
-	Category         string   `json:"category"`
-	ScopeDisplay     string   `json:"scopeDisplay"`
-	SupportedWindows string   `json:"supportedWindows"`
-	MinAgeDays       int      `json:"minAgeDays"`
-	DeletionMode     string   `json:"deletionMode"`
-	Recoverable      string   `json:"recoverable"`
-	RequiresClosed   []string `json:"requiresClosed,omitempty"`
-	Risks            []string `json:"risks"`
-	Evidence         []string `json:"evidence"`
-	WhySafe          string   `json:"whySafe"`
+	ID                 string   `json:"id"`
+	Version            string   `json:"version"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description"`
+	Owner              string   `json:"owner"`
+	Category           string   `json:"category"`
+	ScopeDisplay       string   `json:"scopeDisplay"`
+	SupportedWindows   string   `json:"supportedWindows"`
+	MinAgeDays         int      `json:"minAgeDays"`
+	DeletionMode       string   `json:"deletionMode"`
+	PermanentAvailable bool     `json:"permanentAvailable"`
+	Recoverable        string   `json:"recoverable"`
+	RequiresClosed     []string `json:"requiresClosed,omitempty"`
+	Risks              []string `json:"risks"`
+	Evidence           []string `json:"evidence"`
+	WhySafe            string   `json:"whySafe"`
 }
 
 type CleanupProgress struct {
@@ -93,28 +94,42 @@ type CleanupHistoryView struct {
 }
 
 type CleanupExecutionItem struct {
-	TargetID          string `json:"targetId"`
-	Status            string `json:"status"`
-	ReasonCode        string `json:"reasonCode,omitempty"`
-	Message           string `json:"message,omitempty"`
-	HRESULT           uint32 `json:"hresult,omitempty"`
-	RecoveryAvailable bool   `json:"recoveryAvailable"`
-	RecoveryKind      string `json:"recoveryKind,omitempty"`
-	LogicalBytes      uint64 `json:"logicalBytes"`
-	AllocatedBytes    uint64 `json:"allocatedBytes"`
-	AllocatedKnown    bool   `json:"allocatedKnown"`
+	TargetID            string `json:"targetId"`
+	Status              string `json:"status"`
+	ReasonCode          string `json:"reasonCode,omitempty"`
+	Message             string `json:"message,omitempty"`
+	HRESULT             uint32 `json:"hresult,omitempty"`
+	RecoveryAvailable   bool   `json:"recoveryAvailable"`
+	RecoveryKind        string `json:"recoveryKind,omitempty"`
+	Verified            bool   `json:"verified"`
+	LogicalBytes        uint64 `json:"logicalBytes"`
+	AllocatedBytes      uint64 `json:"allocatedBytes"`
+	AllocatedKnown      bool   `json:"allocatedKnown"`
+	SpaceReclaimedBytes uint64 `json:"spaceReclaimedBytes"`
+	SpaceReclaimedKnown bool   `json:"spaceReclaimedKnown"`
 }
 
 type CleanupExecutionView struct {
-	PreviewID   string                 `json:"previewId"`
-	State       string                 `json:"state"`
-	States      []string               `json:"states"`
-	Aborted     bool                   `json:"aborted"`
-	ReasonCode  string                 `json:"reasonCode,omitempty"`
-	Message     string                 `json:"message,omitempty"`
-	Items       []CleanupExecutionItem `json:"items"`
-	StartedAt   time.Time              `json:"startedAt"`
-	CompletedAt time.Time              `json:"completedAt"`
+	PreviewID           string                 `json:"previewId"`
+	State               string                 `json:"state"`
+	States              []string               `json:"states"`
+	Aborted             bool                   `json:"aborted"`
+	Permanent           bool                   `json:"permanent"`
+	RecoveryAvailable   bool                   `json:"recoveryAvailable"`
+	Requested           int                    `json:"requested"`
+	Processed           int                    `json:"processed"`
+	Deleted             int                    `json:"deleted"`
+	Refused             int                    `json:"refused"`
+	Changed             int                    `json:"changed"`
+	StillPresent        int                    `json:"stillPresent"`
+	OutcomeUnknown      int                    `json:"outcomeUnknown"`
+	SpaceReclaimedBytes uint64                 `json:"spaceReclaimedBytes"`
+	SpaceReclaimedKnown bool                   `json:"spaceReclaimedKnown"`
+	ReasonCode          string                 `json:"reasonCode,omitempty"`
+	Message             string                 `json:"message,omitempty"`
+	Items               []CleanupExecutionItem `json:"items"`
+	StartedAt           time.Time              `json:"startedAt"`
+	CompletedAt         time.Time              `json:"completedAt"`
 }
 
 type CleanupPreviewView struct {
@@ -132,6 +147,8 @@ type CleanupPreviewView struct {
 	AllocatedUnknown   int                `json:"allocatedUnknown"`
 	DeletionMode       string             `json:"deletionMode"`
 	ExecutionAvailable bool               `json:"executionAvailable"`
+	PermanentAvailable bool               `json:"permanentAvailable"`
+	ExecutionMode      string             `json:"executionMode,omitempty"`
 	RecoveryNote       string             `json:"recoveryNote"`
 	Risks              []string           `json:"risks"`
 	SideEffects        []string           `json:"sideEffects"`

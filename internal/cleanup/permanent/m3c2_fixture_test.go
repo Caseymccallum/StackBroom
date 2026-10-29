@@ -32,7 +32,7 @@ func TestM3C2FixtureLockAllowsOnlyVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item := verifyHandle(handle, fixture.Target)
+	item := verifyHandle(handle, fixture.Root, fixture.Target)
 	if item.Status != ItemValidated {
 		t.Fatalf("fixture handle verification = %+v", item)
 	}
@@ -44,6 +44,22 @@ func TestM3C2FixtureLockAllowsOnlyVerification(t *testing.T) {
 	}
 	if err := fixture.VerifySentinels(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPermanentWorkerRejectsCallerSuppliedOutsideRoot(t *testing.T) {
+	t.Setenv(harness.EnvHarnessAuthorized, "1")
+	fixture, err := harness.Prepare()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fixture.Close()
+	item := deleteOne(context.Background(), filepath.Join(t.TempDir(), "not-trusted"), fixture.Target)
+	if item.Status != ItemRefused || item.ReasonCode != "scope" {
+		t.Fatalf("outside trusted root was not refused: %+v", item)
+	}
+	if _, err := os.Lstat(fixture.Target.File.Path); err != nil {
+		t.Fatalf("outside-root refusal touched the fixture: %v", err)
 	}
 }
 

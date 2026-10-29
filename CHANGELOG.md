@@ -4,6 +4,31 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
+## [Unreleased] - M3C-4 joint native cleanup integration
+
+No live native disposition was executed. The live single-file test remains
+skipped behind its three explicit authorisation gates.
+
+### Added
+
+- Permanent-only `ConfirmPermanentCleanup` Wails method with explicit
+  crash-dump preview, second irreversible-deletion confirmation and truthful
+  result counts.
+- `permanentAvailable`/`executionMode` preview metadata and a permanent result
+  summary.
+- Trust-bound production native executor that resolves the `crash-dumps-old`
+  root independently and rejects caller-supplied roots.
+- Test-only `NewFixtureExecutor` for the isolated harness.
+- Regression tests for size-metadata preservation and final-path buffer
+  overflow.
+
+### Corrected
+
+- The native worker now refuses targets outside its independently resolved
+  trusted root before opening them.
+- Full `GetFinalPathNameByHandleW` buffer results are rejected.
+- Verified handle metadata is preserved in the result.
+
 ## [Unreleased] - M3C-3 native acceptance gate
 
 No live deletion or restoration was performed. The native test harness is

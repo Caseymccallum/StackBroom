@@ -10,6 +10,7 @@ import (
 
 	"github.com/Caseymccallum/StackBroom/internal/cleanup"
 	"github.com/Caseymccallum/StackBroom/internal/cleanup/execution"
+	"github.com/Caseymccallum/StackBroom/internal/cleanup/permanent"
 	"github.com/Caseymccallum/StackBroom/internal/history"
 	"github.com/Caseymccallum/StackBroom/internal/storage"
 )
@@ -42,6 +43,7 @@ type CleanupService struct {
 	now               func() time.Time
 	discoverFn        func(context.Context, cleanup.Rule, int, func(cleanup.Progress), func() time.Time) (*cleanup.Discovery, error)
 	executor          *execution.Engine
+	permanentExecutor *permanent.Engine
 	historyStore      *history.Store
 	running           map[string]context.CancelFunc
 	executionProgress map[string]execution.Progress
@@ -60,6 +62,7 @@ func NewCleanupService() *CleanupService {
 		now:               time.Now,
 		discoverFn:        cleanup.Discover,
 		executor:          execution.NewEngine(execution.NewNativeExecutor(), execution.NewRecoveryVerifier(), store),
+		permanentExecutor: permanent.NewEngine(permanent.NewNativeExecutor(), store),
 		historyStore:      store,
 		running:           make(map[string]context.CancelFunc),
 		executionProgress: make(map[string]execution.Progress),
@@ -70,12 +73,20 @@ func cleanupExecutionEnabled() bool {
 	return execution.BuildEnabled() && os.Getenv("STACKBROOM_ENABLE_CLEANUP_EXECUTION") == "1"
 }
 
+func permanentExecutionEnabled() bool {
+	return execution.BuildEnabled() && os.Getenv("STACKBROOM_ENABLE_PERMANENT_DELETE") == "1"
+}
+
 // ListCleanupRules returns the curated catalogue. No path is accepted.
 func (s *CleanupService) ListCleanupRules() []CleanupRule {
 	rules := cleanup.Catalog()
 	out := make([]CleanupRule, 0, len(rules))
 	for _, rule := range rules {
-		out = append(out, mapCleanupRule(rule))
+		view := mapCleanupRule(rule)
+		if rule.ID == permanent.RuleID && s.permanentExecutor != nil && s.permanentExecutor.Available() == nil {
+			view.PermanentAvailable = true
+		}
+		out = append(out, view)
 	}
 	return out
 }
@@ -296,14 +307,28 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 	if err != nil {
 		return CleanupPreviewView{}, err
 	}
+	permanentAvailable := preview.Rule.ID == permanent.RuleID && s.permanentExecutor != nil && s.permanentExecutor.Available() == nil
+	executionMode := preview.DeletionMode
+	if permanentAvailable {
+		executionMode = "permanent"
+	}
+	executionAvailable := permanentAvailable
+	if !permanentAvailable && preview.Rule.ID != permanent.RuleID {
+		executionAvailable = cleanupExecutionEnabled() && s.executor != nil && s.executor.Available() == nil
+	}
+	recoveryNote := preview.RecoveryNote
+	if permanentAvailable {
+		recoveryNote = "Permanent deletion cannot be undone. StackBroom does not use the Recycle Bin for this action."
+	}
 	view := CleanupPreviewView{
 		PreviewID: id, RuleID: preview.Rule.ID, RuleVersion: preview.Rule.Version,
 		RuleTitle: preview.Rule.Title, FileCount: len(preview.Selected),
 		TotalLogical: preview.TotalLogical, TotalAllocated: preview.TotalAllocated,
 		RecoverableBytes: preview.RecoverableBytes, RecoverableKnown: preview.RecoverableKnown,
-		AllocatedUnknown: preview.AllocatedUnknown, DeletionMode: preview.DeletionMode,
-		ExecutionAvailable: cleanupExecutionEnabled() && s.executor != nil && s.executor.Available() == nil,
-		RecoveryNote:       preview.RecoveryNote, Risks: append([]string(nil), preview.Risks...),
+		AllocatedUnknown: preview.AllocatedUnknown, DeletionMode: executionMode,
+		ExecutionAvailable: executionAvailable, PermanentAvailable: permanentAvailable,
+		ExecutionMode: executionMode, RecoveryNote: recoveryNote,
+		Risks:       append([]string(nil), preview.Risks...),
 		SideEffects: append([]string(nil), preview.SideEffects...), ExpiresAt: preview.ExpiresAt,
 	}
 	for _, candidate := range preview.Selected {
@@ -316,7 +341,11 @@ func (s *CleanupService) CreateCleanupPreview(discoveryID string, candidateIDs [
 	for _, candidate := range preview.Selected {
 		targets = append(targets, execution.Target{ID: candidate.ID, File: candidate.File})
 	}
-	executionContext, err := execution.NewContext(id, preview.Rule.ID, preview.Rule.Version, result.Root, targets, preview.ExpiresAt, execution.RecycleOnly)
+	permission := execution.RecycleOnly
+	if permanentAvailable {
+		permission = execution.PermanentOnly
+	}
+	executionContext, err := execution.NewContext(id, preview.Rule.ID, preview.Rule.Version, result.Root, targets, preview.ExpiresAt, permission)
 	if err != nil {
 		return CleanupPreviewView{}, fmt.Errorf("cleanup execution context was refused: %w", err)
 	}
@@ -473,6 +502,74 @@ func (s *CleanupService) ConfirmCleanup(previewID string) (CleanupExecutionView,
 			RecoveryAvailable: item.Status == execution.ItemRecycled && item.Recovery.Available,
 			RecoveryKind:      item.Recovery.Kind,
 			LogicalBytes:      item.LogicalBytes, AllocatedBytes: item.AllocatedBytes, AllocatedKnown: item.AllocatedKnown,
+		})
+	}
+	return view, nil
+}
+
+// ConfirmPermanentCleanup is the explicit irreversible path. It is available
+// only in the tagged native build, requires the permanent-delete environment
+// gate and a permanent-only preview context. Ordinary builds return an error
+// before touching the filesystem.
+func (s *CleanupService) ConfirmPermanentCleanup(previewID string) (CleanupExecutionView, error) {
+	if !execution.BuildEnabled() {
+		return CleanupExecutionView{}, fmt.Errorf("cleaning is not available in this build")
+	}
+	if !permanentExecutionEnabled() {
+		return CleanupExecutionView{}, fmt.Errorf("permanent cleaning is not enabled")
+	}
+	s.mu.Lock()
+	preview := s.previews[previewID]
+	if s.closed || len(s.running) > 0 {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup service is busy or shutting down")
+	}
+	if preview == nil || preview.Execution == nil {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup review not found")
+	}
+	if preview.Execution.RuleID() != permanent.RuleID || preview.Execution.Permission() != execution.PermanentOnly {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("this review is not a permanent crash-dump action")
+	}
+	if !s.now().Before(preview.ExpiresAt) {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("cleanup review expired")
+	}
+	if s.permanentExecutor == nil {
+		s.mu.Unlock()
+		return CleanupExecutionView{}, fmt.Errorf("permanent cleanup is unavailable")
+	}
+	executionContext := preview.Execution
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	s.running[previewID] = cancel
+	delete(s.previews, previewID)
+	s.mu.Unlock()
+	defer func() {
+		cancel()
+		s.mu.Lock()
+		delete(s.running, previewID)
+		s.mu.Unlock()
+	}()
+	result := s.permanentExecutor.Execute(ctx, executionContext, nil)
+	summary := result.Summary()
+	view := CleanupExecutionView{
+		PreviewID: previewID, State: string(result.State), States: []string{string(result.State)},
+		Aborted: result.Aborted, Permanent: true, RecoveryAvailable: false,
+		Requested: summary.Requested, Processed: summary.Processed, Deleted: summary.Deleted,
+		Refused: summary.Refused, Changed: summary.Changed, StillPresent: summary.StillPresent,
+		OutcomeUnknown: summary.Unknown, SpaceReclaimedBytes: summary.SpaceReclaimedBytes,
+		SpaceReclaimedKnown: summary.SpaceReclaimedKnown,
+		ReasonCode:          result.ReasonCode, Message: result.Message,
+		StartedAt: result.StartedAt, CompletedAt: result.CompletedAt,
+	}
+	for _, item := range result.Items {
+		view.Items = append(view.Items, CleanupExecutionItem{
+			TargetID: item.TargetID, Status: string(item.Status), ReasonCode: item.ReasonCode,
+			Message: item.Message, RecoveryAvailable: false, Verified: item.Verified,
+			LogicalBytes: item.LogicalBytes, AllocatedBytes: item.AllocatedBytes,
+			AllocatedKnown: item.AllocatedKnown, SpaceReclaimedBytes: item.SpaceReclaimed,
+			SpaceReclaimedKnown: item.SpaceReclaimedKnown,
 		})
 	}
 	return view, nil

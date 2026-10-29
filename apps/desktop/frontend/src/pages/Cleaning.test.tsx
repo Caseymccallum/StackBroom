@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CleanupDiscoveryView, CleanupPreviewView, CleanupRule } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 
@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   start: vi.fn(),
   cancel: vi.fn(),
   createPreview: vi.fn(),
+  confirmPermanent: vi.fn(),
   clearPreview: vi.fn(),
 }));
 
@@ -31,6 +32,7 @@ const rule: CleanupRule = {
   supportedWindows: "Windows 10+",
   minAgeDays: 14,
   deletionMode: "recycle",
+  permanentAvailable: false,
   recoverable: "uncertain",
   risks: ["Applications may still use them."],
   evidence: ["Only regular files."],
@@ -106,7 +108,7 @@ describe("CleaningPage", () => {
       selected: [{ id: "c1", name: "old.tmp", relativePath: "old.tmp", logicalBytes: 50, allocatedBytes: 50, allocatedKnown: true, modifiedAt: "2026-10-01T00:00:00Z", uncertain: false }],
       excluded: [], fileCount: 1, totalLogical: 100, totalAllocated: 100,
       recoverableBytes: 50, recoverableKnown: false, allocatedUnknown: 1,
-      deletionMode: "recycle", executionAvailable: false,
+      deletionMode: "recycle", executionAvailable: false, permanentAvailable: false, executionMode: "recycle",
       recoveryNote: "Windows may not be able to put every file in the Recycle Bin.",
       risks: [], sideEffects: [], expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
     };
@@ -119,5 +121,33 @@ describe("CleaningPage", () => {
     expect(screen.getByText(/Cleaning isn't available in this build yet/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Clean selected files/i })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /clean now|delete/i })).not.toBeInTheDocument();
+  });
+
+  it("requires an explicit permanent warning before confirmation and reports measured truth", async () => {
+    state.preview = {
+      previewId: "p2", ruleId: "crash-dumps-old", ruleVersion: "1.0.0", ruleTitle: "Old crash dumps",
+      selected: [{ id: "c1", name: "old.dmp", relativePath: "old.dmp", logicalBytes: 100, allocatedBytes: 100, allocatedKnown: true, modifiedAt: "2026-10-01T00:00:00Z", uncertain: false }],
+      excluded: [], fileCount: 1, totalLogical: 100, totalAllocated: 100,
+      recoverableBytes: 100, recoverableKnown: true, allocatedUnknown: 0,
+      deletionMode: "permanent", executionAvailable: true, permanentAvailable: true, executionMode: "permanent",
+      recoveryNote: "Permanent deletion cannot be undone.", risks: [], sideEffects: [],
+      expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+    };
+    state.confirmPermanent.mockResolvedValue({
+      previewId: "p2", state: "completed", states: ["completed"], aborted: false,
+      permanent: true, recoveryAvailable: false, requested: 1, processed: 1, deleted: 1,
+      refused: 0, changed: 0, stillPresent: 0, outcomeUnknown: 0,
+      spaceReclaimedBytes: 100, spaceReclaimedKnown: false, items: [],
+      startedAt: "2026-10-01T00:00:00Z", completedAt: "2026-10-01T00:00:01Z",
+    });
+    render(<CleaningPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Delete permanently…/i }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(screen.getByText(/Delete these files permanently/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/cannot be undone/i).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /^Delete permanently$/i }));
+    await waitFor(() => expect(state.confirmPermanent).toHaveBeenCalledWith("p2"));
+    expect(await screen.findByText(/Cleaning complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/Space reclaimed: not measured/i)).toBeInTheDocument();
   });
 });

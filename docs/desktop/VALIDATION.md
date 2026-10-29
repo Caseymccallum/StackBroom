@@ -3,9 +3,9 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,607,040 bytes** (about 11.6 MB)
-- SHA-256: `9FF6EA9A7D2DB336D17BEDB26343B4B68AB698642496F4F340831B59D75CF628`
-- Source branch: `feat/m3c3-native-acceptance`; version `0.2.0`.
+- Size: **11,639,296 bytes** (about 11.6 MB)
+- SHA-256: `607F1024C7BF90C1D7995206E34EFAE726F7260319B75553EB7E512E3FECD686`
+- Source branch: `feat/m3c4-joint-cleanup`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
 - Local toolchain: Go 1.27.0 windows/amd64, Node v26.5.0, npm 11.17.0.
@@ -54,6 +54,8 @@ M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is
 
 M3C-3 adds an elevation refusal to the native availability gate, repeated native target validation and a `Verified` result requirement. The test-only `m3c2_fixture` harness creates an isolated NTFS root, validates its identity/content/sentinels and proves lock/ancestor-guard/open/verify interaction without calling disposition. The gated single-file live test is skipped unless all three explicit authorisation variables are set; it was not run. Audit details are in `docs/product/M3C-2-AUDIT.md`.
 
+M3C-4 adds the gated `ConfirmPermanentCleanup` Wails method, permanent-only preview context, explicit confirmation UI and truthful result counts. Ordinary builds and ordinary previews leave permanent availability false; no permanent deletion is reachable without the tagged native build and the explicit permanent-delete runtime gate.
+
 The root `internal/processcontrol` package also passes deterministic tests for graceful-close delivery/timeout/refusal, termination exit verification, priority readback/Real-time refusal, 16-way concurrent preview consumption, token tamper/PID binding/expiry and same-handle target requirements.
 
 `internal/storage` passes read-only traversal tests for aggregation, large files, extension totals, duplicate candidates, hash-attempt/failure coverage, full-hash confirmation, duplicate candidate caps, hard-link accounting, hidden-file exclusion, junction non-traversal, junction-root refusal, files replaced by junctions before hashing, parent-directory junction substitution, offline-placeholder refusal, Unicode/deep names, cancellation, entry limits and changed files. The bridge tests cover authorised roots, opaque IDs, bounded cursor pages, full-directory search and matched totals, root-path privacy, sanitised error paths, concurrent-scan refusal and cancellation.
@@ -66,7 +68,7 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 
 ### Frontend
 
-`npm test` passes **45 tests / 14 files**:
+`npm test` passes **46 tests / 14 files**:
 
 - byte/percent/port formatting and unknown values;
 - process search, category filter, sort order and non-mutation;
@@ -82,7 +84,8 @@ The opt-in live sysinfo test also passed on this machine: Windows 10 build 19045
 - Cleaning catalogue, plain Find files/Choose/Review/Clean/Results language, empty default selection, explicit Select all/Clear selection, review request, known/unknown recovery estimates and a disabled Clean selected files control with no Clean Now/delete action;
 - preview expiry shows time remaining rather than “Just now”;
 - skipped-file reasons, search states and errors are translated to plain language;
-- aligned disclosure summaries and no developer-oriented gate/review terminology.
+- aligned disclosure summaries and no developer-oriented gate/review terminology;
+- permanent crash-dump confirmation warning, explicit second confirmation, result counts and “space reclaimed: not measured” reporting.
 
 `npx tsc --noEmit` passes under strict TypeScript settings.
 

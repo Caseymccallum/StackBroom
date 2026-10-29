@@ -4,7 +4,7 @@
 
 **Baseline:** `46be670ec1bb18949d4eb3e6659e07a3e714c0ca`.
 
-**Working branch:** `feat/m3c3-native-acceptance`.
+**Working branch:** `feat/m3c4-joint-cleanup`.
 
 ## Independent source audit
 
@@ -75,6 +75,50 @@ not a substitute for a second human security review.
 - The original path is checked after close. A successful API return alone is
   never treated as confirmation.
 - `GetTokenInformation(TokenElevation)` is used to reject an elevated process.
+
+## ChatGPT review commit
+
+Reviewed `5a9f70c9364886edf00e1ca8f3401669f9737957` against baseline
+`445d673`:
+
+- **Valid:** `verifyHandle` now preserves the verified logical/allocated size
+  metadata in the native `ItemResult`. Regression coverage was added.
+- **Valid:** `GetFinalPathNameByHandleW` result lengths equal to the supplied
+  buffer capacity are rejected, because the terminator cannot fit. A pure buffer
+  boundary regression test was added.
+
+The correction was cherry-picked and retained.
+
+## Direct-call trust boundary
+
+The native executor no longer trusts the caller's `FileRecord.Root`:
+
+- production `NewNativeExecutor()` resolves the trusted
+  `crash-dumps-old` root through `cleanup.RuleByID` and `Rule.ResolveRoot`;
+- it validates that root with `storage.ValidateRoot`;
+- every target must match that independently resolved root and be inside it;
+- `deleteOne` repeats the check before opening anything;
+- final handle-path verification uses the trusted root, not the caller field;
+- `NewFixtureExecutor(root)` exists only behind
+  `windows && cleanup_execution && m3c2_fixture`.
+
+A regression test calls the worker with a different trusted root and confirms it
+refuses with `scope` before touching the fixture.
+
+## Consumer integration
+
+The minimal Wails path is now prepared:
+
+- `ConfirmPermanentCleanup(previewID)` is a separate method;
+- it requires the tagged build, `STACKBROOM_ENABLE_PERMANENT_DELETE=1`, a
+  permanent-only context and the exact `crash-dumps-old` rule;
+- ordinary builds refuse before the filesystem;
+- the preview exposes `permanentAvailable` and `executionMode`;
+- the UI requires a second, explicit “Delete permanently” confirmation with an
+  irreversible warning;
+- results show requested/processed/deleted/refused/changed/still-present/
+  unknown counts, recovery unavailable and no measured-space claim;
+- no automatic cleanup or generic delete path exists.
 
 ## Disposable fixture harness
 

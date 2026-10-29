@@ -12,6 +12,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/Caseymccallum/StackBroom/internal/cleanup"
 	"github.com/Caseymccallum/StackBroom/internal/cleanup/execution"
 	"github.com/Caseymccallum/StackBroom/internal/storage"
 )
@@ -51,13 +52,29 @@ type tokenElevation struct {
 	TokenIsElevated uint32
 }
 
-type windowsExecutor struct{}
+type windowsExecutor struct {
+	trustedRoot string
+	initErr     error
+}
 
-func NewNativeExecutor() Executor { return windowsExecutor{} }
+func NewNativeExecutor() Executor {
+	rule, ok := cleanup.RuleByID(RuleID)
+	if !ok {
+		return windowsExecutor{initErr: fmt.Errorf("crash-dump cleanup rule is unavailable")}
+	}
+	root, err := rule.ResolveRoot()
+	if err == nil {
+		root, err = storage.ValidateRoot(root)
+	}
+	return windowsExecutor{trustedRoot: root, initErr: err}
+}
 
-func (windowsExecutor) Available() error {
+func (e windowsExecutor) Available() error {
 	if os.Getenv("STACKBROOM_ENABLE_PERMANENT_DELETE") != "1" {
 		return ErrDisabled
+	}
+	if e.initErr != nil || e.trustedRoot == "" {
+		return fmt.Errorf("trusted crash-dump scope is unavailable")
 	}
 	elevated, err := processElevated()
 	if err != nil {
@@ -69,8 +86,8 @@ func (windowsExecutor) Available() error {
 	return nil
 }
 
-func (windowsExecutor) Execute(ctx context.Context, targets []execution.Target, progress func(Progress)) (Result, error) {
-	if err := (windowsExecutor{}).Available(); err != nil {
+func (e windowsExecutor) Execute(ctx context.Context, targets []execution.Target, progress func(Progress)) (Result, error) {
+	if err := e.Available(); err != nil {
 		return Result{State: StateFailed, ReasonCode: "execution_disabled", Message: err.Error()}, err
 	}
 	if len(targets) == 0 {
@@ -81,7 +98,7 @@ func (windowsExecutor) Execute(ctx context.Context, targets []execution.Target, 
 		if ctx.Err() != nil {
 			return Result{State: StateCancelled, Items: items, Aborted: true, ReasonCode: "cancelled"}, ctx.Err()
 		}
-		item := deleteOne(ctx, target)
+		item := deleteOne(ctx, e.trustedRoot, target)
 		items = append(items, item)
 		if progress != nil {
 			progress(Progress{State: StateExecuting, TargetID: target.ID, Completed: index + 1, Total: len(targets)})
@@ -94,7 +111,7 @@ type fileDispositionInfoData struct {
 	DeleteFile byte
 }
 
-func deleteOne(ctx context.Context, target execution.Target) ItemResult {
+func deleteOne(ctx context.Context, trustedRoot string, target execution.Target) ItemResult {
 	item := ItemResult{
 		TargetID: target.ID, Status: ItemUnknown, LogicalBytes: target.File.LogicalBytes,
 		AllocatedBytes: target.File.AllocatedBytes, AllocatedKnown: target.File.AllocatedKnown,
@@ -102,6 +119,10 @@ func deleteOne(ctx context.Context, target execution.Target) ItemResult {
 	}
 	if ctx.Err() != nil {
 		item.Status, item.ReasonCode, item.Message = ItemCancelled, "cancelled", "the operation was cancelled"
+		return item
+	}
+	if trustedRoot == "" || !target.File.RootEqual(trustedRoot) || !pathWithinRoot(trustedRoot, target.File.Path) {
+		item.Status, item.ReasonCode, item.Message = ItemRefused, "scope", "the target is outside the trusted crash-dump root"
 		return item
 	}
 	if !strings.EqualFold(filepath.Ext(target.File.Name), ".dmp") || !isNTFS(target.File.Path) {
@@ -133,7 +154,7 @@ func deleteOne(ctx context.Context, target execution.Target) ItemResult {
 			_ = syscall.CloseHandle(handle)
 		}
 	}()
-	if item = verifyHandle(handle, target); item.Status != ItemValidated {
+	if item = verifyHandle(handle, trustedRoot, target); item.Status != ItemValidated {
 		return item
 	}
 	if ctx.Err() != nil {
@@ -182,7 +203,7 @@ func openExclusive(path string) (syscall.Handle, error) {
 	)
 }
 
-func verifyHandle(handle syscall.Handle, target execution.Target) ItemResult {
+func verifyHandle(handle syscall.Handle, trustedRoot string, target execution.Target) ItemResult {
 	item := ItemResult{
 		TargetID: target.ID, Status: ItemUnknown, RecoveryAvailable: false,
 		LogicalBytes: target.File.LogicalBytes, AllocatedBytes: target.File.AllocatedBytes,
@@ -226,12 +247,18 @@ func verifyHandle(handle syscall.Handle, target execution.Target) ItemResult {
 		return item
 	}
 	finalPath, err := finalPath(handle)
-	if err != nil || !pathWithinRoot(target.File.Root, finalPath) {
+	if err != nil || !pathWithinRoot(trustedRoot, finalPath) {
 		item.Status, item.ReasonCode, item.Message = ItemChanged, "scope_changed", "the open file is outside the approved crash-dump folder"
 		return item
 	}
 	item.Status = ItemValidated
 	return item
+}
+
+// finalPathBufferUsable mirrors GetFinalPathNameByHandleW: a result at or above
+// the supplied capacity means the required terminator cannot fit.
+func finalPathBufferUsable(length uintptr, capacity int) bool {
+	return length > 0 && length < uintptr(capacity)
 }
 
 func finalPath(handle syscall.Handle) (string, error) {
@@ -242,9 +269,7 @@ func finalPath(handle syscall.Handle) (string, error) {
 	if r == 0 {
 		return "", callErr
 	}
-	// The API returns the required capacity (including the terminator) when
-	// the supplied buffer is too small. An equal-length result is not usable.
-	if r >= uintptr(len(buffer)) {
+	if !finalPathBufferUsable(r, len(buffer)) {
 		return "", fmt.Errorf("path is too long")
 	}
 	path := syscall.UTF16ToString(buffer[:r])

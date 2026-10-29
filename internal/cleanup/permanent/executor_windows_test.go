@@ -51,6 +51,15 @@ func TestPermanentPathWithinRoot(t *testing.T) {
 	}
 }
 
+func TestPermanentFinalPathBufferBoundary(t *testing.T) {
+	if finalPathBufferUsable(0, 2048) || finalPathBufferUsable(2048, 2048) || finalPathBufferUsable(2049, 2048) {
+		t.Fatal("full or overflowing final-path buffer was accepted")
+	}
+	if !finalPathBufferUsable(1, 2048) || !finalPathBufferUsable(2047, 2048) {
+		t.Fatal("usable final-path buffer was rejected")
+	}
+}
+
 func TestPermanentClassifyErrors(t *testing.T) {
 	if status, code, _ := classifyError(syscall.Errno(32), "open"); status != ItemRefused || code != "in_use" {
 		t.Fatalf("sharing = %s %s", status, code)
@@ -94,9 +103,12 @@ func TestPermanentOpenAndVerifyHandleDoesNotDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item := verifyHandle(handle, f.target)
+	item := verifyHandle(handle, f.root, f.target)
 	if item.Status != ItemValidated {
 		t.Fatalf("handle verification = %+v", item)
+	}
+	if item.LogicalBytes != f.target.File.LogicalBytes || item.AllocatedBytes != f.target.File.AllocatedBytes || item.AllocatedKnown != f.target.File.AllocatedKnown {
+		t.Fatalf("verified metadata was not preserved: %+v", item)
 	}
 	if err := syscall.CloseHandle(handle); err != nil {
 		t.Fatal(err)

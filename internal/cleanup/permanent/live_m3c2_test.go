@@ -45,7 +45,7 @@ func TestM3C2SingleFileLiveDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	engine := NewEngine(NewNativeExecutor(), nil)
+	engine := NewEngine(NewFixtureExecutor(fixture.Root), nil)
 	engine.rootResolver = func(cleanup.Rule) (string, error) { return fixture.Root, nil }
 	result := engine.Execute(context.Background(), executionContext, nil)
 	if result.State != StateCompleted || len(result.Items) != 1 || result.Items[0].Status != ItemDeleted {

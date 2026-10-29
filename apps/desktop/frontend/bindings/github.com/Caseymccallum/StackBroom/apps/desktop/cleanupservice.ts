@@ -43,6 +43,16 @@ export function ConfirmCleanup(previewID: string): $CancellablePromise<$models.C
 }
 
 /**
+ * ConfirmPermanentCleanup is the explicit irreversible path. It is available
+ * only in the tagged native build, requires the permanent-delete environment
+ * gate and a permanent-only preview context. Ordinary builds return an error
+ * before touching the filesystem.
+ */
+export function ConfirmPermanentCleanup(previewID: string): $CancellablePromise<$models.CleanupExecutionView> {
+    return $Call.ByID(3585498385, previewID);
+}
+
+/**
  * CreateCleanupPreview builds an expiring preview from exact discovery IDs.
  * It never mutates a file and there is deliberately no execution method.
  */

@@ -29,6 +29,14 @@ func TestCleanupServiceMutationSurfaceIsGated(t *testing.T) {
 	}
 }
 
+func TestPermanentConfirmationRefusedInOrdinaryBuild(t *testing.T) {
+	service := NewCleanupService()
+	t.Setenv("STACKBROOM_ENABLE_PERMANENT_DELETE", "1")
+	if _, err := service.ConfirmPermanentCleanup("missing"); err == nil {
+		t.Fatal("ordinary build accepted a permanent cleanup confirmation")
+	}
+}
+
 func TestCleanupServiceCancellationIsReported(t *testing.T) {
 	rule, _ := cleanup.RuleByID("user-temp-old")
 	service := NewCleanupService()
