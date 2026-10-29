@@ -104,10 +104,12 @@ through other open handles; that is not a simpler recovery story.
   `Available()` returns `ErrDisabled`.
 - `executor_windows.go` has `//go:build windows && cleanup_execution`; even then
   the environment variable must be `1`.
-- The ordinary app never constructs the permanent engine; `NewNativeExecutor`
-  returns the refusing stub.
-- No permanent-delete UI is exposed. The Cleaning screen continues to say
-  cleaning is unavailable.
+- The ordinary app never constructs a capable permanent engine;
+  `NewNativeExecutor` returns the refusing stub.
+- Ordinary builds expose no permanent action and report no permanent capability.
+  A tagged, environment-gated Cleaning preview/confirmation exists, but it has
+  not passed the separately authorised single-file acceptance test and must not
+  be treated as a shipped action.
 
 ## Test-only harness and elevation gate
 

@@ -69,10 +69,11 @@ Recommended first action:
 - Otherwise use a **StackBroom-managed quarantine** and label it honestly:
   files leave their original folder, remain recoverable, and still use disk
   space until the user empties the quarantine.
-- Do not add a permanent-delete option to the consumer UI in this milestone.
-  The current follow-up contains a tagged, unwired permanent backend prototype
-  because handle-bound `FileDispositionInfo` is the narrowest API that can bind
-  the exact file; it is not a shipped action.
+- Do not expose a permanent-delete option in an ordinary build. The follow-up
+  contains a tagged, gated permanent service/UI path because handle-bound
+  `FileDispositionInfo` is the narrowest API that can bind the exact file; it
+  remains unreachable without the explicit build, environment and preview gates
+  and is not a shipped or accepted action.
 - Never act on unselected files, unrelated roots or protected paths.
 - Revalidate every selected file at confirmation; a changed file is refused, not
   silently skipped.
@@ -109,8 +110,10 @@ the default, and it must never be substituted silently for recycling.
 - A handle-bound permanent-delete prototype exists in `internal/cleanup/permanent`
   behind `windows && cleanup_execution` plus
   `STACKBROOM_ENABLE_PERMANENT_DELETE=1`.
-- The prototype is not wired into the Wails service or any UI action. Ordinary
-  builds use a refusing stub.
+- A gated Wails service method and Cleaning preview/confirmation exist, but an
+  ordinary build uses a refusing stub and reports no permanent capability. The
+  path remains unavailable without the tagged build, environment gate and a
+  permanent-only unexpired preview.
 - The prototype uses basic `FileDispositionInfo`, an exclusive `DELETE` handle,
   identity/attribute/path rechecks, ancestor guards and a post-close path check.
 - Native findings and limitations are in `M3C-NATIVE-DISPOSITION.md`.
