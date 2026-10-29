@@ -4,7 +4,7 @@
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
 - Size: **11,605,504 bytes** (about 11.6 MB)
-- SHA-256: `F44DC7C4675EF727FC04FA5AE496FB6EE26F2EAD2EB985C329C8CD77C8F9A790`
+- SHA-256: `7F89103A96C69ECA71CC47E9EF09D052A90B2F05D50BDEEFD970888243213E90`
 - Source branch: `feat/cleanup-ux`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
