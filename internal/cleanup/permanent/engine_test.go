@@ -107,10 +107,10 @@ func TestPermanentEngineCompletesOnlyForVerifiedAbsence(t *testing.T) {
 		t.Fatalf("result = %+v", result)
 	}
 	summary := result.Summary()
-	if summary.Processed != 1 || summary.Deleted != 1 || summary.RecoveryAvailable || summary.SpaceReclaimedKnown {
+	if summary.Requested != 1 || summary.Processed != 1 || summary.Deleted != 1 || summary.RecoveryAvailable || summary.SpaceReclaimedKnown {
 		t.Fatalf("summary = %+v", summary)
 	}
-	if len(recorder.records) != 1 || recorder.records[0].DeletionMode != "permanent" || recorder.records[0].RecoveryAvailable {
+	if len(recorder.records) != 1 || recorder.records[0].TargetCount != 1 || recorder.records[0].DeletionMode != "permanent" || recorder.records[0].RecoveryAvailable {
 		t.Fatalf("history = %+v", recorder.records)
 	}
 }
@@ -147,6 +147,10 @@ func TestPermanentEngineRefusesChangedTargetBeforeExecutor(t *testing.T) {
 	result := newTestEngine(f, executor, nil).Execute(context.Background(), newTestContext(t, f, execution.PermanentOnly), nil)
 	if result.State != StateFailed || result.ReasonCode != "target_changed" || executor.calls != 0 {
 		t.Fatalf("result = %+v calls=%d", result, executor.calls)
+	}
+	summary := result.Summary()
+	if summary.Requested != 1 || summary.Processed != 0 || summary.Deleted != 0 {
+		t.Fatalf("early failure summary = %+v; a selected file must be reported as requested, not deleted", summary)
 	}
 }
 
@@ -238,6 +242,9 @@ func TestPermanentEngineRefusesUnavailableExecutor(t *testing.T) {
 	if result.ReasonCode != "execution_unavailable" {
 		t.Fatalf("result = %+v", result)
 	}
+	if summary := result.Summary(); summary.Requested != 1 || summary.Processed != 0 || summary.Deleted != 0 {
+		t.Fatalf("unavailable summary = %+v", summary)
+	}
 }
 
 func TestPermanentEngineRefusesExpiredContext(t *testing.T) {
@@ -290,7 +297,7 @@ func TestPermanentEngineRefusesHardLink(t *testing.T) {
 
 func TestPermanentSummaryNeverClaimsRecovery(t *testing.T) {
 	result := Result{Items: []ItemResult{
-		{Status: ItemDeleted, AllocatedKnown: true, AllocatedBytes: 100, SpaceReclaimed: 100},
+		{Status: ItemDeleted, Verified: true, AllocatedKnown: true, AllocatedBytes: 100, SpaceReclaimed: 100},
 		{Status: ItemStillPresent}, {Status: ItemRefused}, {Status: ItemChanged}, {Status: ItemUnknown},
 	}}
 	summary := result.Summary()
@@ -299,6 +306,24 @@ func TestPermanentSummaryNeverClaimsRecovery(t *testing.T) {
 	}
 	if summary.RecoveryAvailable || summary.SpaceReclaimedKnown || summary.SpaceReclaimedBytes != 100 {
 		t.Fatalf("summary = %+v", summary)
+	}
+}
+
+func TestPermanentSummaryNeverCountsUnverifiedDeletionAsDeleted(t *testing.T) {
+	summary := (Result{Requested: 1, Items: []ItemResult{{Status: ItemDeleted}}}).Summary()
+	if summary.Deleted != 0 || summary.Unknown != 1 {
+		t.Fatalf("summary = %+v; an unverified deletion must not be reported as deleted", summary)
+	}
+}
+
+func TestPermanentSummaryKeepsRequestedSeparateFromProcessed(t *testing.T) {
+	result := Result{Requested: 4, Items: []ItemResult{
+		{Status: ItemDeleted, Verified: true},
+		{Status: ItemRefused},
+	}}
+	summary := result.Summary()
+	if summary.Requested != 4 || summary.Processed != 2 || summary.Deleted != 1 || summary.Refused != 1 {
+		t.Fatalf("summary = %+v; requested must remain the selection size and must not imply deletion", summary)
 	}
 }
 

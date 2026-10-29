@@ -63,7 +63,7 @@ func (e *Engine) Execute(ctx context.Context, executionContext *execution.Contex
 			e.recorder.Record(execution.Record{
 				At: result.CompletedAt, Type: "execution", RuleID: executionRuleID(executionContext),
 				RuleVersion: executionRuleVersion(executionContext), State: execution.State(result.State),
-				TargetCount: len(result.Items), LogicalBytes: summary.LogicalBytes,
+				TargetCount: summary.Requested, LogicalBytes: summary.LogicalBytes,
 				AllocatedBytes: summary.AllocatedBytes, DeletionMode: "permanent",
 				ReasonCode: result.ReasonCode, RecoveryAvailable: false,
 			})
@@ -72,6 +72,8 @@ func (e *Engine) Execute(ctx context.Context, executionContext *execution.Contex
 	if executionContext == nil {
 		return failed(result, "missing_execution", "cleanup context is missing")
 	}
+	targets := executionContext.Targets()
+	result.Requested = len(targets)
 	if ctx.Err() != nil {
 		result.State, result.ReasonCode = StateCancelled, "cancelled"
 		return result
@@ -93,7 +95,6 @@ func (e *Engine) Execute(ctx context.Context, executionContext *execution.Contex
 	if err := e.Available(); err != nil {
 		return failed(result, "execution_unavailable", "permanent cleanup is not available in this build")
 	}
-	targets := executionContext.Targets()
 	if len(targets) == 0 {
 		return failed(result, "no_targets", "no crash dumps were selected")
 	}

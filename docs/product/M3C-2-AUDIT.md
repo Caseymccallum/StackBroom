@@ -46,6 +46,10 @@ not a substitute for a second human security review.
   a permanent operation has no restoration record.
 - **`SpaceReclaimedKnown` is always false.** The result is an allocation
   estimate, not a measured volume-free-space delta.
+- **Requested is not a deletion count.** `Result.Requested` is the selection
+  size preserved before validation; `Processed` counts result items, and
+  `Deleted` counts only verified absence. An early validation failure therefore
+  reports requested > 0, processed 0 and deleted 0.
 - **The harness directory is generated under the OS temp directory and holds a
   read-sharing directory handle.** It prevents writes/deletes through the
   directory while allowing read-only verification; it is not an OS sandbox.
@@ -182,20 +186,31 @@ Expected evidence:
 The test does not run by default, does not use a real crash dump, and does not
 modify a production rule.
 
-## Subsequent refusal tests to prepare
+## Refusal suite
 
-- locked file: open with an incompatible share mode; no disposition call;
-- hidden file; no disposition call;
-- system file; no disposition call;
-- hard-linked file; no disposition call;
-- renamed/replaced file between preview and execution; no disposition call;
-- junction-swapped ancestor; no disposition call;
-- changed contents, size or timestamp; no disposition call;
-- expired preview; no disposition call;
-- duplicate confirmation; context refusal;
-- elevated process; gate refusal.
+The following non-destructive native cases are implemented in
+`internal/cleanup/permanent/m3c2_fixture_test.go`. They run only with
+`windows && cleanup_execution && m3c2_fixture`; none calls
+`SetFileInformationByHandle`.
 
-Each must verify the target and sentinels are untouched.
+- locked file: an incompatible holder blocks `openExclusive`; result is
+  `refused/in_use`, and the holder is closed before verifying the target;
+- hidden file: `refused/hidden`;
+- system file: `refused/system`;
+- hard-linked file: `refused/hard_link`;
+- modified file: `changed/metadata_changed`;
+- renamed file: `changed/inaccessible`; the renamed file remains byte-for-byte
+  intact;
+- reparse/junction ancestor: `refused/scope`; the junction and its outside
+  target remain intact.
+
+The direct target-symlink case is also implemented but skips on a machine where
+creating a file symlink requires an unavailable privilege. The junction-ancestor
+case exercises the reparse rejection without that privilege.
+
+Every case verifies both unselected sentinel files and the selected target or
+its protected replacement. The single-file live deletion remains separately
+gated and was not run.
 
 ## Test provenance
 
@@ -207,10 +222,12 @@ Each must verify the target and sentinels are untouched.
 | Harness lock + ancestor guard + DELETE open/verify | Real Windows sharing; no disposition call |
 | Outside-fixture context refusal | Real fixture/context validation |
 | Native handle open/identity/final-path verification | Real NTFS fixture; no disposition call |
-| Native locked-file refusal | Real Windows sharing; no disposition call |
+| Native locked/hidden/system/hard-link/modified/renamed refusal | Real Windows fixture; no disposition call |
+| Native reparse/junction refusal | Real junction; no disposition call; direct file-symlink test skips without the symlink privilege |
 | Disposable live deletion | Real NTFS fixture and real disposition; skipped unless authorised |
+| Requested/processed/deleted accounting | Pure result tests and engine early-failure tests |
 | History privacy | Local file, no native API |
-| Frontend Cleaning behaviour | Mocked cleanup hook and DOM |
+| Frontend Cleaning behaviour | Mocked cleanup hook and DOM; no native call |
 
 ## Decision
 
@@ -222,8 +239,9 @@ Each must verify the target and sentinels are untouched.
 
 ## Next integration step
 
-Only after independent review and a successful authorised disposable test:
-wire one backend-owned, selected `crash-dumps-old` preview to the permanent
-engine behind the existing gate, return the `Result.Summary` fields to a
-truthful result view, and keep Recycle and permanent as separate explicit
-operations. Do not add a second category or a general delete API.
+The gated service and Cleaning UI are prepared, but remain unreachable in
+ordinary builds and ordinary previews. Only after independent review and a
+successful authorised disposable test should the single `crash-dumps-old`
+permanent action be enabled for consumer acceptance. Keep Recycle and permanent
+as separate explicit operations. Do not add a second category or a general
+delete API.

@@ -29,6 +29,38 @@ skipped behind its three explicit authorisation gates.
 - Full `GetFinalPathNameByHandleW` buffer results are rejected.
 - Verified handle metadata is preserved in the result.
 
+## [Unreleased] - M3C-5 joint acceptance and functional completion
+
+No live native disposition was executed. The single-file disposable acceptance
+test remains skipped behind its explicit authorisation gates.
+
+### Added
+
+- ChatGPT review commit `94222a105db22aef4b32088fa1111c605a15c319` tests for
+  accurate permanent-cleaning availability, single-use confirmation and
+  measured result reporting.
+- Preview-ID reset coverage so a new review cannot display the previous
+  review's result.
+- `Result.Requested` so an early validation failure still reports the real
+  selection size while `Processed` and `Deleted` remain separate, truthful
+  counters.
+- Native refusal tests for locked, hidden, system, hard-linked, modified,
+  renamed and reparse/junction cases. Each verifies the selected target and
+  both unselected sentinels are unchanged.
+
+### Corrected
+
+- Cleaning now shows “Crash-dump cleaning available” only when the backend
+  reports the permanent capability; the unavailable notice is no longer shown
+  for a permanent-capable preview.
+- The permanent confirmation is disabled after a terminal result.
+- Result rendering distinguishes no deletion, partial completion and unknown
+  outcomes, and shows visible in-progress text while the synchronous native
+  call is running.
+- Target validation now reports a missing renamed target as inaccessible rather
+  than as a scope escape, and classifies protected-file refusals separately
+  from changed files.
+
 ## [Unreleased] - M3C-3 native acceptance gate
 
 No live deletion or restoration was performed. The native test harness is

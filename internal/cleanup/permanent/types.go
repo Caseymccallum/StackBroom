@@ -58,6 +58,7 @@ type ItemResult struct {
 
 type Result struct {
 	State       State
+	Requested   int
 	Items       []ItemResult
 	Aborted     bool
 	StartedAt   time.Time
@@ -106,12 +107,20 @@ func (r Result) Finished() bool {
 func (r Result) Summary() Summary {
 	// SpaceReclaimed is an estimate from selected file allocation. The
 	// prototype does not claim an exact volume-free-space delta.
-	summary := Summary{Requested: len(r.Items), Processed: len(r.Items), SpaceReclaimedKnown: false}
+	requested := r.Requested
+	if requested < len(r.Items) {
+		requested = len(r.Items)
+	}
+	summary := Summary{Requested: requested, Processed: len(r.Items), SpaceReclaimedKnown: false}
 	for _, item := range r.Items {
 		summary.LogicalBytes += item.LogicalBytes
 		summary.AllocatedBytes += item.AllocatedBytes
 		switch item.Status {
 		case ItemDeleted:
+			if !item.Verified {
+				summary.Unknown++
+				continue
+			}
 			summary.Deleted++
 			if item.AllocatedKnown {
 				summary.SpaceReclaimedBytes += item.SpaceReclaimed

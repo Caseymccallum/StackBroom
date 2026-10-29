@@ -49,8 +49,8 @@ func ValidateCleanupTarget(file *FileRecord) error {
 	if file.LinkCount != 1 {
 		return validationFailure("hard_link", "target has multiple hard links")
 	}
-	if !pathWithinRoot(file.Root, file.Path) || !resolvedPathWithinRoot(file.Root, file.Path) {
-		return validationFailure("scope", "target is outside the approved root or has a reparse ancestor")
+	if !pathWithinRoot(file.Root, file.Path) {
+		return validationFailure("scope", "target is outside the approved root")
 	}
 	info, err := os.Lstat(platformPath(file.Path))
 	if err != nil {
@@ -58,6 +58,9 @@ func ValidateCleanupTarget(file *FileRecord) error {
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.IsDir() {
 		return validationFailure("not_regular", "target is no longer a regular file")
+	}
+	if !resolvedPathWithinRoot(file.Root, file.Path) {
+		return validationFailure("scope", "target has a reparse ancestor or resolves outside the approved root")
 	}
 	if uint64(info.Size()) != file.LogicalBytes || !info.ModTime().Equal(file.ModTime) {
 		return validationFailure("metadata_changed", "target metadata changed")

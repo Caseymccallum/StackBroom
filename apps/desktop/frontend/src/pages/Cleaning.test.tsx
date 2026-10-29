@@ -123,7 +123,8 @@ describe("CleaningPage", () => {
     expect(screen.queryByRole("button", { name: /clean now|delete/i })).not.toBeInTheDocument();
   });
 
-  it("requires an explicit permanent warning before confirmation and reports measured truth", async () => {
+  it("requires an explicit permanent warning before confirmation, reports measured truth and clears the result when the preview changes", async () => {
+    state.rules = [{ ...rule, id: "crash-dumps-old", title: "Old crash dumps", permanentAvailable: true }];
     state.preview = {
       previewId: "p2", ruleId: "crash-dumps-old", ruleVersion: "1.0.0", ruleTitle: "Old crash dumps",
       selected: [{ id: "c1", name: "old.dmp", relativePath: "old.dmp", logicalBytes: 100, allocatedBytes: 100, allocatedKnown: true, modifiedAt: "2026-10-01T00:00:00Z", uncertain: false }],
@@ -140,7 +141,9 @@ describe("CleaningPage", () => {
       spaceReclaimedBytes: 100, spaceReclaimedKnown: false, items: [],
       startedAt: "2026-10-01T00:00:00Z", completedAt: "2026-10-01T00:00:01Z",
     });
-    render(<CleaningPage />);
+    const { rerender } = render(<CleaningPage />);
+    expect(screen.getByText("Crash-dump cleaning available")).toBeInTheDocument();
+    expect(screen.queryByText(/Cleaning isn't available in this build\./i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Delete permanently…/i }));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(screen.getByText(/Delete these files permanently/i)).toBeInTheDocument();
@@ -149,5 +152,11 @@ describe("CleaningPage", () => {
     await waitFor(() => expect(state.confirmPermanent).toHaveBeenCalledWith("p2"));
     expect(await screen.findByText(/Cleaning complete/i)).toBeInTheDocument();
     expect(screen.getByText(/Space reclaimed: not measured/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Delete permanently…/i })).toBeDisabled();
+
+    state.preview = { ...state.preview, previewId: "p3" };
+    rerender(<CleaningPage />);
+    expect(screen.queryByText(/Cleaning complete/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Delete permanently…/i })).toBeEnabled();
   });
 });

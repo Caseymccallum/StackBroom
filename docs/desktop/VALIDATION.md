@@ -3,8 +3,8 @@
 ## Build result
 
 - Executable: `apps/desktop/bin/StackBroom.exe`
-- Size: **11,639,296 bytes** (about 11.6 MB)
-- SHA-256: `607F1024C7BF90C1D7995206E34EFAE726F7260319B75553EB7E512E3FECD686`
+- Size: **11,640,832 bytes** (about 11.6 MB)
+- SHA-256: `C7DBC691EB0D5C5C71EE8B72E8E4165BBF061FF587819A3FB6F31D6B85A5F398`
 - Source branch: `feat/m3c4-joint-cleanup`; version `0.2.0`.
 - Build tags: `production` (no `cleanup_execution`); `-H windowsgui`; trimmed with `-w -s`.
 - Wails v3.0.0, React 18, TypeScript, Tailwind CSS v4.
@@ -44,15 +44,19 @@ The binary is intentionally not committed. The build script reproduces it from t
 - opaque receipt token, target binding and privacy;
 - aggregate engine availability fails closed by default;
 - backend feature gate remains disabled even when `STACKBROOM_ENABLE_CLEANUP_EXECUTION=1` in an ordinary build;
-- permanent prototype: wrong permission/rule, expired context, changed target, scope escape, hard link, unavailable executor, false success, partial/cancelled results, permanent history and native gate refusal.
+- permanent prototype: wrong permission/rule, expired context, changed target, scope escape, hard link, unavailable executor, false success, partial/cancelled results, permanent history and native gate refusal;
+- M3C-5 requested-count accounting: an early validation failure reports the selected file as requested with zero processed and zero deleted;
+- M3C-5 native refusal cases: locked, hidden, system, hard-linked, modified, renamed and junction-ancestor targets remain untouched, with both unselected sentinels verified.
 
 The opt-in execution sources compile with `go test -tags cleanup_execution ./internal/cleanup/execution` and `go test -tags cleanup_execution ./... -run '^$'` from `apps/desktop`. This is a compile/review check only; no COM operation was called.
 
 M3B-4 root tests, root vet, tagged cleanup/storage/history tests and tagged vet all passed. The M3B-4 decision is recorded in `docs/product/M3B-4-RECOVERY-FEASIBILITY.md`: Recycle Bin execution is NO-GO, managed quarantine is CONDITIONAL for a separate feasibility prototype, and the production posture remains preview-only. The M3B-4 receipt lifecycle tests pass; `go test -race` was not run because the local toolchain requires cgo, which is disabled.
 
-M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`. A dedicated `internal/cleanup/permanent` prototype is compiled out of ordinary builds and is not wired to the service or UI. Its ordinary and tagged tests pass, including an owner-visible gate test and a non-mutating native test that opens, verifies and closes a fixture handle without marking it for deletion. No live deletion or restoration was performed. The native findings are in `docs/product/M3C-NATIVE-DISPOSITION.md`.
+M3C keeps that posture while simplifying the Cleaning UX. The one-action plan is in `docs/product/M3C-LIMITED-CLEANUP.md`. A dedicated `internal/cleanup/permanent` prototype is compiled out of ordinary builds; M3C-4 added a gated `ConfirmPermanentCleanup` path and M3C-5 completes its frontend state handling. Its ordinary and tagged tests pass, including an owner-visible gate test and non-mutating native tests that open, verify and close a fixture handle without marking it for deletion. No live deletion or restoration was performed. The native findings are in `docs/product/M3C-NATIVE-DISPOSITION.md`.
 
 M3C-3 adds an elevation refusal to the native availability gate, repeated native target validation and a `Verified` result requirement. The test-only `m3c2_fixture` harness creates an isolated NTFS root, validates its identity/content/sentinels and proves lock/ancestor-guard/open/verify interaction without calling disposition. The gated single-file live test is skipped unless all three explicit authorisation variables are set; it was not run. Audit details are in `docs/product/M3C-2-AUDIT.md`.
+
+M3C-5 incorporates the frontend review tests from `94222a1`: the capability notice is accurate, the permanent confirmation becomes single-use after a terminal result, and a changed preview ID clears the old result. `Result.Requested` now preserves the selection size through early validation failures; `Processed` and `Deleted` remain separate. The tagged refusal suite covers locked, hidden, system, hard-linked, modified, renamed and junction-ancestor cases without a disposition call. The direct target-symlink case skips when file-symlink creation is not permitted by the local privilege policy. The disposable live deletion was not run.
 
 M3C-4 adds the gated `ConfirmPermanentCleanup` Wails method, permanent-only preview context, explicit confirmation UI and truthful result counts. Ordinary builds and ordinary previews leave permanent availability false; no permanent deletion is reachable without the tagged native build and the explicit permanent-delete runtime gate.
 
@@ -131,7 +135,7 @@ The existing 28 screenshots cover the M1 UI at exact 1366x768 and 1920x1080 clie
 - Go 1.27.3 was not installed and no system-wide tooling was changed. Release builds should use Go 1.27.3+ after owner validation.
 - The Go race detector was not runnable locally because the installed environment has no CGO compiler; overlap/cancellation is covered by a functional concurrency test instead.
 - Screen-reader/axe/Narrator validation is not yet performed.
-- The storage analyzer is read-only and requires a user-selected folder. The Cleaning section is discovery/preview only in ordinary builds; its disabled confirmation control performs nothing.
+- The storage analyzer is read-only and requires a user-selected folder. The Cleaning section is discovery/preview only in ordinary builds; its disabled confirmation control performs nothing. A tagged, environment-gated permanent path exists but has not passed the authorised single-file acceptance test.
 - The tagged Windows `IFileOperation` worker has never been executed. Their COM vtable indices, recycle flags and resource cleanup are source-reviewed only. The native recovery verifier is unavailable, so a tagged build refuses before calling the executor.
 - Recycle Bin evidence/restoration and permanent-fallback behaviour remain unverified. No live deletion is authorised.
 - M3B-3 no-fallback preflight, final-file guard and durable receipt provider are unavailable; the engine therefore refuses execution even in a tagged build.

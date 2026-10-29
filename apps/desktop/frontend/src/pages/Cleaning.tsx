@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CleanupExecutionView } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
 import { AlertTriangle, ChevronDown, FolderSearch, ShieldCheck, Sparkles } from "lucide-react";
 import type { CleanupCandidate, CleanupPreviewView, CleanupRule } from "../../bindings/github.com/Caseymccallum/StackBroom/apps/desktop/models";
@@ -15,6 +15,7 @@ export function CleaningPage() {
   const candidates = cleanup.discovery?.candidates ?? [];
   const selected = useMemo(() => new Set(selectedIDs), [selectedIDs]);
   const activeStep = cleanup.preview ? 2 : cleanup.discovery ? 1 : 0;
+  const crashCleaningAvailable = cleanup.rules.some((rule) => rule.permanentAvailable === true);
 
   useEffect(() => {
     void cleanup.loadRules();
@@ -37,7 +38,7 @@ export function CleaningPage() {
         <CardHeader
           title="Cleaning"
           subtitle="Find old files, choose what to review, and decide what to clean."
-          action={<Badge tone="amber">Cleaning not available yet</Badge>}
+          action={crashCleaningAvailable ? <Badge tone="teal">Crash-dump cleaning available</Badge> : <Badge tone="amber">Cleaning not available yet</Badge>}
         />
         <CardBody>
           <ol className="cleanup-steps" aria-label="Cleanup steps">
@@ -52,10 +53,18 @@ export function CleaningPage() {
               </li>
             ))}
           </ol>
-          <div className="banner" style={{ borderColor: "var(--amber)" }}>
-            <ShieldCheck size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
+          <div className={crashCleaningAvailable ? "banner banner-error" : "banner"} style={{ borderColor: crashCleaningAvailable ? "var(--red)" : "var(--amber)" }}>
+            {crashCleaningAvailable ? <AlertTriangle size={16} style={{ color: "var(--red)" }} aria-hidden="true" /> : <ShieldCheck size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />}
             <div>
-              <strong>Cleaning isn't available in this build.</strong> You can find and review files, but nothing will be cleaned or removed yet.
+              {crashCleaningAvailable ? (
+                <>
+                  <strong>Crash-dump cleaning available.</strong> Only explicitly selected old crash dumps can be permanently deleted. Permanent deletion cannot be undone.
+                </>
+              ) : (
+                <>
+                  <strong>Cleaning isn't available in this build.</strong> You can find and review files, but nothing will be cleaned or removed yet.
+                </>
+              )}
             </div>
           </div>
           {cleanup.error && (
@@ -69,7 +78,7 @@ export function CleaningPage() {
             <p className="cleanup-note">
               <strong>Recycle Bin</strong> keeps a file recoverable until you empty it.
               <strong> Permanent deletion</strong> removes it immediately and cannot be undone.
-              This build does not offer permanent deletion.
+              {crashCleaningAvailable ? " It is available only for the old crash dumps shown here." : " This build does not offer permanent deletion."}
             </p>
           </details>
         </CardBody>
@@ -248,12 +257,22 @@ function PreviewCard({
   const [confirming, setConfirming] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState<CleanupExecutionView | null>(null);
+  const currentPreviewID = useRef(preview.previewId);
   const cleanupMethod = permanent ? "Permanent deletion" : preview.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available";
+
+  useEffect(() => {
+    currentPreviewID.current = preview.previewId;
+    setResult(null);
+    setConfirming(false);
+    setExecuting(false);
+  }, [preview.previewId]);
 
   const confirmPermanent = async () => {
     if (!permanent || executing) return;
+    const requestedPreviewID = preview.previewId;
     setExecuting(true);
-    const next = await onConfirm(preview.previewId);
+    const next = await onConfirm(requestedPreviewID);
+    if (currentPreviewID.current !== requestedPreviewID) return;
     if (next) setResult(next);
     setConfirming(false);
     setExecuting(false);
@@ -307,7 +326,7 @@ function PreviewCard({
             {(preview.selected ?? []).map((candidate) => <li key={candidate.id}><span>{candidate.relativePath}</span><span className="muted">{formatBytes(candidate.logicalBytes)}</span></li>)}
           </ul>
         </details>
-        {confirming && permanent && (
+        {confirming && permanent && !executing && (
           <div className="banner banner-error cleanup-confirm" style={{ marginTop: 12 }} role="alertdialog" aria-modal="true" aria-labelledby="permanent-confirm-title">
             <AlertTriangle size={18} style={{ color: "var(--red)" }} aria-hidden="true" />
             <div>
@@ -320,11 +339,17 @@ function PreviewCard({
             </div>
           </div>
         )}
+        {executing && (
+          <div className="banner" style={{ marginTop: 12 }} role="status" aria-live="polite">
+            <ShieldCheck size={16} style={{ color: "var(--accent)" }} aria-hidden="true" />
+            <div><strong>Deleting selected files…</strong> Do not close StackBroom while this is running.</div>
+          </div>
+        )}
         {result && <ExecutionResult result={result} />}
         <div className="cleanup-actions" style={{ marginTop: 12 }}>
           <Button variant="ghost" onClick={onClear}>Close review</Button>
           {permanent ? (
-            <Button variant="primary" onClick={() => setConfirming(true)} disabled={!preview.executionAvailable || executing} aria-describedby="permanent-warning">
+            <Button variant="primary" onClick={() => setConfirming(true)} disabled={!preview.executionAvailable || executing || result !== null} aria-describedby="permanent-warning">
               Delete permanently…
             </Button>
           ) : (
@@ -342,12 +367,18 @@ function PreviewCard({
 function ExecutionResult({ result }: { result: CleanupExecutionView }) {
   const state = result.state === "completed" ? "Cleaning complete" : result.state === "partial" ? "Partially complete" : "Cleaning did not complete";
   return (
-    <div className="banner" style={{ marginTop: 12, borderColor: result.state === "completed" ? "var(--accent-line)" : "var(--amber)" }} role="status">
+    <div className="banner" style={{ marginTop: 12, borderColor: result.state === "completed" ? "var(--accent-line)" : "var(--amber)" }} role="status" aria-live="polite">
       <div>
         <strong>{state}.</strong>
         <p className="cleanup-note">
           Requested {result.requested}; processed {result.processed}; deleted {result.deleted}; refused {result.refused}; changed {result.changed}; still present {result.stillPresent}; unknown {result.outcomeUnknown}.
         </p>
+        {result.requested > 0 && result.deleted === 0 && (
+          <p className="cleanup-note"><strong>No files were deleted.</strong> Review the counts above before trying again.</p>
+        )}
+        {result.state === "partial" && (
+          <p className="cleanup-note"><strong>Some files were not cleaned.</strong> Only the files counted as deleted were verified removed; review the remaining counts.</p>
+        )}
         <p className="cleanup-note">
           {result.permanent ? "Permanent deletion was requested. Recovery is unavailable." : "Recovery depends on the Recycle Bin."}
           {" "}

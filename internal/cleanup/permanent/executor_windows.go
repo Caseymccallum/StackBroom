@@ -87,16 +87,17 @@ func (e windowsExecutor) Available() error {
 }
 
 func (e windowsExecutor) Execute(ctx context.Context, targets []execution.Target, progress func(Progress)) (Result, error) {
+	requested := len(targets)
 	if err := e.Available(); err != nil {
-		return Result{State: StateFailed, ReasonCode: "execution_disabled", Message: err.Error()}, err
+		return Result{State: StateFailed, Requested: requested, ReasonCode: "execution_disabled", Message: err.Error()}, err
 	}
 	if len(targets) == 0 {
-		return Result{State: StateFailed, ReasonCode: "no_targets", Message: "no files were selected"}, fmt.Errorf("no files selected")
+		return Result{State: StateFailed, Requested: 0, ReasonCode: "no_targets", Message: "no files were selected"}, fmt.Errorf("no files selected")
 	}
 	items := make([]ItemResult, 0, len(targets))
 	for index, target := range targets {
 		if ctx.Err() != nil {
-			return Result{State: StateCancelled, Items: items, Aborted: true, ReasonCode: "cancelled"}, ctx.Err()
+			return Result{State: StateCancelled, Requested: requested, Items: items, Aborted: true, ReasonCode: "cancelled"}, ctx.Err()
 		}
 		item := deleteOne(ctx, e.trustedRoot, target)
 		items = append(items, item)
@@ -104,7 +105,7 @@ func (e windowsExecutor) Execute(ctx context.Context, targets []execution.Target
 			progress(Progress{State: StateExecuting, TargetID: target.ID, Completed: index + 1, Total: len(targets)})
 		}
 	}
-	return Result{State: StateVerifying, Items: items}, nil
+	return Result{State: StateVerifying, Requested: requested, Items: items}, nil
 }
 
 type fileDispositionInfoData struct {
@@ -134,7 +135,8 @@ func deleteOne(ctx context.Context, trustedRoot string, target execution.Target)
 		return item
 	}
 	if err := storage.ValidateCleanupTarget(&target.File); err != nil {
-		item.Status, item.ReasonCode, item.Message = ItemChanged, storage.ValidateTargetErrorCode(err), "the file changed before cleanup"
+		code := storage.ValidateTargetErrorCode(err)
+		item.Status, item.ReasonCode, item.Message = validationStatus(code), code, "the file changed before cleanup"
 		return item
 	}
 	release, err := storage.GuardCleanupAncestors(target.File)
@@ -330,6 +332,15 @@ func processElevated() (bool, error) {
 		return false, callErr
 	}
 	return info.TokenIsElevated != 0, nil
+}
+
+func validationStatus(code string) ItemStatus {
+	switch code {
+	case "hidden", "system", "reparse", "placeholder", "hard_link", "not_regular", "scope":
+		return ItemRefused
+	default:
+		return ItemChanged
+	}
 }
 
 func classifyError(err error, where string) (ItemStatus, string, string) {
