@@ -159,6 +159,9 @@ Each must verify the target and sentinels are untouched.
 |---|---|
 | Engine validation, expiry, partial/cancelled, false success | Mock executor and injected path state |
 | Native gate and elevation helper | Real Windows token API; no file mutation |
+| Harness root isolation and sensitive-location refusal | Real temporary directories; no disposition call |
+| Harness lock + ancestor guard + DELETE open/verify | Real Windows sharing; no disposition call |
+| Outside-fixture context refusal | Real fixture/context validation |
 | Native handle open/identity/final-path verification | Real NTFS fixture; no disposition call |
 | Native locked-file refusal | Real Windows sharing; no disposition call |
 | Disposable live deletion | Real NTFS fixture and real disposition; skipped unless authorised |

@@ -152,7 +152,15 @@ func (f *Fixture) VerifySentinels() error {
 		return fmt.Errorf("fixture is not initialized")
 	}
 	for name, expected := range f.Sentinels {
-		body, err := os.ReadFile(filepath.Join(f.Root, name))
+		path := filepath.Join(f.Root, name)
+		info, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("sentinel %s is no longer a regular file", name)
+		}
+		body, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}

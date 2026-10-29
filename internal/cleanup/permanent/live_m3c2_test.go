@@ -57,6 +57,13 @@ func TestM3C2SingleFileLiveDeletion(t *testing.T) {
 	if err := fixture.VerifySentinels(); err != nil {
 		t.Fatalf("sentinel changed: %v", err)
 	}
+	entries, err := os.ReadDir(fixture.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("unexpected fixture entries after deletion: %d", len(entries))
+	}
 	summary := result.Summary()
 	if summary.RecoveryAvailable || summary.SpaceReclaimedKnown {
 		t.Fatalf("fabricated recovery/space claim: %+v", summary)
