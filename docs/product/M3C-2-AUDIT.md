@@ -1,10 +1,10 @@
-# M3C-2 — Native Cleanup Audit and Live-Test Gate
+# M3C-2/3 — Native Cleanup Audit and Live-Test Gate
 
 **Status:** audit and test-harness preparation. No native deletion has been run.
 
 **Baseline:** `46be670ec1bb18949d4eb3e6659e07a3e714c0ca`.
 
-**Working branch:** `feat/m3c2-native-gate`.
+**Working branch:** `feat/m3c3-native-acceptance`.
 
 ## Independent source audit
 
@@ -49,6 +49,15 @@ not a substitute for a second human security review.
 - **The harness directory is generated under the OS temp directory and holds a
   read-sharing directory handle.** It prevents writes/deletes through the
   directory while allowing read-only verification; it is not an OS sandbox.
+- **The harness lock is released immediately before the authorised live
+  disposition.** A parent-directory sharing handle must not decide whether the
+  actual delete can proceed. The fixture was already verified and is a uniquely
+  named owner-created temporary directory. The production ancestor guard still
+  applies during the delete.
+- **Lock interaction has been exercised without mutation.** A test holds the
+  harness directory lock, applies the production ancestor guard, opens the
+  target with DELETE access, verifies its exact handle identity and closes it
+  without disposition. It passes.
 - **No destructive junction, locked-file or renamed-path test has been run.**
 
 ### ABI and API review
@@ -80,6 +89,10 @@ Runtime gate: `STACKBROOM_M3C2_HARNESS_AUTHORIZED=1`.
 
 - creates a fresh generated root under the OS temporary directory;
 - validates it with `storage.ValidateRoot`;
+- requires the temporary base to be named `Temp`/`tmp` and the generated root to
+  be named `StackBroom-M3C2-*`;
+- rejects roots under known Documents, Desktop, Downloads, Pictures, Videos,
+  Music or CrashDumps path segments;
 - requires NTFS;
 - creates one `m3c2-single.dmp` with deterministic contents and two sentinel
   files;
@@ -151,6 +164,14 @@ Each must verify the target and sentinels are untouched.
 | Disposable live deletion | Real NTFS fixture and real disposition; skipped unless authorised |
 | History privacy | Local file, no native API |
 | Frontend Cleaning behaviour | Mocked cleanup hook and DOM |
+
+## Decision
+
+- **First single-file native acceptance test:** CONDITIONAL GO, only with the
+  three explicit authorisation gates and after focused source review.
+- **Consumer Cleaning integration:** **NO-GO** until the authorised live test
+  passes, sentinels remain unchanged, outcome semantics are reviewed, and a
+  separate UI/release approval is given.
 
 ## Next integration step
 

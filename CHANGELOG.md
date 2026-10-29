@@ -4,7 +4,7 @@ All notable changes to StackBroom are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 semantic versioning once it reaches 1.0.
 
-## [Unreleased] - M3C-2 native validation gate
+## [Unreleased] - M3C-3 native acceptance gate
 
 No live deletion or restoration was performed. The native test harness is
 compile-tagged and runtime-authorised; the live test is skipped without separate

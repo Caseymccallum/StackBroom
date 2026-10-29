@@ -33,6 +33,13 @@ func TestM3C2SingleFileLiveDeletion(t *testing.T) {
 	if err := fixture.LiveAuthorized(); err != nil {
 		t.Fatal(err)
 	}
+	// The directory-integrity lock is released before the authorised mutation:
+	// a parent-directory sharing handle must not be allowed to decide whether
+	// the actual disposition can proceed. The fixture remains a uniquely named,
+	// owner-created temporary directory whose initial state was just verified.
+	if err := fixture.ReleaseLock(); err != nil {
+		t.Fatal(err)
+	}
 	executionContext, err := execution.NewContext("m3c2-live", RuleID, "1.0.0", fixture.Root,
 		[]execution.Target{fixture.Target}, time.Now().Add(10*time.Minute), execution.PermanentOnly)
 	if err != nil {

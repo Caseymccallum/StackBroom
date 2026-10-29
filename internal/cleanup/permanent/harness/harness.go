@@ -57,6 +57,9 @@ func Prepare() (*Fixture, error) {
 	if err != nil {
 		return nil, fmt.Errorf("validate fixture root: %w", err)
 	}
+	if !fixtureRootValid(root) {
+		return nil, fmt.Errorf("fixture root is not an isolated temporary M3C2 directory")
+	}
 	if !isNTFS(root) {
 		return nil, fmt.Errorf("fixture root is not on NTFS")
 	}
@@ -115,6 +118,9 @@ func (f *Fixture) VerifyInitialState() error {
 	if err != nil || !strings.EqualFold(abs, f.Root) {
 		return fmt.Errorf("fixture root identity changed")
 	}
+	if !fixtureRootValid(f.Root) {
+		return fmt.Errorf("fixture root escaped the isolated temporary location")
+	}
 	if !isNTFS(f.Root) {
 		return fmt.Errorf("fixture root is not NTFS")
 	}
@@ -167,7 +173,7 @@ func (f *Fixture) LiveAuthorized() error {
 	return nil
 }
 
-func (f *Fixture) Close() error {
+func (f *Fixture) ReleaseLock() error {
 	if f == nil || f.lock == 0 {
 		return nil
 	}
@@ -175,6 +181,8 @@ func (f *Fixture) Close() error {
 	f.lock = 0
 	return err
 }
+
+func (f *Fixture) Close() error { return f.ReleaseLock() }
 
 func digest(data []byte) string {
 	sum := sha256.Sum256(data)
@@ -202,6 +210,36 @@ func lockDirectory(root string) (syscall.Handle, error) {
 	const fileShareRead = 0x00000001
 	return syscall.CreateFile(path, fileListDirectory|fileReadAttributes, fileShareRead, nil, openExisting,
 		fileFlagBackupSemantics|fileFlagOpenReparsePoint, 0)
+}
+
+func fixtureRootValid(root string) bool {
+	temp, err := filepath.Abs(os.TempDir())
+	if err != nil {
+		return false
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	resolvedTemp, err := filepath.EvalSymlinks(temp)
+	if err != nil {
+		return false
+	}
+	tempName := strings.ToLower(filepath.Base(resolvedTemp))
+	if tempName != "temp" && tempName != "tmp" {
+		return false
+	}
+	relative, err := filepath.Rel(resolvedTemp, resolvedRoot)
+	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
+		return false
+	}
+	lower := strings.ToLower(resolvedRoot)
+	for _, sensitive := range []string{`\documents\`, `\desktop\`, `\downloads\`, `\pictures\`, `\videos\`, `\music\`, `\crashdumps\`} {
+		if strings.Contains(lower, sensitive) {
+			return false
+		}
+	}
+	return strings.HasPrefix(strings.ToLower(filepath.Base(resolvedRoot)), "stackbroom-m3c2-")
 }
 
 func isNTFS(path string) bool {

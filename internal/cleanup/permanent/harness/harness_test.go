@@ -4,6 +4,7 @@ package harness
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -34,5 +35,18 @@ func TestFixtureHarnessRequiresAuthorizationAndDoesNotDelete(t *testing.T) {
 	}
 	if f.Root == "" || f.Target.ID == "" {
 		t.Fatal("fixture root or target ID is missing")
+	}
+	if !fixtureRootValid(f.Root) {
+		t.Fatal("generated fixture root is not isolated")
+	}
+	if fixtureRootValid(t.TempDir()) {
+		t.Fatal("an arbitrary temporary directory was accepted as a fixture root")
+	}
+	sensitive := filepath.Join(t.TempDir(), "CrashDumps", "StackBroom-M3C2-nope")
+	if err := os.MkdirAll(sensitive, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if fixtureRootValid(sensitive) {
+		t.Fatal("a fixture path under a sensitive location was accepted")
 	}
 }
