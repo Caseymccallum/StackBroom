@@ -15,6 +15,7 @@ export function CleaningPage() {
   const candidates = cleanup.discovery?.candidates ?? [];
   const selected = useMemo(() => new Set(selectedIDs), [selectedIDs]);
   const activeStep = cleanup.preview ? 2 : cleanup.discovery ? 1 : 0;
+  const permanentAvailable = cleanup.rules.some((rule) => rule.id === "crash-dumps-old" && rule.permanentAvailable);
 
   useEffect(() => {
     void cleanup.loadRules();
@@ -37,7 +38,7 @@ export function CleaningPage() {
         <CardHeader
           title="Cleaning"
           subtitle="Find old files, choose what to review, and decide what to clean."
-          action={<Badge tone="amber">Cleaning not available yet</Badge>}
+          action={<Badge tone={permanentAvailable ? "teal" : "amber"}>{permanentAvailable ? "Crash-dump cleaning available" : "Cleaning not available yet"}</Badge>}
         />
         <CardBody>
           <ol className="cleanup-steps" aria-label="Cleanup steps">
@@ -55,7 +56,11 @@ export function CleaningPage() {
           <div className="banner" style={{ borderColor: "var(--amber)" }}>
             <ShieldCheck size={16} style={{ color: "var(--amber)" }} aria-hidden="true" />
             <div>
-              <strong>Cleaning isn't available in this build.</strong> You can find and review files, but nothing will be cleaned or removed yet.
+              {permanentAvailable ? (
+                <><strong>Old crash dumps can be deleted permanently.</strong> Find files, choose what to delete, and review the irreversible action before confirming.</>
+              ) : (
+                <><strong>Cleaning isn't available in this build.</strong> You can find and review files, but nothing will be cleaned or removed yet.</>
+              )}
             </div>
           </div>
           {cleanup.error && (
@@ -67,9 +72,9 @@ export function CleaningPage() {
           <details className="cleanup-disclosure" style={{ marginTop: 10 }}>
             <summary><ChevronDown size={14} aria-hidden="true" /> Recycle Bin or permanent deletion?</summary>
             <p className="cleanup-note">
-              <strong>Recycle Bin</strong> keeps a file recoverable until you empty it.
-              <strong> Permanent deletion</strong> removes it immediately and cannot be undone.
-              This build does not offer permanent deletion.
+              <strong>Recycle Bin</strong> generally lets you restore successfully recycled files until they're removed from the bin.
+              <strong> Permanent deletion</strong> cannot be undone through StackBroom.
+              {permanentAvailable ? " Only selected old crash dumps support permanent deletion in this build." : " This build does not offer permanent deletion."}
             </p>
           </details>
         </CardBody>
@@ -178,7 +183,7 @@ export function CleaningPage() {
       )}
 
       {cleanup.preview && (
-        <PreviewCard preview={cleanup.preview} onClear={cleanup.clearPreview} onConfirm={cleanup.confirmPermanent} />
+        <PreviewCard key={cleanup.preview.previewId} preview={cleanup.preview} onClear={cleanup.clearPreview} onConfirm={cleanup.confirmPermanent} />
       )}
     </div>
   );
@@ -251,7 +256,7 @@ function PreviewCard({
   const cleanupMethod = permanent ? "Permanent deletion" : preview.deletionMode === "recycle" ? "Move to Recycle Bin" : "Not available";
 
   const confirmPermanent = async () => {
-    if (!permanent || executing) return;
+    if (!permanent || executing || result) return;
     setExecuting(true);
     const next = await onConfirm(preview.previewId);
     if (next) setResult(next);
@@ -322,9 +327,9 @@ function PreviewCard({
         )}
         {result && <ExecutionResult result={result} />}
         <div className="cleanup-actions" style={{ marginTop: 12 }}>
-          <Button variant="ghost" onClick={onClear}>Close review</Button>
+          <Button variant="ghost" onClick={onClear} disabled={executing}>Close review</Button>
           {permanent ? (
-            <Button variant="primary" onClick={() => setConfirming(true)} disabled={!preview.executionAvailable || executing} aria-describedby="permanent-warning">
+            <Button variant="primary" onClick={() => setConfirming(true)} disabled={!preview.executionAvailable || executing || result !== null || expiry === "Expired"} aria-describedby="permanent-warning">
               Delete permanently…
             </Button>
           ) : (
